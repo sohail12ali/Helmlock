@@ -1,0 +1,8 @@
+schema_version = 1
+
+[workspace]
+name = "Acme"
+
+[[layers]]
+folder = "overlay"
+layer = "project"

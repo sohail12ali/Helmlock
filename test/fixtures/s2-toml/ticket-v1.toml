@@ -1,0 +1,13 @@
+# A version-1 ticket: the owner was called "assignee" and dates were bare TOML dates.
+schema_version = 1
+
+[ticket]
+id = "T-003-om"
+title = "Old ticket"
+stage = "done"
+assignee = "om-prakash"
+created = 2026-09-17
+updated = 2026-09-30
+
+[flags]
+blocked = false

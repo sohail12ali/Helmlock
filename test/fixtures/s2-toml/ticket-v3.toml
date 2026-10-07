@@ -1,0 +1,8 @@
+schema_version = 3
+
+[ticket]
+id = "T-099-sa"
+title = "From the future"
+stage = "backlog"
+created = "2027-01-01T00:00:00Z"
+updated = "2027-01-01T00:00:00Z"
