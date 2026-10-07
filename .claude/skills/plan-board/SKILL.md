@@ -1,6 +1,6 @@
 ---
-name: plan
-description: Run a planning conversation that produces a living, navigable plan page (docs/plan.html): ordered decisions with dependencies, impact and trade-offs, flow canvases, blueprints, research notes, open questions and a log. Source lives in small files in docs/plan/ and is built into the page. Use for any brainstorming, design, scoping or "how should we build X" work, and when the user says "plan", "update the plan" or "/plan".
+name: plan-board
+description: Run a planning conversation that produces a living, navigable plan page (docs/plan.html): ordered decisions with dependencies, impact and trade-offs, flow canvases, blueprints, research notes, open questions and a log. Source lives in small files in docs/plan/ and is built into the page. Use for any brainstorming, design, scoping or "how should we build X" work, and when the user says "plan", "update the plan" or "/plan-board".
 ---
 
 # Plan
@@ -10,12 +10,12 @@ A planning session produces `docs/plan/` (small source files) and `docs/plan.htm
 **Never read or edit `docs/plan.html` or `viewer/`.** They are generated or renderer code and cost tokens for nothing. Use `--status` to see where things stand.
 
 ```bash
-python .claude/skills/plan/build.py --init       # first run: copy starter/ to docs/plan/, build
-python .claude/skills/plan/build.py              # build docs/plan.html (fails on errors, prints a few warnings)
-python .claude/skills/plan/build.py --status     # digest: progress per phase, ready to decide, open questions
-python .claude/skills/plan/build.py --check      # all errors and quality warnings
-python .claude/skills/plan/build.py --apply F     # save picks the user pasted from the page (file, or - for stdin)
-python .claude/skills/plan/build.py --reopen F24  # remove a saved decision from a card
+python .claude/skills/plan-board/build.py --init       # first run: copy starter/ to docs/plan/, build
+python .claude/skills/plan-board/build.py              # build docs/plan.html (fails on errors, prints a few warnings)
+python .claude/skills/plan-board/build.py --status     # digest: progress per phase, ready to decide, open questions
+python .claude/skills/plan-board/build.py --check      # all errors and quality warnings
+python .claude/skills/plan-board/build.py --apply F     # save picks the user pasted from the page (file, or - for stdin)
+python .claude/skills/plan-board/build.py --reopen F24  # remove a saved decision from a card
 ```
 
 ## The loop (every iteration)
@@ -94,7 +94,7 @@ The page has "Copy my picks". The user pastes lines like `- F24 "Title" => [toml
 
 The page also has **Save decisions** (top bar) and **Load decisions** (in the Copy panel). Save writes `plan-picks.json` (Chrome and Edge ask where; others download it). Run `build.py --apply` with no file to take `docs/plan/picks.json` or the newest `~/Downloads/plan-picks*.json`, or pass a path.
 
-**Served mode (no dialogs):** `python .claude/skills/plan/build.py --serve` builds the plan and serves it at http://127.0.0.1:8765/. There **Save decisions** writes straight to `docs/plan/plan-picks.json` (fixed path, localhost only, needs a custom header), and the page loads that file at start. Opened as a plain file, the page falls back to the save dialog or a download.
+**Served mode (no dialogs):** `python .claude/skills/plan-board/build.py --serve` builds the plan and serves it at http://127.0.0.1:8765/. There **Save decisions** writes straight to `docs/plan/plan-picks.json` (fixed path, localhost only, needs a custom header), and the page loads that file at start. Opened as a plain file, the page falls back to the save dialog or a download.
 
 ## Pitfalls we hit (so you do not)
 

@@ -11,7 +11,7 @@ Project is in the **idea stage**. No code yet. The goal right now is to shape th
 
 ## Planning workflow
 
-Use the `/plan` skill (`.claude/skills/plan/SKILL.md`). The plan lives as small source files in `docs/plan/` and is built into `docs/plan.html`. Start with `python .claude/skills/plan/build.py --status`, edit only the source files you need, rebuild, never read or edit `docs/plan.html`. Update after every meaningful exchange; never start a fresh plan.
+Use the `/plan-board` skill (`.claude/skills/plan-board/SKILL.md`). The plan lives as small source files in `docs/plan/` and is built into `docs/plan.html`. Start with `python .claude/skills/plan-board/build.py --status`, edit only the source files you need, rebuild, never read or edit `docs/plan.html`. Update after every meaningful exchange; never start a fresh plan.
 
 ## Decided design rules
 

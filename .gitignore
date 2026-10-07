@@ -15,3 +15,7 @@ docs/plan.html
 
 # Python caches
 __pycache__/
+
+# Node
+node_modules/
+.hl-cache/
