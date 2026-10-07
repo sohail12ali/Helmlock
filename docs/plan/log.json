@@ -1,6 +1,11 @@
 [
  {
   "date": "2026-10-07",
+  "you": "yes, do both with multiple agents",
+  "change": "Fast-forwarded setup/initial to the writable console. Built agents and chat with four parallel agents: approval queue and runs from the console with a Claude approval bridge, provider layer and assistant, Telegram, and the console UI. Verified a real run with an approval card in the browser. Fixed: system agents copied into knowledge repos. Blueprint 29."
+ },
+ {
+  "date": "2026-10-07",
   "you": "start the writable console with multiple agents",
   "change": "Built the writable console with three parallel agents: verb-call API through the same registry as the CLI, settings plugin and config set, todos and settings endpoints; ticket actions, board drag, question cards; settings, todos and work pages. Verified live in the browser. Blueprint 28."
  },
