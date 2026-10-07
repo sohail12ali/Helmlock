@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import type { Context, RunEvent, RunHandle, RunOptions, RuntimeAdapter, RuntimesService } from "@helmlock/core";
@@ -250,4 +250,27 @@ test("silence is flagged (not killed) at each threshold; the buffer keeps the ne
   assert.equal(notes.length, 2);
   assert.match(notes[0] as string, /no output for/);
   assert.equal(manager.get(s.id)?.status, "done");
+});
+
+test("a finished run's transcript is saved and replays from a new run manager (server restart)", async () => {
+  const { createRunManager } = await import("./run-manager.ts");
+  const ws = await createTestWorkspace({ catalog });
+  try {
+    await ws.runtime.mountAll();
+    const file = join(ws.root, "runs", "run-saved-1.events.jsonl");
+    mkdirSync(join(ws.root, "runs"), { recursive: true });
+    writeFileSync(
+      file,
+      `${JSON.stringify({ seq: 0, ts: "t", event: { type: "text", text: "hello" } })}\n${JSON.stringify({ seq: 1, ts: "t", event: { type: "result", ok: true, text: "done" } })}\n`,
+    );
+    const m = createRunManager({ ctx: ws.runtime.ctx });
+    const seen: unknown[] = [];
+    for await (const l of m.events("run-saved-1")) seen.push(l.event);
+    assert.equal(seen.length, 2);
+    const from1: unknown[] = [];
+    for await (const l of m.events("run-saved-1", 1)) from1.push(l.event);
+    assert.equal(from1.length, 1);
+  } finally {
+    await ws.cleanup();
+  }
 });

@@ -3,6 +3,7 @@
 // browser can replay and follow, silence is flagged at 5 and 15 minutes, cancel is a tree kill, and the run record is
 // the same runs/<id>.json that `hl run` writes. Claude runs started by the server get a per-run --settings file with
 // a PreToolUse hook that asks a person through the server (control-center agent_approvals.py write_settings).
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Context, RunEvent, RunManagerService, RunMode, RunStartOptions, RunState } from "@helmlock/core";
 import { type ManagedRunOptions, newRunId } from "./process-run.ts";
@@ -94,8 +95,22 @@ export function createRunManager(o: RunManagerOptions): RunManager {
     for (const w of [...r.waiters]) w();
     r.waiters.clear();
   };
+  // The transcript is also appended to runs/<id>.events.jsonl (local, gitignored with runs/) so a finished run can be
+  // replayed after the server restarts; the in-memory buffer only covers runs started by this process.
+  const eventsFile = (id: string) => join(ctx.get("workspace").root, "runs", `${id}.events.jsonl`);
+  const persist = (id: string, line: RunEventLine) => {
+    try {
+      const f = eventsFile(id);
+      mkdirSync(join(f, ".."), { recursive: true });
+      appendFileSync(f, `${JSON.stringify(line)}\n`, "utf8");
+    } catch {
+      /* the live buffer still works; a lost transcript line must never break the run */
+    }
+  };
   const push = (r: Live, event: RunEvent) => {
-    r.buf.push({ seq: r.nextSeq++, ts: new Date().toISOString(), event });
+    const line: RunEventLine = { seq: r.nextSeq++, ts: new Date().toISOString(), event };
+    r.buf.push(line);
+    persist(r.state.id, line);
     if (r.buf.length > cap) r.buf.splice(0, r.buf.length - cap);
     wake(r);
   };
@@ -276,7 +291,27 @@ export function createRunManager(o: RunManagerOptions): RunManager {
 
     events(id, fromSeq = 0) {
       const r = runs.get(id);
-      if (!r) throw new RunError("unknown-run", `no active or recent run ${id}`, "finished runs are listed at GET /api/v1/runs");
+      if (!r) {
+        // Not in memory (finished before this server started): replay the saved transcript, if any.
+        if (!/^[A-Za-z0-9-]+$/.test(id) || !existsSync(eventsFile(id)))
+          throw new RunError("unknown-run", `no active or recent run ${id}`, "finished runs are listed at GET /api/v1/runs");
+        const lines = readFileSync(eventsFile(id), "utf8")
+          .split("\n")
+          .filter((l) => l.trim())
+          .flatMap((l) => {
+            try {
+              return [JSON.parse(l) as RunEventLine];
+            } catch {
+              return [];
+            }
+          })
+          .filter((l) => l.seq >= fromSeq);
+        return {
+          async *[Symbol.asyncIterator]() {
+            for (const l of lines) yield l;
+          },
+        };
+      }
       return {
         async *[Symbol.asyncIterator]() {
           let next = Math.max(0, fromSeq);
