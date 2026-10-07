@@ -227,7 +227,7 @@ export type TodoList = TodoItem[];
 /** A setting a plugin declares in plugin.toml [settings.<key>] (F44). Secrets are stored by env-var name only (F9b). */
 export interface SettingField {
   key: string;
-  type: "string" | "number" | "boolean" | "select" | "secret-env";
+  type: "string" | "number" | "boolean" | "select" | "secret-env" | "list";
   label: string;
   hint?: string;
   default?: string | number | boolean;
