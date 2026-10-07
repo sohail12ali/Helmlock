@@ -139,7 +139,7 @@ export interface SnapshotEvent {
 }
 export interface ChangeEvent {
   version: number;
-  areas: ("tickets" | "records" | "tasks" | "worklog" | "activity" | "runs" | "workspace" | "skills" | "todos")[];
+  areas: ("tickets" | "records" | "tasks" | "worklog" | "activity" | "runs" | "workspace" | "skills" | "todos" | "approvals" | "chats")[];
   tickets: string[];
   paths: string[];
 }

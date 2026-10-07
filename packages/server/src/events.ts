@@ -37,6 +37,8 @@ export function classifyPath(rel: string): { areas: Area[]; ticket?: string } {
   if (first === "activity") return { areas: ["activity"] };
   if (first === "runs") return { areas: ["runs"] };
   if (first === "todos") return { areas: ["todos"] };
+  if (first === "approvals") return { areas: ["approvals"] };
+  if (first === "chats") return { areas: ["chats"] };
   if (parts.includes("skills") || parts.includes("agents")) return { areas: ["skills"] };
   if (parts.length === 1 && (WORKSPACE_FILES.has(first as string) || (first as string).endsWith(".code-workspace"))) return { areas: ["workspace"] };
   return { areas: ["workspace"] };
