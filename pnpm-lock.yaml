@@ -48,6 +48,9 @@ importers:
 
   packages/plugins:
     dependencies:
+      '@clack/prompts':
+        specifier: ^1.8.1
+        version: 1.8.1
       '@helmlock/core':
         specifier: workspace:^
         version: link:../core
