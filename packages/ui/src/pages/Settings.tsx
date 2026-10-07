@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ModelsTest } from "@/features/chat/ModelsTest";
 import { type ThemePref, useTheme } from "@/lib/theme";
 
 type SectionId = SettingsView["sections"][number]["id"];
@@ -287,6 +288,7 @@ export function SettingsPage() {
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {s.id === "workspace" && <WorkspaceFacts />}
+                {s.id === "models" && <ModelsTest />}
                 {s.plugins.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{COMING[s.id]}</p>
                 ) : (

@@ -18,6 +18,12 @@ export const keys = {
   runs: ["runs"] as const,
   skills: ["skills"] as const,
   search: (q: string) => ["search", q] as const,
+  // milestone 4
+  run: (id: string) => ["run", id] as const,
+  approvals: (status: "pending" | "recent" = "pending") => ["approvals", status] as const,
+  models: ["models"] as const,
+  chats: ["chats"] as const,
+  chat: (id: string) => ["chat", id] as const,
 };
 
 type Area = ChangeEvent["areas"][number];

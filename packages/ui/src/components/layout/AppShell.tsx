@@ -1,14 +1,17 @@
-import { HelpCircle, Inbox, LayoutDashboard, Menu, Moon, MoreHorizontal, PanelLeft, Search, SquareKanban, Sun } from "lucide-react";
-import { useMemo, useState } from "react";
+import { HelpCircle, Inbox, LayoutDashboard, Menu, MessageSquare, Moon, MoreHorizontal, PanelLeft, Search, SquareKanban, Sun } from "lucide-react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useOverview, useWorkspace } from "@/api/hooks";
 import { type LiveState, useLiveUpdates } from "@/api/live";
+import { useM4Live } from "@/api/m4";
 import { NewTicketHost } from "@/components/actions/NewTicket";
+import { Loading } from "@/components/common";
 import { HelpDialog } from "@/components/HelpDialog";
 import { Palette } from "@/components/Palette";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/input";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ApprovalsBadge } from "@/features/approvals/PendingApprovals";
 import { useGlobalKeys } from "@/lib/keys";
 import { NARROW, PHONE, useMediaQuery } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
@@ -16,6 +19,17 @@ import { cn } from "@/lib/utils";
 import { NAV } from "./nav";
 import { ShellContext } from "./shell-context";
 import { SplitGroup, SplitHandle, SplitPanel, useSplitPanelRef } from "./split";
+
+// The assistant panel loads on first open (keeps the first chunk small).
+const ChatPanel = lazy(() => import("@/features/chat/ChatPanel"));
+const CHAT_OPEN_KEY = "hl.chat.open";
+function loadChatOpen(): boolean {
+  try {
+    return localStorage.getItem(CHAT_OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 function LiveDot({ state }: { state: LiveState }) {
   const label =
@@ -98,6 +112,21 @@ export function AppShell() {
   const ws = useWorkspace();
   const overview = useOverview();
   const live = useLiveUpdates();
+  useM4Live();
+  const [chatOpen, setChatOpenState] = useState(loadChatOpen);
+  const setChatOpen = (o: boolean) => {
+    setChatOpenState(o);
+    try {
+      localStorage.setItem(CHAT_OPEN_KEY, o ? "1" : "0");
+    } catch {
+      /* storage blocked */
+    }
+  };
+  const toggleChat = () => {
+    if (!phone) return setChatOpen(!chatOpen);
+    if (location.pathname === "/chat") navigate(-1);
+    else navigate("/chat");
+  };
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
@@ -175,6 +204,16 @@ export function AppShell() {
                 <Search />
               </Button>
             )}
+            <ApprovalsBadge />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleChat}
+              aria-label={chatOpen && !phone ? "Close assistant" : "Open assistant"}
+              aria-pressed={!phone ? chatOpen : location.pathname === "/chat"}
+            >
+              <MessageSquare />
+            </Button>
             <LiveDot state={live} />
             <Button variant="ghost" size="icon" onClick={toggle} aria-label={resolved === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
               {resolved === "dark" ? <Sun /> : <Moon />}
@@ -193,32 +232,41 @@ export function AppShell() {
           </div>
         </header>
 
-        <div className="min-h-0 flex-1">
-          {narrow ? (
-            <main className="h-full overflow-hidden">
-              <Outlet />
-            </main>
-          ) : (
-            <SplitGroup id="shell" panelIds={["nav", "content"]}>
-              <SplitPanel
-                id="nav"
-                defaultSize={210}
-                minSize={160}
-                maxSize={340}
-                collapsible
-                collapsedSize={52}
-                panelRef={navRef}
-                onCollapsedChange={setNavCollapsed}
-              >
-                <SideNav collapsed={navCollapsed} needsYou={needsYou} />
-              </SplitPanel>
-              <SplitHandle label="Resize sidebar" />
-              <SplitPanel id="content" minSize="40%">
-                <main className="h-full overflow-hidden">
-                  <Outlet />
-                </main>
-              </SplitPanel>
-            </SplitGroup>
+        <div className="flex min-h-0 flex-1">
+          <div className="min-w-0 flex-1">
+            {narrow ? (
+              <main className="h-full overflow-hidden">
+                <Outlet />
+              </main>
+            ) : (
+              <SplitGroup id="shell" panelIds={["nav", "content"]}>
+                <SplitPanel
+                  id="nav"
+                  defaultSize={210}
+                  minSize={160}
+                  maxSize={340}
+                  collapsible
+                  collapsedSize={52}
+                  panelRef={navRef}
+                  onCollapsedChange={setNavCollapsed}
+                >
+                  <SideNav collapsed={navCollapsed} needsYou={needsYou} />
+                </SplitPanel>
+                <SplitHandle label="Resize sidebar" />
+                <SplitPanel id="content" minSize="40%">
+                  <main className="h-full overflow-hidden">
+                    <Outlet />
+                  </main>
+                </SplitPanel>
+              </SplitGroup>
+            )}
+          </div>
+          {!narrow && chatOpen && (
+            <aside aria-label="Assistant panel" className="w-[min(26rem,40vw)] shrink-0 border-l">
+              <Suspense fallback={<Loading />}>
+                <ChatPanel />
+              </Suspense>
+            </aside>
           )}
         </div>
 
@@ -228,6 +276,14 @@ export function AppShell() {
           <Sheet open={navOpen} onOpenChange={setNavOpen}>
             <SheetContent side="left" title="Navigation" className="w-64 pt-10">
               <SideNav collapsed={false} needsYou={needsYou} onNavigate={() => setNavOpen(false)} />
+            </SheetContent>
+          </Sheet>
+        )}
+
+        {narrow && !phone && (
+          <Sheet open={chatOpen} onOpenChange={setChatOpen}>
+            <SheetContent side="right" title="Assistant" className="w-[min(28rem,92vw)] pt-8">
+              <Suspense fallback={<Loading />}>{chatOpen && <ChatPanel />}</Suspense>
             </SheetContent>
           </Sheet>
         )}
