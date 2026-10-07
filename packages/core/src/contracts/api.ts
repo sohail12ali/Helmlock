@@ -1,7 +1,7 @@
 // FROZEN CONTRACT (milestone 2: read-only console). JSON over HTTP under /api/v1 plus SSE (F145, F10c).
 // Every response is { ok: true, data } or { ok: false, error: { rule, message, file?, fix? } } (same envelope as the CLI).
 // Writes are not part of this milestone: every change still goes through `hl` verbs.
-import type { ActivityLine, CommentLine, Task, TicketRecord, RecordKindName } from "./schemas.ts";
+import type { ActivityLine, CommentLine, RecordKindName, Task, TicketRecord } from "./schemas.ts";
 import type { GateResult, SearchHit, SkillEntry, StageDef, TicketDigest, WorkspaceFolder } from "./services.ts";
 
 export type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { rule: string; message: string; file?: string; fix?: string } };

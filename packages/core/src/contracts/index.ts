@@ -1,5 +1,6 @@
 // FROZEN CONTRACT (milestone 1).
 
+export type * from "./api.ts";
 export type { CatalogEntry, PluginCatalog } from "./catalog.ts";
 export type * from "./events.ts";
 export type { FileLayer, ReadResult, TomlEmitter, WriteOptions, WriteResult } from "./files.ts";
@@ -10,4 +11,3 @@ export * from "./schemas.ts";
 export type * from "./services.ts";
 export type { Actor, VerbCtx, VerbDef, VerbError, VerbResult, VerbsService } from "./verbs.ts";
 export { blocked, fail, ok } from "./verbs.ts";
-export type * from "./api.ts";

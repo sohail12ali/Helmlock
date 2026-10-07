@@ -56,7 +56,7 @@ export interface Runtime {
 }
 
 /** Plugins mounted for every write so the activity line and the author are available. */
-const ALWAYS_FOR_WRITES = ["roster", "activity"];
+const ALWAYS_FOR_WRITES = ["roster", "activity", "pages"];
 
 export async function createRuntime(o: RuntimeOptions): Promise<Runtime> {
   const env = o.env ?? process.env;
