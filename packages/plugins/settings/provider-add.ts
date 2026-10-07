@@ -55,7 +55,8 @@ export async function addProvider(files: FileLayer, kind: string, i: ProviderAdd
   const models = Array.isArray(cfg.models) ? [...(cfg.models as unknown[])] : [];
   if (providers.some((x) => isObj(x) && x.id === i.id)) throw new SettingError("config-bad-value", `provider "${i.id}" already exists`, "pick another id");
 
-  const modelId = i.model.includes("/") ? i.model : `${i.id}/${i.model}`;
+  // Model ids are "<provider>/<model as the server names it>"; server names may contain "/" themselves (LM Studio).
+  const modelId = i.model.startsWith(`${i.id}/`) ? i.model : `${i.id}/${i.model}`;
   const prov: Record<string, unknown> = { id: i.id, label: i.label ?? (typeof p.label === "string" ? p.label : i.id), base_url };
   if (i.preset) prov.preset = i.preset;
   if (i.key_env) prov.key_env = i.key_env;

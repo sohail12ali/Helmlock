@@ -137,6 +137,9 @@ test("provider add appends a provider and model row and sets the default model; 
     assert.match(toml, /default_model = "local\/llama3.1"/);
     const again = await ws.run("provider add", { id: "local", preset: "ollama", model: "x" });
     assert.equal(again.ok, false);
+    const slashed = await ws.run("provider add", { id: "lms", preset: "lmstudio", model: "google/gemma-4-12b-qat" });
+    assert.ok(slashed.ok, JSON.stringify(slashed));
+    assert.match(readFileSync(join(ws.root, "workspace.toml"), "utf8"), /id = "lms\/google\/gemma-4-12b-qat"/);
     const key = await ws.run("provider add", { id: "oa", preset: "openai", key_env: "sk-abc123", model: "gpt" });
     assert.equal(key.ok, false);
   } finally {
