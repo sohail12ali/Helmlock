@@ -25,7 +25,7 @@ The {{NAME}} knowledge center: tickets, projects, shared knowledge and work logs
 | `activity/` | Verb history, one file per person per day |
 | `todos/` | Personal todos |
 | `archive/` | Closed work |
-| `harness/` | Workspace rules for agents, turned into host config by `hl harness sync` |
+| `harness/` | Workspace rules, agents (`harness/agents/`) and skills (`harness/skills/`), turned into host config by `hl harness sync` |
 | `.obsidian/` | Shared Obsidian settings; open this folder as a vault |
 
 State (every `.toml`) changes through `hl`. Prose (`.md`) is edited directly.

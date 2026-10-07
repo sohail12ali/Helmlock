@@ -6,6 +6,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Context, RunEvent, RunManagerService, RunMode, RunStartOptions, RunState } from "@helmlock/core";
+import { agentNotice } from "../harness/layers.ts";
 import { type ManagedRunOptions, newRunId } from "./process-run.ts";
 import { RUNTIME_ALIASES } from "./registry.ts";
 import { buildRecord, RunTally, writeRunRecord } from "./run-record.ts";
@@ -159,6 +160,9 @@ export function createRunManager(o: RunManagerOptions): RunManager {
     }
     run = (await ctx.runHook("agent/pre-run", run)) as ManagedRunOptions;
     if (run.mode === "force") throw new RunError("mode-not-allowed", 'mode "force" stays in the terminal (hl run --mode force)');
+    // .claude/agents holds the layer winners after `hl harness sync` (Blueprint 31): say so when it is behind.
+    const notice = run.agent ? agentNotice(ws.root, ws.deliveryRoot, ws.author, run.agent) : undefined;
+    if (notice) push(r, { type: "stderr", text: notice });
 
     let handle: Awaited<ReturnType<typeof adapter.start>>;
     try {
