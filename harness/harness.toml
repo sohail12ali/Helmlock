@@ -89,15 +89,4 @@ globs = [
 [modes]
 ladder = ["plan", "ask", "auto-review", "force"]
 default = "plan"
-
-[modes.claude]
-plan = "--permission-mode plan"
-ask = "--permission-mode default"
-auto-review = "--permission-mode acceptEdits"
-force = "--permission-mode bypassPermissions"
-
-[modes.cursor]
-plan = "--mode plan"
-ask = "--mode ask"
-auto-review = "--auto-review"
-force = "--force"
+# Host flags per mode are owned by the runtime adapters (hl run), not this file.
