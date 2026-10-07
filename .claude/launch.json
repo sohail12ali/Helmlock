@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "console-demo",
+      "url": "http://127.0.0.1:4317",
+      "port": 4317
+    }
+  ]
+}

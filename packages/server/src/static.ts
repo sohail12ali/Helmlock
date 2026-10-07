@@ -53,7 +53,9 @@ export async function serveUi(uiDir: string, pathname: string): Promise<Response
       });
     }
     // A missing file with an extension is a real 404, not a client route.
-    if (extname(rel)) return new Response("not found", { status: 404, headers: { "content-type": TYPES[".txt"]! } });
+    // Client routes such as /t/T-001-sa/T-001-sa-spec.md carry file names, so only /assets/ and top-level files 404.
+    if (extname(rel) && (rel.startsWith("/assets/") || rel.lastIndexOf("/") === 0))
+      return new Response("not found", { status: 404, headers: { "content-type": TYPES[".txt"]! } });
   }
   return new Response(await readFile(index), { headers: { "content-type": TYPES[".html"]!, "cache-control": "no-cache" } });
 }
