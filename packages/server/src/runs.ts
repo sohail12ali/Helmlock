@@ -110,7 +110,7 @@ async function stateFromRecord(runtime: Runtime, id: string): Promise<RunState |
     status: raw.ok === true ? "done" : fc === "cancelled" ? "cancelled" : "failed",
     started: str("started") ?? "",
   };
-  for (const k of ["agent", "ticket", "ended", "first_result_line"] as const) {
+  for (const k of ["agent", "ticket", "ended", "first_result_line", "origin"] as const) {
     const v = str(k);
     if (v) s[k] = v;
   }
@@ -221,6 +221,7 @@ export function registerRunRoutes(api: Hono, d: M4Deps): void {
       const serverUrl = port ? `http://127.0.0.1:${port}` : `http://${d.hostOf(c)}`;
       const state = await manager().start({
         prompt: b.task,
+        origin: "console",
         actor: { kind: "person", id: person.id, onBehalfOf: person.id },
         env: { HL_SERVER_URL: serverUrl, HL_HOOK_TOKEN: d.hookToken },
         ...(b.runtime ? { runtime: b.runtime } : {}),

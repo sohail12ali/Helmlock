@@ -141,7 +141,16 @@ test("assistant: model without tool calls gets no tools and a note; trimming kee
   try {
     const chat = await a.create({ channel: "console", model: "fake/plain" });
     const big = "lorem ipsum ".repeat(130); // about 400 tokens each
-    for (let i = 0; i < 3; i++) await collect(a.send(chat.id, `turn ${i} ${big}`, { actor, channel: "console" }));
+    const events: AssistantEvent[][] = [];
+    for (let i = 0; i < 3; i++) events.push(await collect(a.send(chat.id, `turn ${i} ${big}`, { actor, channel: "console" })));
+    assert.equal(
+      events[0]?.some((e) => e.type === "notice"),
+      false,
+      "no notice before trimming",
+    );
+    const notice = events[2]?.find((e) => e.type === "notice") as Extract<AssistantEvent, { type: "notice" }> | undefined;
+    assert.equal(notice?.code, "context-near-limit", "trimming at ~80% raises a notice");
+    assert.match(notice?.message ?? "", /older turn\(s\) were left out/);
     const last = fake.requests.at(-1) as FakeRequest;
     assert.equal(last.body.tools, undefined);
     assert.match(msgs(last)[0]?.content ?? "", /cannot call tools/);

@@ -147,6 +147,7 @@ test("start, buffered events with seq numbers, replay from a seq, the record wri
   assert.equal(rec.agent, "analyst");
   assert.equal(rec.session_id, "sess-1");
   assert.equal(rec.failure_class, null);
+  assert.equal(rec.origin, undefined, "no origin given: none recorded");
 });
 
 test("one active run per ticket (F65), identical starts within 10 s coalesce (F134), force is refused", async () => {
@@ -171,10 +172,12 @@ test("one active run per ticket (F65), identical starts within 10 s coalesce (F1
   (runs.at(-1) as FakeRun).finish();
 });
 
-test("cancel kills the run; status and record say cancelled", async () => {
+test("cancel kills the run; status and record say cancelled; the origin is kept in state and record", async () => {
   runs = [];
   manager = makeManager();
-  const s = await manager.start({ prompt: "long job", ticket: "T-004-sa", actor });
+  const s = await manager.start({ prompt: "long job", ticket: "T-004-sa", actor, origin: "telegram:42" });
+  assert.equal(s.origin, "telegram:42");
+  assert.equal(manager.active()[0]?.origin, "telegram:42");
   const it = collect(manager.events(s.id));
   await manager.cancel(s.id, "sam");
   assert.equal(runs[0]?.cancelled, true);
@@ -185,6 +188,7 @@ test("cancel kills the run; status and record say cancelled", async () => {
   const rec = JSON.parse(readFileSync(join(ws.root, "runs", `${s.id}.json`), "utf8")) as RunRecord;
   assert.equal(rec.ok, false);
   assert.equal(rec.failure_class, "cancelled");
+  assert.equal(rec.origin, "telegram:42");
   await assert.rejects(manager.cancel("run-nope", "sam"), { rule: "unknown-run" } as object);
 });
 

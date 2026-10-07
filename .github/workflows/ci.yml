@@ -1,0 +1,67 @@
+# Delivery repo CI (F59, F147): the same checks as a local run, on Windows and Ubuntu.
+# Installs from the committed lockfile with install scripts disabled.
+name: ci
+
+on:
+  push:
+    branches: [main, setup/initial]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11
+          cache: pnpm
+
+      - name: Install (frozen lockfile, no install scripts)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Git identity for tests that commit
+        run: |
+          git config --global user.name "helmlock-ci"
+          git config --global user.email "ci@localhost"
+          git config --global init.defaultBranch main
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint (Biome)
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: End-to-end test
+        run: pnpm test:e2e
+
+      - name: UI tests
+        run: pnpm --filter @helmlock/ui test
+
+      - name: UI build
+        run: pnpm --filter @helmlock/ui build
+
+      - name: Harness lint
+        run: node packages/cli/bin/hl.ts harness lint

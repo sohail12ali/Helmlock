@@ -1,6 +1,7 @@
 // `hl doctor` checks. CheckResult shape ported from Paperclip cli/src/checks/index.ts
 // (MIT, Copyright (c) 2025 Paperclip AI): {name, status, message, canRepair, repair(), repairHint}.
-import { existsSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import type { Context, MountResult } from "../contracts/kernel.ts";
 
@@ -52,6 +53,40 @@ export function versionAtLeast(have: string, want: string): boolean {
 }
 
 const PER_MACHINE = ["author.local", "workspace.local.toml", ".env"];
+/** The knowledge repo's pre-commit hook (F59, F135), installed by `hl init` from the delivery templates. */
+export const HOOKS_DIR = ".githooks";
+const HOOK_TEMPLATE = ["templates", "knowledge-repo", ".githooks", "pre-commit"];
+
+/** core.hooksPath must point at .githooks so the pre-commit hook runs (`hl init` sets it; a fresh clone does not). */
+function hooksCheck(root: string, deliveryRoot: string, env: Record<string, string | undefined>, dryRun: boolean): CheckResult {
+  const git = (args: string[]) => spawnSync("git", args, { cwd: root, encoding: "utf8", env: env as NodeJS.ProcessEnv, windowsHide: true });
+  const got = git(["config", "--get", "core.hooksPath"]);
+  if (got.error) return { name: "hooks", status: "warn", message: "git not available; hooks not checked" };
+  const hook = join(root, HOOKS_DIR, "pre-commit");
+  const template = join(deliveryRoot, ...HOOK_TEMPLATE);
+  const path = (got.stdout ?? "").trim();
+  const hasHook = existsSync(hook);
+  if (path === HOOKS_DIR && hasHook) return { name: "hooks", status: "pass", message: `core.hooksPath = ${HOOKS_DIR}` };
+  const why = [hasHook ? "" : `${HOOKS_DIR}/pre-commit is missing`, path === HOOKS_DIR ? "" : `core.hooksPath is ${path ? JSON.stringify(path) : "not set"}`]
+    .filter(Boolean)
+    .join("; ");
+  return {
+    name: "hooks",
+    status: "warn",
+    message: `${why} (the pre-commit hook runs hl validate and hl harness sync --check)`,
+    canRepair: hasHook || existsSync(template),
+    repairHint: `hl doctor --repair sets core.hooksPath to ${HOOKS_DIR}${hasHook ? "" : " and copies the hook from the delivery templates"}`,
+    repair: () => {
+      if (dryRun) return;
+      if (!hasHook) {
+        mkdirSync(join(root, HOOKS_DIR), { recursive: true });
+        copyFileSync(template, hook);
+      }
+      const set = git(["config", "core.hooksPath", HOOKS_DIR]);
+      if (set.error || set.status !== 0) throw new Error(`git config core.hooksPath failed: ${set.error?.message ?? set.stderr}`);
+    },
+  };
+}
 
 export async function runChecks(d: DoctorEnv): Promise<CheckResult[]> {
   const out: CheckResult[] = [];
@@ -169,5 +204,6 @@ export async function runChecks(d: DoctorEnv): Promise<CheckResult[]> {
         : { name: "gitignore", status: "pass", message: "per-machine files are ignored" },
     );
   }
+  if (w.codeWorkspaceFile && w.root !== w.deliveryRoot && existsSync(join(w.root, ".git"))) out.push(hooksCheck(w.root, w.deliveryRoot, d.env, d.dryRun));
   return out;
 }

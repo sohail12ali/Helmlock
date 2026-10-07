@@ -5,7 +5,7 @@ import type { FileLayer, PluginManifest, PluginModule, TomlEmitter, VerbDef } fr
 import { composeRows, ok, readManifests } from "@helmlock/core";
 import { z } from "zod";
 import { catalog } from "../registry.ts";
-import { coerceValue, type SettingDecl, SettingError, setInDoc, settingsOf } from "./settings.ts";
+import { coerceValue, type SettingDecl, SettingError, type SettingValue, setInDoc, settingsOf } from "./settings.ts";
 
 export * from "./settings.ts";
 
@@ -34,7 +34,7 @@ const manifests = () => {
 export interface SetResult {
   plugin: string;
   key: string;
-  value: string | number | boolean;
+  value: SettingValue;
   file: string;
   changed: boolean;
 }
@@ -107,18 +107,19 @@ const configSet = verb({
     "hl config set work-log day_hours 7",
     "hl config set runtime-claude command C:/tools/claude.exe",
     "hl config set runtimes silence_sec 900 --dry-run",
+    'hl config set telegram allowed_user_ids "12345, 67890"',
   ],
   args: ["plugin", "key", "value"],
   input: z.object({
     plugin: z.string().min(1),
     key: z.string().min(1),
-    value: z.union([z.string(), z.number(), z.boolean()]),
+    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
     local: flag,
   }),
   writes: true,
   async run(v, i) {
     const r = await setSetting(v.ctx.get("files"), i, { dryRun: v.dryRun });
-    const shown = typeof r.value === "string" ? JSON.stringify(r.value) : String(r.value);
+    const shown = typeof r.value === "string" || Array.isArray(r.value) ? JSON.stringify(r.value) : String(r.value);
     const verb = v.dryRun ? "would set" : r.changed ? "set" : "unchanged:";
     // Config reload only (F107): hl commands read it now; a running `hl serve` picks it up when restarted (F132 style).
     const note = r.changed && !v.dryRun ? " (applies to hl commands now; restart hl serve for the console)" : "";

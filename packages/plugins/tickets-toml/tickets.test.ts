@@ -45,14 +45,19 @@ describe("tickets-toml", () => {
       assert.equal(t.ticket.owner, "sam");
       assert.equal(t.flags.blocked, false);
       assert.equal(await newTicket(ws, "Second"), "T-002-sa");
+      // The activity line and verb.done of `ticket new` name the new ticket (registry entityOf reads data.id).
+      const done: unknown[] = [];
+      ws.runtime.ctx.on("verb.done", (p) => void done.push(p.entity));
+      assert.equal(await newTicket(ws, "Third"), "T-003-sa");
+      assert.deepEqual(done, ["T-003-sa"]);
       const kims = okData(await ws.run("ticket new", { title: "Kim's" }, { actor: KIM })).ticket as Ticket;
-      assert.equal(kims.ticket.id, "T-003-kl");
+      assert.equal(kims.ticket.id, "T-004-kl");
       const list = okData(await ws.run("ticket list", {})).tickets as Ticket[];
-      assert.equal(list.length, 3);
+      assert.equal(list.length, 4);
       const mine = okData(await ws.run("ticket list", { mine: true }, { actor: KIM })).tickets as Ticket[];
       assert.deepEqual(
         mine.map((t) => t.ticket.id),
-        ["T-003-kl"],
+        ["T-004-kl"],
       );
     }));
 

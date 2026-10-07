@@ -47,7 +47,8 @@ export function buildVerbs(ctx: Context, store: Store): VerbDef[] {
       async run(v, i) {
         const o = await store.create(i, v.actor, v.dryRun);
         const t = o.value;
-        return done(o, v.dryRun, `${t.ticket.id}  ${t.ticket.stage}  ${t.ticket.title}`, { ticket: t });
+        // The top-level id names the new ticket as the activity line's entity (registry entityOf).
+        return done(o, v.dryRun, `${t.ticket.id}  ${t.ticket.stage}  ${t.ticket.title}`, { id: t.ticket.id, ticket: t });
       },
     }),
     def({

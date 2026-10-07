@@ -19,10 +19,9 @@ scope = "local"
 section = "telegram"
 
 [settings.allowed_user_ids]
-type = "string"
+type = "list"
 label = "Allowed Telegram user ids"
-hint = "Comma-separated numeric user ids. Anyone else gets nothing; empty means nobody (fail-closed)."
-default = ""
+hint = "Numeric Telegram user ids (a TOML array; the CLI takes them comma-separated). Anyone else gets nothing; empty means nobody (fail-closed)."
 scope = "local"
 section = "telegram"
 

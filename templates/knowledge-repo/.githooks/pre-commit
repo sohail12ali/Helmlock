@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+# Knowledge repo pre-commit hook (F59, F135): validate the tickets this commit touches, then check that the generated
+# host config matches harness/harness.toml. `hl init` sets `git config core.hooksPath .githooks`; `hl doctor --repair`
+# sets it again in a fresh clone. Runs under sh (Git Bash on Windows). Skip once with `git commit --no-verify`.
+set -u
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+
+# Ticket folders with staged changes (added, copied, modified, renamed): artifacts/T-001-sa/... -> T-001-sa.
+tickets="$(git diff --cached --name-only --diff-filter=ACMR -- artifacts | sed -n 's#^artifacts/\(T-[0-9][0-9]*-[a-z][a-z]*\)/.*#\1#p' | sort -u)"
+
+status=0
+for t in $tickets; do
+  sh ./hl validate "$t" || status=1
+done
+sh ./hl harness sync --check || status=1
+
+if [ "$status" -ne 0 ]; then
+  echo "pre-commit: fix the findings above, or run 'hl harness sync' for generated config (git commit --no-verify skips once)" >&2
+fi
+exit "$status"
