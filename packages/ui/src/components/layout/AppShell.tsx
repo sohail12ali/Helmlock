@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useOverview, useWorkspace } from "@/api/hooks";
 import { type LiveState, useLiveUpdates } from "@/api/live";
+import { NewTicketHost } from "@/components/actions/NewTicket";
 import { HelpDialog } from "@/components/HelpDialog";
 import { Palette } from "@/components/Palette";
 import { Button } from "@/components/ui/button";
@@ -233,6 +234,7 @@ export function AppShell() {
 
         <Palette open={paletteOpen} onOpenChange={setPaletteOpen} pathname={location.pathname} />
         <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+        <NewTicketHost />
       </div>
     </ShellContext.Provider>
   );

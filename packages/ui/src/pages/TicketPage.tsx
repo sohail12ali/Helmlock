@@ -1,12 +1,24 @@
 import type { BugRecord, DecisionRecord, GapRecord, QuestionRecord, Task, TicketDetail } from "@helmlock/core/contracts";
-import { ChevronRight, Copy, MessageCircleQuestion } from "lucide-react";
+import { ChevronRight, Copy, MessageCircleQuestion, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { useArtifact, useRuns, useStageLabel, useTicket } from "@/api/hooks";
-import { CopyCommand, EmptyState, ErrorState, Loading, Mono, StatusChip } from "@/components/common";
+import {
+  BugForm,
+  CommentBox,
+  DecisionForm,
+  GapForm,
+  QuestionCard,
+  QuestionForm,
+  ResolveRecord,
+  TaskForm,
+  TaskStatusToggle,
+} from "@/components/actions/RecordActions";
+import { BlockControl, ClaimControl, FieldsEditor, MoveControls } from "@/components/actions/TicketControls";
+import { EmptyState, ErrorState, Loading, Mono, StatusChip } from "@/components/common";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { RunsTable } from "@/components/RunsTable";
-import { FileList, GateNotice, TicketChips } from "@/components/TicketBits";
+import { FileList, TicketChips } from "@/components/TicketBits";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +28,19 @@ import { fmtBytes, fmtDateTime } from "@/lib/format";
 
 type Rec<T> = T & { kind: string; path: string };
 const byKind = <T,>(d: TicketDetail, kind: string) => d.records.filter((r) => r.kind === kind) as unknown as Rec<T>[];
+
+/** A folded "add" form, so the record lists stay first. */
+function AddBox({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-md border p-2 text-sm">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-ink2 hover:text-foreground">
+        <Plus className="size-4" />
+        {label}
+      </summary>
+      <div className="mt-2">{children}</div>
+    </details>
+  );
+}
 
 function Crumbs({ items }: { items: { label: ReactNode; to?: string }[] }) {
   return (
@@ -37,7 +62,7 @@ function Crumbs({ items }: { items: { label: ReactNode; to?: string }[] }) {
 }
 
 function DecisionsTable({ decisions }: { decisions: Rec<DecisionRecord>[] }) {
-  if (decisions.length === 0) return <EmptyState title="No decisions yet." command='hl decision add <T> "<title>" --chosen "<option>" --why "<reason>"' />;
+  if (decisions.length === 0) return <EmptyState title="No decisions yet." hint="Record one with Add a decision on the Decisions tab." />;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm" aria-label="Decisions">
@@ -77,27 +102,30 @@ function QuestionsList({ questions, onlyOpen = false }: { questions: Rec<Questio
   if (list.length === 0) return <p className="text-sm text-muted-foreground">{onlyOpen ? "No open questions." : "No questions on this ticket."}</p>;
   return (
     <ul className="flex flex-col gap-3">
-      {list.map((q) => (
-        <li key={q.id} className="flex gap-2 text-sm">
-          <MessageCircleQuestion
-            className={q.blocking && q.status === "open" ? "mt-0.5 size-4 shrink-0 text-destructive" : "mt-0.5 size-4 shrink-0 text-muted-foreground"}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Mono className="text-xs">{q.id}</Mono>
-              {q.blocking && <Badge variant="danger">blocking</Badge>}
-              <StatusChip status={q.status} />
-              <span className="text-xs text-muted-foreground">
-                asked {fmtDateTime(q.asked)} by <Mono>{q.author}</Mono>
-              </span>
+      {list.map((q) =>
+        q.status === "open" ? (
+          <li key={q.id}>
+            <QuestionCard q={q} />
+          </li>
+        ) : (
+          <li key={q.id} className="flex gap-2 text-sm">
+            <MessageCircleQuestion className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Mono className="text-xs">{q.id}</Mono>
+                {q.blocking && <Badge variant="danger">blocking</Badge>}
+                <StatusChip status={q.status} />
+                <span className="text-xs text-muted-foreground">
+                  asked {fmtDateTime(q.asked)} by <Mono>{q.author}</Mono>
+                </span>
+              </div>
+              <p className="mt-0.5">{q.text}</p>
+              {q.options.length > 0 && <p className="text-xs text-muted-foreground">Options: {q.options.join(" / ")}</p>}
+              {q.answer && <p className="mt-1 rounded-md bg-sunk px-2 py-1 text-ink2">{q.answer}</p>}
             </div>
-            <p className="mt-0.5">{q.text}</p>
-            {q.options.length > 0 && <p className="text-xs text-muted-foreground">Options: {q.options.join(" / ")}</p>}
-            {q.answer && <p className="mt-1 rounded-md bg-sunk px-2 py-1 text-ink2">{q.answer}</p>}
-            {q.status === "open" && !onlyOpen && <CopyCommand className="mt-1.5 max-w-lg" command={`hl question answer ${q.id} "<answer>"`} />}
-          </div>
-        </li>
-      ))}
+          </li>
+        ),
+      )}
     </ul>
   );
 }
@@ -106,14 +134,15 @@ function BugsAndGaps({ bugs, gaps }: { bugs: Rec<BugRecord>[]; gaps: Rec<GapReco
   const open = [...bugs.filter((b) => b.status === "open"), ...gaps.filter((g) => g.status === "open")];
   if (open.length === 0) return <p className="text-sm text-muted-foreground">No open bugs or gaps.</p>;
   return (
-    <ul className="flex flex-col gap-1.5 text-sm">
+    <ul className="flex flex-col gap-1.5 text-sm" aria-label="Open bugs and gaps">
       {bugs
         .filter((b) => b.status === "open")
         .map((b) => (
           <li key={b.id} className="flex flex-wrap items-center gap-1.5">
             <Mono className="text-xs">{b.id}</Mono>
             <StatusChip status={b.severity === "high" || b.severity === "critical" ? "failed" : "open"} label={b.severity} />
-            <span>{b.title}</span>
+            <span className="min-w-0 flex-1">{b.title}</span>
+            <ResolveRecord id={b.id} kind="bug" />
           </li>
         ))}
       {gaps
@@ -122,7 +151,8 @@ function BugsAndGaps({ bugs, gaps }: { bugs: Rec<BugRecord>[]; gaps: Rec<GapReco
           <li key={g.id} className="flex flex-wrap items-center gap-1.5">
             <Mono className="text-xs">{g.id}</Mono>
             <Badge variant="outline">{g.category}</Badge>
-            <span>{g.text}</span>
+            <span className="min-w-0 flex-1">{g.text}</span>
+            <ResolveRecord id={g.id} kind="gap" />
           </li>
         ))}
     </ul>
@@ -149,11 +179,12 @@ function Progress({ done, total }: { done: number; total: number }) {
 function TasksView({ tasks, ticket }: { tasks: Task[]; ticket: string }) {
   if (tasks.length === 0)
     return (
-      <EmptyState
-        title="No tasks yet."
-        hint="The planner slices the work into tasks once the spec is frozen."
-        command={`hl task add ${ticket} "<title>" --slice S1 --layer api --ac AC-1`}
-      />
+      <div className="flex flex-col gap-3">
+        <EmptyState title="No tasks yet." hint="The planner slices the work into tasks once the spec is frozen, or add one here." />
+        <AddBox label="Add a task">
+          <TaskForm ticket={ticket} slices={["S1"]} />
+        </AddBox>
+      </div>
     );
   const slices = [...new Set(tasks.map((t) => t.slice))];
   const acs = [...new Set(tasks.flatMap((t) => t.acs))].sort();
@@ -186,7 +217,7 @@ function TasksView({ tasks, ticket }: { tasks: Task[]; ticket: string }) {
                       </span>
                     </td>
                     <td className="py-1.5 text-right">
-                      <StatusChip status={t.status} />
+                      <TaskStatusToggle ticket={ticket} task={t} />
                     </td>
                   </tr>
                 ))}
@@ -194,6 +225,11 @@ function TasksView({ tasks, ticket }: { tasks: Task[]; ticket: string }) {
           </table>
         </section>
       ))}
+      <section>
+        <AddBox label="Add a task">
+          <TaskForm ticket={ticket} slices={slices} />
+        </AddBox>
+      </section>
       <section>
         <h3 className="mb-1 text-xs font-medium text-muted-foreground">AC trace</h3>
         {acs.length === 0 ? (
@@ -236,7 +272,7 @@ function Thread({ d }: { d: TicketDetail }) {
           ))}
         </ol>
       )}
-      <CopyCommand className="max-w-lg" label="Comment" command={`hl ticket comment ${d.card.id} "<text>"`} />
+      <CommentBox ticket={d.card.id} />
     </div>
   );
 }
@@ -263,6 +299,11 @@ function Properties({ d, stageLabel }: { d: TicketDetail; stageLabel: (s: string
   const related = t.links?.related ?? [];
   return (
     <div className="flex flex-col gap-4 text-sm">
+      <section aria-label="Ticket actions" className="flex flex-col gap-3">
+        <ClaimControl detail={d} />
+        <BlockControl detail={d} />
+        <FieldsEditor detail={d} />
+      </section>
       <section>
         <h2 className="mb-2 font-semibold">Properties</h2>
         <dl className="grid grid-cols-[6.5rem_1fr] gap-y-1.5">
@@ -353,7 +394,7 @@ export function TicketPage() {
     <PageLayout id="ticket" rightTitle="Properties" right={<Properties d={d} stageLabel={stageLabel} />}>
       <TicketHeader d={d} crumbs={[{ label: "Tickets", to: "/tickets" }, { label: d.card.id }]} />
       <div className="mt-3">
-        <GateNotice detail={d} stageLabel={stageLabel} />
+        <MoveControls detail={d} stageLabel={stageLabel} />
       </div>
       <Tabs
         className="mt-3"
@@ -392,8 +433,7 @@ export function TicketPage() {
                 ) : (
                   <EmptyState
                     title="No goal written yet."
-                    hint="The spec file holds the full summary; open it from Files."
-                    command={`hl ticket set ${d.card.id} --goal "<one sentence>"`}
+                    hint="The spec file holds the full summary; open it from Files. Set a goal with Edit in Properties."
                   />
                 )}
               </CardContent>
@@ -428,8 +468,14 @@ export function TicketPage() {
               <CardHeader>
                 <CardTitle>Bugs and gaps</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-2">
                 <BugsAndGaps bugs={bugs} gaps={gaps} />
+                <AddBox label="Add a bug">
+                  <BugForm ticket={d.card.id} />
+                </AddBox>
+                <AddBox label="Add a gap">
+                  <GapForm ticket={d.card.id} />
+                </AddBox>
               </CardContent>
             </Card>
           </div>
@@ -446,11 +492,17 @@ export function TicketPage() {
           <Thread d={d} />
         </TabsContent>
         <TabsContent value="runs">{runs.isError ? <ErrorState error={runs.error} /> : <RunsTable runs={ticketRuns} />}</TabsContent>
-        <TabsContent value="decisions">
+        <TabsContent value="decisions" className="flex flex-col gap-3">
           <DecisionsTable decisions={decisions} />
+          <AddBox label="Add a decision">
+            <DecisionForm ticket={d.card.id} />
+          </AddBox>
         </TabsContent>
-        <TabsContent value="questions">
+        <TabsContent value="questions" className="flex flex-col gap-3">
           <QuestionsList questions={questions} />
+          <AddBox label="Ask a question">
+            <QuestionForm ticket={d.card.id} />
+          </AddBox>
         </TabsContent>
         <TabsContent value="tasks">
           <TasksView tasks={d.tasks} ticket={d.card.id} />

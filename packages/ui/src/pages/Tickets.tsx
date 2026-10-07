@@ -1,9 +1,13 @@
 import type { Board, TicketCard } from "@helmlock/core/contracts";
 import { AlertTriangle, Columns3, List, MessageCircleQuestion, Search } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useBoard, useStageLabel, useWorkspace } from "@/api/hooks";
-import { CopyCommand, EmptyState, ErrorState, Loading, Mono, PageHeader, StatusChip } from "@/components/common";
+import { useDraggableCard, useDropLane } from "@/components/actions/dnd";
+import { NewTicketButton } from "@/components/actions/NewTicket";
+import { ActionError } from "@/components/actions/result";
+import { useAction } from "@/components/actions/use-action";
+import { EmptyState, ErrorState, Loading, Mono, PageHeader, StatusChip } from "@/components/common";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { TicketDrawer } from "@/components/TicketBits";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +89,113 @@ function CardBody({ t }: { t: TicketCard }) {
   );
 }
 
+function BoardCard({
+  t,
+  selected,
+  cursor,
+  moving,
+  onOpen,
+}: {
+  t: TicketCard;
+  selected?: string;
+  cursor?: string;
+  moving: boolean;
+  onOpen: (id: string) => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const dragging = useDraggableCard(ref, t.id, t.stage, !moving);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      data-nav-id={t.id}
+      data-ticket={t.id}
+      aria-busy={moving || undefined}
+      onClick={() => onOpen(t.id)}
+      className={cn(
+        "cursor-grab rounded-md border bg-card p-2.5 text-left shadow-xs transition-opacity hover:border-primary/50 active:cursor-grabbing",
+        selected === t.id && "border-primary ring-1 ring-primary",
+        cursor === t.id && selected !== t.id && "ring-1 ring-primary/40",
+        t.blocked && "border-l-2 border-l-destructive",
+        (dragging || moving) && "opacity-50",
+      )}
+    >
+      <CardBody t={t} />
+    </button>
+  );
+}
+
+function Lane({
+  stage,
+  lane,
+  selected,
+  cursor,
+  onOpen,
+}: {
+  stage: Board["stages"][number];
+  lane: TicketCard[];
+  selected?: string;
+  cursor?: string;
+  onOpen: (id: string) => void;
+}) {
+  const ref = useRef<HTMLLIElement>(null);
+  const move = useAction("ticket move");
+  const [moving, setMoving] = useState<string | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
+  // Waits for the server (F109 budget is for input, not the write); the card snaps back on a block since nothing moved.
+  const over = useDropLane(ref, stage.id, async (id) => {
+    setMoving(id);
+    setRefused(null);
+    const r = await move.run({ id, stage: stage.id });
+    setMoving(null);
+    if (!r.ok) setRefused(id);
+  });
+  const overWip = stage.wip !== undefined && stage.count > stage.wip;
+  return (
+    <li
+      ref={ref}
+      aria-label={`${stage.label} lane`}
+      data-stage={stage.id}
+      className={cn("flex w-64 shrink-0 flex-col rounded-lg bg-sunk/70 p-2 transition-shadow", over && "ring-2 ring-primary/60")}
+    >
+      <header className="mb-2 flex items-center gap-2 px-1">
+        <h2 className="text-sm font-semibold">{stage.label}</h2>
+        <Mono
+          className={cn("text-xs", overWip ? "text-warn" : "text-muted-foreground")}
+          aria-label={stage.wip ? `WIP ${stage.count} of ${stage.wip}` : `${stage.count} tickets`}
+        >
+          {stage.wip !== undefined ? `${stage.count}/${stage.wip}` : stage.count}
+        </Mono>
+        {overWip && (
+          <Badge variant="warn" title={`More than ${stage.wip} tickets in ${stage.label}; moves still work`}>
+            <AlertTriangle />
+            over WIP
+          </Badge>
+        )}
+        {stage.agent && <span className="ml-auto text-xs text-muted-foreground">{stage.agent}</span>}
+      </header>
+      {move.failure && (
+        <ActionError
+          className="mb-2"
+          result={move.failure}
+          onDismiss={() => {
+            move.reset();
+            setRefused(null);
+          }}
+        />
+      )}
+      {move.failure && refused && <p className="sr-only">{`${refused} was not moved to ${stage.label}`}</p>}
+      <div className="flex flex-col gap-2">
+        {lane.length === 0 && !moving && <p className="px-1 py-3 text-xs text-muted-foreground">Empty</p>}
+        {moving && <p className="px-1 text-xs text-muted-foreground">{`Moving ${moving}…`}</p>}
+        {lane.map((t) => (
+          <BoardCard key={t.id} t={t} selected={selected} cursor={cursor} moving={moving === t.id} onOpen={onOpen} />
+        ))}
+      </div>
+    </li>
+  );
+}
+
 function BoardView({
   board,
   tickets,
@@ -100,43 +211,9 @@ function BoardView({
 }) {
   return (
     <ul className="flex gap-3 overflow-x-auto pb-2" aria-label="Board">
-      {board.stages.map((s) => {
-        const lane = tickets.filter((t) => t.stage === s.id);
-        const over = s.wip !== undefined && s.count > s.wip;
-        return (
-          <li key={s.id} aria-label={`${s.label} lane`} className="flex w-64 shrink-0 flex-col rounded-lg bg-sunk/70 p-2">
-            <header className="mb-2 flex items-center gap-2 px-1">
-              <h2 className="text-sm font-semibold">{s.label}</h2>
-              <Mono
-                className={cn("text-xs", over ? "text-destructive" : "text-muted-foreground")}
-                aria-label={s.wip ? `WIP ${s.count} of ${s.wip}` : `${s.count} tickets`}
-              >
-                {s.wip !== undefined ? `${s.count}/${s.wip}` : s.count}
-              </Mono>
-              {s.agent && <span className="ml-auto text-xs text-muted-foreground">{s.agent}</span>}
-            </header>
-            <div className="flex flex-col gap-2">
-              {lane.length === 0 && <p className="px-1 py-3 text-xs text-muted-foreground">Empty</p>}
-              {lane.map((t) => (
-                <button
-                  type="button"
-                  key={t.id}
-                  data-nav-id={t.id}
-                  onClick={() => onOpen(t.id)}
-                  className={cn(
-                    "rounded-md border bg-card p-2.5 text-left shadow-xs hover:border-primary/50",
-                    selected === t.id && "border-primary ring-1 ring-primary",
-                    cursor === t.id && selected !== t.id && "ring-1 ring-primary/40",
-                    t.blocked && "border-l-2 border-l-destructive",
-                  )}
-                >
-                  <CardBody t={t} />
-                </button>
-              ))}
-            </div>
-          </li>
-        );
-      })}
+      {board.stages.map((s) => (
+        <Lane key={s.id} stage={s} lane={tickets.filter((t) => t.stage === s.id)} selected={selected} cursor={cursor} onOpen={onOpen} />
+      ))}
     </ul>
   );
 }
@@ -265,6 +342,7 @@ export function TicketsPage() {
       onCloseRight={() => set("t", undefined)}
     >
       <PageHeader title="Tickets">
+        <NewTicketButton />
         <fieldset className="inline-flex rounded-md border p-0.5" aria-label="View">
           {(["board", "list"] as const).map((v) => (
             <Button
@@ -317,7 +395,7 @@ export function TicketsPage() {
       </div>
 
       {board.data.tickets.length === 0 ? (
-        <EmptyState title="No tickets yet." hint="Create the first one from the CLI or ask the dispatcher." command='hl ticket new "<title>"' />
+        <EmptyState title="No tickets yet." hint="Create the first one with New ticket (key c), or ask the dispatcher." />
       ) : visible.length === 0 ? (
         <EmptyState title="No tickets match these filters." hint="Clear a filter chip or the text filter." />
       ) : view === "board" ? (
@@ -325,9 +403,6 @@ export function TicketsPage() {
       ) : (
         <ListView tickets={visible} selected={selected} cursor={cursor} onOpen={open} stageLabel={stageLabel} />
       )}
-      <div className="mt-4 max-w-md">
-        <CopyCommand label="New ticket" command='hl ticket new "<title>" --size M' />
-      </div>
     </PageLayout>
   );
 }
