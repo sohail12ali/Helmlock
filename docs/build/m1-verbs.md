@@ -10,20 +10,23 @@ Ids: tickets `T-014-sa` (counter plus author initials), records `D-003-sa` (deci
 | `hl doctor` | `--repair`, `--json` | S1 |
 | `hl help agent` | prints the agent contract | S1 |
 | `hl config show` | `--json` | S1 |
-| `hl init <dir>` | `--name`, `--author`, `--initials`, `--email`, `--delivery <path>`, `--yes`, `--dry-run` | S6 |
+| `hl init <dir>` | `--name`, `--author`, `--slug`, `--initials`, `--email`, `--no-git`, `--delivery <path>`, `--yes`, `--dry-run` | S6 |
 | `hl project add <folder-name>` | `--path`, `--id`, `--yes`, `--dry-run` | S6 |
 | `hl ticket new "<title>"` | `--project`, `--size S\|M\|L`, `--priority`, `--goal` | S3 |
-| `hl ticket show <T>` / `hl ticket list` | `--stage`, `--mine`, `--json` | S3 |
+| `hl ticket show <T>` / `hl ticket list` | `--stage`, `--mine`, `--json` (show includes tasks and record counts) | S3 |
 | `hl ticket move <T> <stage>` | exits 2 when a gate blocks | S3 |
 | `hl ticket block <T>` / `hl ticket unblock <T>` | `--by "<who or what>"`, `--next "<next action>"` | S3 |
+| `hl ticket set <T>` | `--size`, `--priority`, `--title`, `--summary`, `--project`, `--goal` | S3 |
 | `hl ticket claim <T>` / `hl ticket release <T>` | a second claim exits 1 and is never retried | S3 |
 | `hl ticket comment <T> "<text>"` | | S3 |
 | `hl decision add <T> "<title>"` | `--chosen`, `--why`, `--rejected` (repeatable) | S3 |
 | `hl question add <T> "<text>"` | `--blocking`, `--option` (repeatable) | S3 |
 | `hl question answer <Q> "<answer>"` | | S3 |
 | `hl bug add <T> "<title>"` / `hl gap add <T> "<text>"` | `--severity` / `--category` | S3 |
+| `hl bug resolve <B>` / `hl gap resolve <G>` | `--fixed-in` / `--note` | S3 |
 | `hl blockers <T>` | open blocking questions, bugs, gaps; `--json` | S3 |
-| `hl task add <T> "<title>"` | `--slice S1`, `--layer db\|api\|ui\|test\|env\|spike\|docs`, `--ac AC-1` (repeatable), `--estimate` | S3 |
+| `hl task add <T> "<title>"` | `--slice S1`, `--layer db\|api\|ui\|test\|env\|spike\|docs`, `--ac AC-1`, `--depends <task-id>`, `--file <path>` (all repeatable), `--estimate` | S3 |
+| `hl task list <T>` | `--json` | S3 |
 | `hl task set <T> <task-id>` | `--status todo\|doing\|done\|blocked`, `--actual` | S3 |
 | `hl validate [<T>]` | `--changed <file>`, `--json` (budget: under 300 ms for one file) | S3 |
 | `hl todo add "<text>"` | `--ticket`, `--due`, `--priority` | S4 |
