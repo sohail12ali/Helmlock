@@ -12,6 +12,7 @@ const CORE_SUMMARY: Record<string, string> = {
   doctor: "check the setup (--repair for safe fixes)",
   "help agent": "print the contract agents follow",
   "config show": "show composed plugin rows and their layer",
+  serve: "start the read-only console on 127.0.0.1 (--port, --open)",
 };
 
 export function buildTree(entries: readonly VerbEntry[]): Command {
