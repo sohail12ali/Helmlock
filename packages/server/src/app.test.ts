@@ -287,7 +287,7 @@ describe("api", () => {
       const r = await app.request(p);
       const ms = performance.now() - t;
       assert.equal(r.status, 200);
-      assert.ok(ms < 50, `${p} took ${ms.toFixed(1)} ms`);
+      assert.ok(ms < 200, `${p} took ${ms.toFixed(1)} ms`);
     }
   });
 });

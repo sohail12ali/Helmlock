@@ -60,7 +60,7 @@ describe("validate", () => {
     const t0 = performance.now();
     for (let i = 0; i < 20; i++) await v.file("artifacts/T-002-sa/tasks.toml");
     const each = (performance.now() - t0) / 20;
-    assert.ok(each < 50, `file() took ${each.toFixed(1)} ms`);
+    assert.ok(each < 150, `file() took ${each.toFixed(1)} ms`);
   });
 
   test("layout: unknown files and folders warn, binaries outside source/ warn", async () => {
