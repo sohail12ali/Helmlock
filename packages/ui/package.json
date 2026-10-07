@@ -9,6 +9,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^4.0.0",
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "^3.0.0",
     "@helmlock/core": "workspace:^",
     "@tanstack/react-query": "^5.104.1",
     "class-variance-authority": "^0.7.1",

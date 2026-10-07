@@ -143,3 +143,106 @@ export interface ChangeEvent {
   tickets: string[];
   paths: string[];
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Milestone 3: the writable console. Writes go through the SAME verb registry as the CLI (F13a): activity lines,
+// gates, guards, page refresh and stale-write checks all apply. No second write path.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Verbs the console may call. Anything else is refused with 403 rule "verb-not-allowed". Agent runs, init, serve and
+ *  harness generation stay CLI-only in this milestone. */
+export const CONSOLE_VERBS = [
+  "ticket new",
+  "ticket set",
+  "ticket move",
+  "ticket block",
+  "ticket unblock",
+  "ticket claim",
+  "ticket release",
+  "ticket comment",
+  "decision add",
+  "question add",
+  "question answer",
+  "bug add",
+  "bug resolve",
+  "gap add",
+  "gap resolve",
+  "task add",
+  "task set",
+  "todo add",
+  "todo done",
+  "log-work",
+  "validate",
+  "config set",
+] as const;
+export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
+
+/** Header every write must carry (with Content-Type: application/json); a cross-site form cannot set it. */
+export const WRITE_HEADER = "X-Helmlock-Request";
+
+export interface VerbField {
+  key: string;
+  kind: "boolean" | "string" | "number" | "array" | "unknown";
+  of?: "boolean" | "string" | "number" | "unknown";
+  required: boolean;
+  choices?: string[];
+  description?: string;
+}
+
+/** GET /api/v1/verbs: the console verbs with their inputs, so forms can be generated (F9c). */
+export interface VerbInfo {
+  id: ConsoleVerb;
+  summary: string;
+  examples: string[];
+  writes: boolean;
+  /** Positional argument names in CLI order (also input keys). */
+  args: string[];
+  fields: VerbField[];
+}
+export type VerbCatalog = VerbInfo[];
+
+/** POST /api/v1/verbs/<noun>/<verb> (e.g. /verbs/ticket/move, /verbs/log-work), JSON body. */
+export interface VerbCall {
+  input: Record<string, unknown>;
+  dry_run?: boolean;
+}
+/** Response body; HTTP 200 for ok, 409 for a code-2 block (gate or guard), 400/422 for code 1. */
+export type VerbCallResult =
+  | { ok: true; data: unknown; text?: string }
+  | { ok: false; code: 1 | 2; error: { rule: string; message: string; file?: string; fix?: string }; data?: unknown };
+
+/** GET /api/v1/todos?status=open|done&ticket= */
+export interface TodoItem {
+  id: string;
+  text: string;
+  status: "open" | "done";
+  priority: string;
+  due?: string;
+  ticket?: string;
+  created: string;
+  author: string;
+}
+export type TodoList = TodoItem[];
+
+/** A setting a plugin declares in plugin.toml [settings.<key>] (F44). Secrets are stored by env-var name only (F9b). */
+export interface SettingField {
+  key: string;
+  type: "string" | "number" | "boolean" | "select" | "secret-env";
+  label: string;
+  hint?: string;
+  default?: string | number | boolean;
+  options?: string[];
+  /** "workspace" = workspace.toml (shared, committed); "local" = workspace.local.toml (this machine). */
+  scope: "workspace" | "local";
+}
+export interface PluginSettings {
+  plugin: string;
+  label: string;
+  fields: SettingField[];
+  /** Current composed values and the layer each came from. */
+  values: Record<string, { value: unknown; source: "default" | "bundle" | "workspace.toml" | "workspace.local.toml" | "flags" }>;
+}
+/** GET /api/v1/settings: F9a sections; a section may be empty (shown with what is coming). */
+export interface SettingsView {
+  sections: { id: "workspace" | "models" | "agents" | "permissions" | "telegram"; label: string; plugins: PluginSettings[] }[];
+}

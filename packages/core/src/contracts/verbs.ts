@@ -28,7 +28,8 @@ export interface VerbError {
   fix?: string;
 }
 
-export type VerbResult<O = unknown> = { ok: true; data: O; text?: string } | { ok: false; code: 1 | 2; error: VerbError };
+/** A failure may carry data too (e.g. validate findings, gate reasons) so --json and the console can show them. */
+export type VerbResult<O = unknown> = { ok: true; data: O; text?: string } | { ok: false; code: 1 | 2; error: VerbError; data?: unknown };
 
 export interface VerbDef<I extends z.ZodType = z.ZodType, O = unknown> {
   /** "ticket move", "log-work", "where": noun then verb, space separated. */
