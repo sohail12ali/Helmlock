@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Helmlock">
+  <title>Helmlock</title>
+  <defs>
+    <linearGradient id="hl-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="hl-metal" gradientUnits="userSpaceOnUse" x1="0" y1="6" x2="0" y2="58">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <!-- tile -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#hl-bg)"/>
+  <!-- helm: eight handles and spokes -->
+  <g stroke="url(#hl-metal)" stroke-linecap="round">
+    <g stroke-width="4.2">
+      <line x1="32" y1="5.5" x2="32" y2="58.5"/>
+      <line x1="5.5" y1="32" x2="58.5" y2="32"/>
+      <line x1="13.3" y1="13.3" x2="50.7" y2="50.7"/>
+      <line x1="50.7" y1="13.3" x2="13.3" y2="50.7"/>
+    </g>
+    <!-- rim -->
+    <circle cx="32" cy="32" r="18.5" fill="none" stroke-width="4.6"/>
+  </g>
+  <!-- hub: a padlock -->
+  <circle cx="32" cy="32" r="11.6" fill="#0b1f4d"/>
+  <path d="M27.2 31.2v-3.1a4.8 4.8 0 0 1 9.6 0v3.1" fill="none" stroke="url(#hl-metal)" stroke-width="2.6" stroke-linecap="round"/>
+  <rect x="24.6" y="30.4" width="14.8" height="10.6" rx="2.6" fill="url(#hl-metal)"/>
+  <circle cx="32" cy="34.6" r="1.7" fill="#0b1f4d"/>
+  <rect x="31.1" y="35.2" width="1.8" height="3.4" rx="0.9" fill="#0b1f4d"/>
+</svg>

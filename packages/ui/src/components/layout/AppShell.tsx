@@ -181,8 +181,9 @@ export function AppShell() {
               {narrow ? <Menu /> : <PanelLeft />}
             </Button>
           )}
-          <NavLink to="/" className="truncate font-semibold" title={ws.data?.name}>
-            {phone ? (ws.data?.name ?? consoleName) : consoleName}
+          <NavLink to="/" className="flex min-w-0 items-center gap-2 font-semibold" title={ws.data?.name}>
+            <img src="/favicon.svg" alt="" width={22} height={22} className="size-[22px] shrink-0" />
+            <span className="truncate">{phone ? (ws.data?.name ?? consoleName) : consoleName}</span>
           </NavLink>
           <form
             aria-label="Search the workspace"

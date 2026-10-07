@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/helmlock-icon.svg" width="96" alt="Helmlock icon: a ship's helm with a padlock hub"></p>
+
 # Helmlock
 
 Helmlock is a delivery system for teams that work with coding agents (Claude Code and the Cursor CLI).

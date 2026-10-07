@@ -59,6 +59,8 @@ function ToolLine({ m }: { m: ChatMessageData }) {
 
 function Message({ m, streaming }: { m: ChatMessageData; streaming?: boolean }) {
   if (m.role === "tool" || m.tool) return <ToolLine m={m} />;
+  // A model often sends an empty assistant turn right before a tool call: nothing to show.
+  if (m.role === "assistant" && !m.text.trim() && !streaming) return null;
   const me = m.role === "user";
   return (
     <div className={cn("flex flex-col", me ? "items-end" : "items-start")} data-role={m.role}>
