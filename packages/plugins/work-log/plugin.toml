@@ -6,3 +6,13 @@ provides = ["worklog"]
 requires = ["roster"]
 verbs = ["log-work", "log show"]
 entry = "index.ts"
+
+[settings.day_hours]
+type = "number"
+label = "Working day (hours)"
+hint = "Hours a day's work-log entries are spread over when no hours are pinned."
+default = 8
+min = 0.25
+max = 24
+scope = "workspace"
+section = "workspace"

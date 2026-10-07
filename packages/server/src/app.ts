@@ -1,12 +1,24 @@
 // The read-only console API (milestone 2): every route of contracts/api.ts under /api/v1, plus SSE and the built UI.
 // Route layout and the { ok, data } | { ok: false, error } envelope follow Paperclip server/src/app.ts and the hl CLI;
-// localhost-only binding and the Host check follow control-center console/server/httpd.py. Writes stay in `hl` verbs.
+// localhost-only binding and the Host check follow control-center console/server/httpd.py.
+// Milestone 3: POST /api/v1/verbs/<noun>/<verb> runs a console verb through the same registry as the CLI (writes.ts).
 import type { ApiResponse, Runtime, TicketFilter } from "@helmlock/core";
 import { Hono, type Context as HonoContext } from "hono";
 import { createReadModel, helmlockVersion, localDate, type ReadModel } from "./data.ts";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
+import {
+  checkWriteRequest,
+  createWriteQueue,
+  isConsoleVerb,
+  parseVerbCall,
+  settingsView,
+  todoList,
+  toVerbResponse,
+  verbCatalog,
+  verbIdFromPath,
+} from "./writes.ts";
 
 export interface AppOptions {
   /** The port the server listens on, for the Host check. Undefined accepts any port on a loopback name. */
@@ -86,9 +98,11 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   };
 
   const app = new Hono();
+  const serial = createWriteQueue();
+  const hostOf = (c: HonoContext) => c.req.header("host") ?? new URL(c.req.url).host;
 
   app.use("*", async (c, next) => {
-    const host = c.req.header("host") ?? new URL(c.req.url).host;
+    const host = hostOf(c);
     if (!hostAllowed(host, opts.port?.())) {
       c.header("X-Content-Type-Options", "nosniff");
       return c.json(
@@ -108,9 +122,13 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   const api = new Hono();
   api.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
-    if (c.req.method !== "GET" && c.req.method !== "HEAD")
+    const isVerbCall = c.req.method === "POST" && c.req.path.startsWith("/api/v1/verbs/");
+    if (c.req.method !== "GET" && c.req.method !== "HEAD" && !isVerbCall)
       return c.json(
-        { ok: false, error: { rule: "read-only", message: "the console API is read-only", fix: "change files with `hl` verbs" } } satisfies ApiResponse<never>,
+        {
+          ok: false,
+          error: { rule: "read-only", message: `${c.req.method} ${c.req.path} is not allowed`, fix: "change files with POST /api/v1/verbs/<noun>/<verb>" },
+        } satisfies ApiResponse<never>,
         405,
       );
     await next();
@@ -155,6 +173,47 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
     const q = (c.req.query("q") ?? "").trim();
     if (!q) throw new ApiError(400, "bad-request", "search needs ?q=<text>");
     return m.search(q);
+  });
+
+  route("/verbs", async () => verbCatalog(runtime));
+  route("/todos", async (_m, c) => todoList(runtime, c.req.query("status") || undefined, c.req.query("ticket") || undefined));
+  route("/settings", async () => settingsView(runtime));
+
+  api.post("/verbs/*", async (c) => {
+    try {
+      checkWriteRequest({ method: c.req.method, header: (n) => c.req.header(n) }, hostOf(c));
+      const id = verbIdFromPath(c.req.path);
+      if (!id || !isConsoleVerb(id))
+        throw new ApiError(403, "verb-not-allowed", `${id ? `"${id}"` : c.req.path} cannot be called from the console`, {
+          fix: "run it with `hl` in a terminal; the console verbs are listed at GET /api/v1/verbs",
+        });
+      let raw: unknown;
+      try {
+        raw = await c.req.json();
+      } catch {
+        throw new ApiError(400, "bad-request", "body is not valid JSON");
+      }
+      const call = parseVerbCall(raw);
+      await model();
+      const info = runtime.info;
+      const person = info.author ? await runtime.ctx.get("roster").get(info.author) : undefined;
+      if (!person)
+        throw new ApiError(403, "unknown-author", info.author ? `author ${info.author} is not in people.toml` : "no author is set on this machine", {
+          fix: "write your roster id to author.local and add yourself to people.toml (see `hl doctor`)",
+        });
+      const res = await serial(() =>
+        runtime.run(id, call.input, {
+          dryRun: call.dry_run ?? false,
+          json: true,
+          interactive: false,
+          actor: { kind: "person", id: person.id, onBehalfOf: person.id },
+        }),
+      );
+      const { status, body } = toVerbResponse(res);
+      return c.json(body, status as 200);
+    } catch (e) {
+      return fail(c, e, log);
+    }
   });
 
   api.get("/events", (c) => {

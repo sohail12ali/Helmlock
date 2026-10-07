@@ -23,7 +23,7 @@ export function defineVerb<I extends z.ZodType, O = unknown>(def: VerbDef<I, O>)
   return def as unknown as VerbDef;
 }
 
-type ThrownVerbError = Error & Partial<VerbError> & { code?: unknown };
+type ThrownVerbError = Error & Partial<VerbError> & { code?: unknown; data?: unknown };
 
 /** Map anything thrown by a verb to a result: code 2 only when the error says so, otherwise 1. */
 export function errorResult(e: unknown): VerbResult<never> {
@@ -31,7 +31,9 @@ export function errorResult(e: unknown): VerbResult<never> {
   const error: VerbError = { rule: typeof err.rule === "string" ? err.rule : "error", message: err.message };
   if (typeof err.file === "string") error.file = err.file;
   if (typeof err.fix === "string") error.fix = err.fix;
-  return { ok: false, code: err.code === 2 ? 2 : 1, error };
+  const res: VerbResult<never> = { ok: false, code: err.code === 2 ? 2 : 1, error };
+  if (err.data !== undefined) res.data = err.data; // a thrown failure may carry data too (e.g. gate reasons)
+  return res;
 }
 
 function entityOf(res: VerbResult, input: Record<string, unknown>): string | undefined {

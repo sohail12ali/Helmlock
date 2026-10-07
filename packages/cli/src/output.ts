@@ -47,7 +47,8 @@ export function errorText(e: VerbError, o: Out, code: number): string {
 /** Print a verb result; returns the exit code. */
 export function printResult(res: VerbResult, json: boolean, o: Out): 0 | 1 | 2 {
   if (json) {
-    o.stdout(`${JSON.stringify(res.ok ? { ok: true, data: res.data } : { ok: false, code: res.code, error: res.error }, null, 2)}\n`);
+    const body = res.ok ? { ok: true, data: res.data } : { ok: false, code: res.code, error: res.error, ...(res.data !== undefined ? { data: res.data } : {}) };
+    o.stdout(`${JSON.stringify(body, null, 2)}\n`);
     return res.ok ? 0 : res.code;
   }
   if (res.ok) {
