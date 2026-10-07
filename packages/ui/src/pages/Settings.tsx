@@ -40,7 +40,16 @@ const SOURCE_LABEL: Record<Source, string> = {
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 function toDraft(v: unknown): string {
+  if (Array.isArray(v)) return v.map(String).join(", ");
   return v === undefined || v === null ? "" : String(v);
+}
+
+/** A "list" setting is typed as comma-separated text and saved as an array (empty entries dropped). */
+export function toList(text: string): string[] {
+  return text
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function SettingRow({ plugin, field, current }: { plugin: string; field: SettingField; current: { value: unknown; source: Source } | undefined }) {
@@ -71,6 +80,7 @@ function SettingRow({ plugin, field, current }: { plugin: string; field: Setting
       if (draft.trim() === "" || !Number.isFinite(n)) return setProblem("enter a number");
       return void save(n);
     }
+    if (field.type === "list") return void save(toList(draft));
     if (field.type === "secret-env" && draft.trim() !== "" && !ENV_NAME.test(draft.trim()))
       return setProblem("an environment variable name, such as OPENROUTER_API_KEY");
     void save(draft.trim());
@@ -109,7 +119,7 @@ function SettingRow({ plugin, field, current }: { plugin: string; field: Setting
         step={field.type === "number" ? "any" : undefined}
         value={draft}
         aria-invalid={!!problem || undefined}
-        placeholder={field.type === "secret-env" ? "ENV_VAR_NAME" : undefined}
+        placeholder={field.type === "secret-env" ? "ENV_VAR_NAME" : field.type === "list" ? "one, two, three" : undefined}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && dirty) {
@@ -130,6 +140,7 @@ function SettingRow({ plugin, field, current }: { plugin: string; field: Setting
           <>
             {field.hint && <span className="block">{field.hint}</span>}
             {field.type === "secret-env" && <span className="block">The secret itself stays in your environment; only the variable name is saved.</span>}
+            {field.type === "list" && <span className="block">Separate entries with commas.</span>}
             {problem && (
               <span className="block text-destructive" role="alert">
                 {problem}

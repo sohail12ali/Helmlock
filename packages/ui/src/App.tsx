@@ -4,7 +4,7 @@ import { Route, Routes } from "react-router";
 import { Loading } from "@/components/common";
 import { AppShell } from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/lib/theme";
-import { InboxPage, OverviewPage } from "@/pages/Overview";
+import { OverviewPage } from "@/pages/Overview";
 import { TicketsPage } from "@/pages/Tickets";
 
 const TicketPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.TicketPage })));
@@ -14,7 +14,9 @@ const RunView = lazy(() => import("@/features/agents/RunView").then((m) => ({ de
 const ChatPage = lazy(() => import("@/features/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
 const TodosPage = lazy(() => import("@/pages/Todos").then((m) => ({ default: m.TodosPage })));
 const WorkPage = lazy(() => import("@/pages/Work").then((m) => ({ default: m.WorkPage })));
-const KnowledgePage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.KnowledgePage })));
+const KnowledgePage = lazy(() => import("@/features/knowledge/KnowledgePage").then((m) => ({ default: m.KnowledgePage })));
+const InboxPage = lazy(() => import("@/features/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const SetupPage = lazy(() => import("@/features/setup/SetupPage").then((m) => ({ default: m.SetupPage })));
 const SettingsPage = lazy(() => import("@/pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const ActionsPage = lazy(() => import("@/pages/Actions").then((m) => ({ default: m.ActionsPage })));
 const SearchPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.SearchPage })));
@@ -48,7 +50,7 @@ export function AppRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<OverviewPage />} />
-        <Route path="inbox" element={<InboxPage />} />
+        <Route path="inbox" element={s(<InboxPage />)} />
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="t/:id" element={s(<TicketPage />)} />
         <Route path="t/:id/:artifact" element={s(<ArtifactPage />)} />
@@ -59,6 +61,7 @@ export function AppRoutes() {
         <Route path="work" element={s(<WorkPage />)} />
         <Route path="knowledge" element={s(<KnowledgePage />)} />
         <Route path="settings" element={s(<SettingsPage />)} />
+        <Route path="setup" element={s(<SetupPage />)} />
         <Route path="actions" element={s(<ActionsPage />)} />
         <Route path="search" element={s(<SearchPage />)} />
         <Route path="*" element={s(<NotFoundPage />)} />

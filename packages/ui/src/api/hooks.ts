@@ -24,6 +24,11 @@ export const keys = {
   models: ["models"] as const,
   chats: ["chats"] as const,
   chat: (id: string) => ["chat", id] as const,
+  // milestone 5
+  knowledge: ["knowledge"] as const,
+  knowledgeDoc: (path: string) => ["knowledge", "doc", path] as const,
+  inbox: ["inbox"] as const,
+  setup: ["setup"] as const,
 };
 
 type Area = ChangeEvent["areas"][number];

@@ -4,6 +4,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useOverview, useWorkspace } from "@/api/hooks";
 import { type LiveState, useLiveUpdates } from "@/api/live";
 import { useM4Live } from "@/api/m4";
+import { useInboxUnread, useM5Live } from "@/api/m5";
 import { NewTicketHost } from "@/components/actions/NewTicket";
 import { Loading } from "@/components/common";
 import { HelpDialog } from "@/components/HelpDialog";
@@ -16,7 +17,7 @@ import { useGlobalKeys } from "@/lib/keys";
 import { NARROW, PHONE, useMediaQuery } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { NAV } from "./nav";
+import { INBOX_NAV, NAV } from "./nav";
 import { ShellContext } from "./shell-context";
 import { SplitGroup, SplitHandle, SplitPanel, useSplitPanelRef } from "./split";
 
@@ -42,10 +43,14 @@ function LiveDot({ state }: { state: LiveState }) {
   );
 }
 
-function SideNav({ collapsed, needsYou, onNavigate }: { collapsed: boolean; needsYou?: number; onNavigate?: () => void }) {
+// Inbox sits under Overview in the side nav (mockup 05) with its unread count; Overview keeps the needs-you count
+// only while the server has no inbox.
+const SIDE_NAV = [NAV[0]!, INBOX_NAV, ...NAV.slice(1)];
+
+function SideNav({ collapsed, needsYou, unread, onNavigate }: { collapsed: boolean; needsYou?: number; unread?: number; onNavigate?: () => void }) {
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-0.5 overflow-y-auto bg-sunk/60 p-2">
-      {NAV.map((n) => (
+      {SIDE_NAV.map((n) => (
         <NavLink
           key={n.id}
           to={n.path}
@@ -62,9 +67,14 @@ function SideNav({ collapsed, needsYou, onNavigate }: { collapsed: boolean; need
         >
           <n.icon className="size-4 shrink-0" />
           {!collapsed && <span className="truncate">{n.label}</span>}
-          {!collapsed && n.id === "overview" && !!needsYou && (
+          {!collapsed && n.id === "overview" && unread === undefined && !!needsYou && (
             <span className="ml-auto rounded-full bg-primary px-1.5 font-mono text-[11px] text-primary-foreground" title="Needs you">
               {needsYou}
+            </span>
+          )}
+          {!collapsed && n.id === "inbox" && !!unread && (
+            <span className="ml-auto rounded-full bg-primary px-1.5 font-mono text-[11px] text-primary-foreground" title="Unread in the inbox">
+              {unread}
             </span>
           )}
         </NavLink>
@@ -113,6 +123,8 @@ export function AppShell() {
   const overview = useOverview();
   const live = useLiveUpdates();
   useM4Live();
+  useM5Live();
+  const unread = useInboxUnread();
   const [chatOpen, setChatOpenState] = useState(loadChatOpen);
   const setChatOpen = (o: boolean) => {
     setChatOpenState(o);
@@ -250,7 +262,7 @@ export function AppShell() {
                   panelRef={navRef}
                   onCollapsedChange={setNavCollapsed}
                 >
-                  <SideNav collapsed={navCollapsed} needsYou={needsYou} />
+                  <SideNav collapsed={navCollapsed} needsYou={needsYou} unread={unread} />
                 </SplitPanel>
                 <SplitHandle label="Resize sidebar" />
                 <SplitPanel id="content" minSize="40%">
@@ -270,12 +282,12 @@ export function AppShell() {
           )}
         </div>
 
-        {phone && <BottomBar needsYou={needsYou} onMore={() => setNavOpen(true)} />}
+        {phone && <BottomBar needsYou={unread ?? needsYou} onMore={() => setNavOpen(true)} />}
 
         {narrow && (
           <Sheet open={navOpen} onOpenChange={setNavOpen}>
             <SheetContent side="left" title="Navigation" className="w-64 pt-10">
-              <SideNav collapsed={false} needsYou={needsYou} onNavigate={() => setNavOpen(false)} />
+              <SideNav collapsed={false} needsYou={needsYou} unread={unread} onNavigate={() => setNavOpen(false)} />
             </SheetContent>
           </Sheet>
         )}

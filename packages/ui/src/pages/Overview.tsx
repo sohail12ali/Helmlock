@@ -1,6 +1,7 @@
 import type { ActivityLine, Overview as OverviewData, StageDef, WorkLogLine } from "@helmlock/core/contracts";
 import { Link } from "react-router";
 import { useOverview } from "@/api/hooks";
+import { useSetup } from "@/api/m5";
 import { EmptyState, ErrorState, Loading, Mono, PageHeader } from "@/components/common";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { NeedsYouList } from "@/components/NeedsYou";
@@ -37,6 +38,24 @@ export function StageBars({ stages }: { stages: (StageDef & { count: number })[]
         </li>
       ))}
     </ul>
+  );
+}
+
+/** "Finish setup (n left)" until the first-run checklist (GET /setup) is done. Hidden when the server has none. */
+function FinishSetup() {
+  const q = useSetup();
+  const open = (q.data?.steps ?? []).filter((s) => !s.done);
+  if (!open.length) return null;
+  return (
+    <Card role="region" className="mb-3 flex flex-wrap items-center gap-2 border-primary/40 px-4 py-3" aria-label="Finish setup">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">Finish setup ({open.length} left)</p>
+        <p className="truncate text-xs text-muted-foreground">Next: {open.map((s) => s.label).join(", ")}</p>
+      </div>
+      <Button size="sm" asChild>
+        <Link to="/setup">Continue setup</Link>
+      </Button>
+    </Card>
   );
 }
 
@@ -116,6 +135,7 @@ export function OverviewPage() {
   return (
     <PageLayout id="overview">
       <PageHeader title="Overview" />
+      <FinishSetup />
       <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
         <Stat label="Needs you" value={o.needs_you.length} hint={needsYouHint(o)} highlight={o.needs_you.length > 0} />
         <Stat label="In progress" value={o.in_progress} hint={live ? `${live} agent run${live > 1 ? "s" : ""} live` : "no runs live"} />
@@ -167,26 +187,6 @@ export function OverviewPage() {
           </CardContent>
         </Card>
       </div>
-    </PageLayout>
-  );
-}
-
-export function InboxPage() {
-  const q = useOverview();
-  return (
-    <PageLayout id="inbox">
-      <PageHeader title="Inbox" />
-      {q.isPending ? (
-        <Loading />
-      ) : q.isError ? (
-        <ErrorState error={q.error} />
-      ) : (
-        <Card>
-          <CardContent className="px-2 pt-2">
-            <NeedsYouList items={q.data.needs_you} />
-          </CardContent>
-        </Card>
-      )}
     </PageLayout>
   );
 }
