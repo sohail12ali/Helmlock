@@ -1,0 +1,35 @@
+# Knowledge (vault view)
+@from control-center, paperclip, Obsidian
+> 1 A read-only tree and reader, like the control-center Vault tab; the real graph and backlinks live in Obsidian over the same files (F52).
+> Generated notes carry wikilinks and properties, so decisions, bugs and tasks appear in the graph.
+> Backlinks and a small link graph sit on the right.
+app
+  top
+    brand "Acme Console"
+    search "Search the knowledge base  (/)"
+    sp
+    btn "Open in Obsidian"
+  body
+    side
+      nav "Overview" "Inbox 3" "Tickets" "Todos" "Work" "Agents" "Knowledge*" "Settings"
+    main
+      row
+        card "Files" w=210
+          tree
+            node "artifacts" on=0
+              node "T-014"
+                node "T-014-spec.md" on=1
+                node "T-014-plan.md"
+                node "decisions"
+            node "wiki"
+            node "logs"
+        card "T-014-spec.md" grow=2 n=1
+          crumb "artifacts" "T-014" "spec"
+          h "Spec: artifact data format"
+          text "Decisions: [[T-014-D-001]]  Plan: [[T-014-plan]]"
+          list "Summary" "Scope and non-goals" "Business rules" "Acceptance criteria"
+    right
+      h "Backlinks"
+      list "T-014 hub note" "D-001 TOML for records" "T-012 Plugin contract"
+      h "Link graph"
+      graph "T-014" "spec" "D-001" "T-012"

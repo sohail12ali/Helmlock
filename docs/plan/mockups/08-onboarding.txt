@@ -1,0 +1,34 @@
+# Onboarding wizard
+@from paperclip, control-center
+> 1 A short stepper. Unfinished state is saved, so it resumes. Save and exit on the left, Continue on the right (paperclip).
+> The last steps scaffold the knowledge repo and register the first project. The same checks later run as Doctor (F63).
+> Models step offers presets for local servers and hosted gateways (F72).
+app
+  top
+    brand "Welcome"
+    sp
+    muted "Resumes where you left off"
+  body
+    main
+      stepper "Machine" "Identity" "Repos" "Model*" "Telegram" "Review"
+      card "Connect a model" n=1
+        text "Pick a provider. You can add more later."
+        row
+          card "Ollama (local)"
+            muted "localhost:11434, no key"
+          card "LM Studio (local)"
+            muted "localhost:1234, no key"
+          card "OpenRouter"
+            muted "key from environment"
+          card "Custom"
+            muted "any OpenAI-style server"
+        field "Base URL" "http://localhost:11434/v1"
+        row
+          btn "Test connection" kind=primary
+          chip "Found 6 models" kind=ok
+        list "+qwen3:14b  context 32k  tools yes" "+llama3.1:8b  context 8k  tools yes" "-phi3:mini  tools unknown"
+      row
+        btn "Save and exit"
+        sp
+        btn "Back"
+        btn "Continue" kind=primary

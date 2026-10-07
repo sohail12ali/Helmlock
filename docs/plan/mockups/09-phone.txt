@@ -1,0 +1,19 @@
+# Phone: dashboard
+@from paperclip
+> 1 Single column with a bottom navigation bar and large touch targets (paperclip's mobile rules). Same data as the desktop overview.
+> The phone width toggle on any other mockup shows the same collapse using container queries.
+phone
+  top
+    brand "Acme"
+    sp
+    avatar "SA"
+  main
+    stat "Needs you" "7" hint="3 approvals" n=1
+    card "Needs you"
+      list "!Approve: move T-014 to build" "!T-009 blocked" "Answer Q-5"
+      btns "Open inbox"
+    card "Tickets by stage"
+      bars "Spec 3" "Plan 2" "Build 5" "Verify 1"
+    card "Agent runs"
+      list "analyst  T-014  [+running]" "builder  T-009  [!waiting]"
+  nav "Home*" "Inbox 3" "Tickets" "Chat" "More" bottom=1

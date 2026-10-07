@@ -1,0 +1,17 @@
+# Local settings and secrets (F39, F9b)
+.env
+*.local.toml
+.claude/settings.local.json
+
+# The workspace file you open is a per-machine copy of the committed template (F21)
+Helmlock.code-workspace
+
+# Obsidian per-user state (F53)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Generated plan page, rebuilt by .claude/skills/plan/build.py
+docs/plan.html
+
+# Python caches
+__pycache__/

@@ -1,0 +1,1522 @@
+[
+ {
+  "id": "F11a",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F0a",
+   "F45"
+  ],
+  "title": "One provider layer for any model",
+  "ask": "Ollama, LM Studio, vLLM, llama.cpp, OpenRouter and OpenAI all follow the same OpenAI-style protocol. How is one layer configured to reach any of them?",
+  "why": "Decides which models the assistant and agents can use. Hard to change once keys and URLs are saved. Provider adapters are plugins (F41).",
+  "learn": "deepseek-harness providers map, compat switches, discovery; see Blueprint 12",
+  "rec_reason": "One adapter, one table. Every endpoint is a row with protocol, base URL, optional key by env-var name, headers and compat switches; models are another table. Re-read per request so no restart is needed.",
+  "options": [
+   {
+    "id": "unified",
+    "label": "One OpenAI-compatible layer: a providers table (protocol, base URL, optional key by env name, headers, compat switches) and a models table (context window, max tokens, capabilities); every endpoint is a row; config re-read on every request",
+    "desc": "Configure, do not code.",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "One code path for every OpenAI-style server",
+     "Add a server by editing config, no release",
+     "Config shared in git, secrets stay in env vars",
+     "Same layer for assistant and agents"
+    ],
+    "cons": [
+     "Compat switches for odd gateways must be maintained",
+     "One protocol per row: a gateway serving two needs two rows"
+    ],
+    "pick_if": "you want any LLM without code changes.",
+    "must": "Original requirement: a basic assistant on any OpenAI-compatible model."
+   },
+   {
+    "id": "presets",
+    "label": "Hardcoded presets for a few providers",
+    "desc": "Fast to build.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Quick start"
+    ],
+    "cons": [
+     "Every new gateway needs code"
+    ],
+    "pick_if": "you only use two providers."
+   },
+   {
+    "id": "env",
+    "label": "Single OPENAI_BASE_URL and key",
+    "desc": "Simplest.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Nothing to configure"
+    ],
+    "cons": [
+     "One endpoint only",
+     "No per-model settings"
+    ],
+    "pick_if": "a single provider, forever."
+   },
+   {
+    "id": "catalog",
+    "label": "Depend on a third-party catalog library for about 45 providers",
+    "desc": "Broad coverage.",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Many hosted providers out of the box"
+    ],
+    "cons": [
+     "Large dependency",
+     "Local servers still need manual settings"
+    ],
+    "pick_if": "hosted providers matter most."
+   }
+  ],
+  "decided": {
+   "options": [
+    "unified"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F11b",
+  "phase": "channels",
+  "impact": 1,
+  "needs": [
+   "F11a"
+  ],
+  "title": "Model protocols",
+  "ask": "Which wire formats are supported?",
+  "multi": true,
+  "options": [
+   {
+    "id": "cc",
+    "label": "OpenAI chat completions",
+    "rec": true,
+    "desc": "Widest compatibility."
+   },
+   {
+    "id": "resp",
+    "label": "OpenAI responses",
+    "desc": "Newer API."
+   },
+   {
+    "id": "ant",
+    "label": "Anthropic messages",
+    "desc": "For Claude-compatible gateways."
+   }
+  ],
+  "decided": {
+   "options": [
+    "cc"
+   ],
+   "note": "OpenAI chat completions only. Claude runs through its own CLI, not this wire.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F11c",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F11a"
+  ],
+  "title": "Model selection",
+  "ask": "How do you pick models?",
+  "learn": "deepseek-harness /model popup, control-center",
+  "multi": true,
+  "options": [
+   {
+    "id": "default",
+    "label": "Default model in Settings",
+    "rec": true,
+    "desc": "Used for new chats."
+   },
+   {
+    "id": "perchat",
+    "label": "Per-chat picker in the composer",
+    "rec": true,
+    "desc": "Grouped by provider."
+   },
+   {
+    "id": "fetch",
+    "label": "Fetch models from /models",
+    "rec": true,
+    "desc": "Manual id entry as fallback."
+   },
+   {
+    "id": "effort",
+    "label": "Reasoning effort selector",
+    "desc": "When the model supports it."
+   },
+   {
+    "id": "compat",
+    "label": "Per-provider compat switches",
+    "rec": true,
+    "desc": "supportsDeveloperRole, maxTokensField; most gateways need them."
+   },
+   {
+    "id": "fallback",
+    "label": "Fallback model",
+    "desc": "Retry on another model when one fails."
+   }
+  ],
+  "why": "Model choice is the daily interaction with the assistant.",
+  "mockups": [
+   "04-assistant-chat",
+   "07-settings"
+  ],
+  "decided": {
+   "options": [
+    "default",
+    "perchat",
+    "fetch",
+    "compat"
+   ],
+   "note": "No automatic fallback in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F11d",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F11a",
+   "F13a"
+  ],
+  "title": "What the assistant can do",
+  "ask": "How capable is the v1 assistant?",
+  "why": "How capable the v1 assistant is; the largest scope lever in this phase. The concrete jobs are listed in F118; sensitive tools follow F122.",
+  "learn": "control-center assistant verbs, deepseek-harness",
+  "rec_reason": "L3 makes the assistant useful (create tickets, add todos, log work, search) using the same verbs as everything else, with confirmation on writes. L4 duplicates the agent runtime.",
+  "options": [
+   {
+    "id": "l1",
+    "label": "L1: chat only",
+    "cost": "S",
+    "desc": "Talks, knows nothing about your work.",
+    "lock": "low",
+    "pros": [
+     "Trivial"
+    ],
+    "cons": [
+     "Knows nothing about your work"
+    ],
+    "pick_if": "a quick chat box is enough."
+   },
+   {
+    "id": "l2",
+    "label": "L2: chat + search and read the knowledge base",
+    "cost": "M",
+    "desc": "Answers from your tickets and wiki.",
+    "lock": "low",
+    "pros": [
+     "Answers from your tickets and wiki"
+    ],
+    "cons": [
+     "Read-only: cannot act"
+    ],
+    "pick_if": "you want a smart search first."
+   },
+   {
+    "id": "l3",
+    "label": "L3: L2 + verbs as tools (create ticket, add todo, log work), confirm on writes",
+    "cost": "M",
+    "rec": true,
+    "desc": "Same verb registry as CLI and Telegram.",
+    "lock": "low",
+    "pros": [
+     "Acts through confirmed verbs",
+     "Same verbs as CLI and Telegram"
+    ],
+    "cons": [
+     "Needs the verb registry and confirm prompts first"
+    ],
+    "pick_if": "you want it to do real work safely."
+   },
+   {
+    "id": "l4",
+    "label": "L4: L3 + workspace file tools with approval",
+    "cost": "L",
+    "desc": "Becomes a full agent loop; overlaps F5c.",
+    "lock": "med",
+    "pros": [
+     "Can edit files"
+    ],
+    "cons": [
+     "It is now an agent runtime; overlaps F5c",
+     "Biggest safety surface"
+    ],
+    "pick_if": "you want one tool for chat and agents."
+   }
+  ],
+  "mockups": [
+   "04-assistant-chat"
+  ],
+  "decided": {
+   "options": [
+    "l3"
+   ],
+   "note": "Chat, search, and verbs with confirmation. File tools stay with the agents. Consistency fix (B24, 2026-10-07): The assistant may search and read files read-only; writing files stays with the agents.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F11e",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [],
+  "title": "Chat history storage",
+  "ask": "How are conversations stored?",
+  "learn": "deepseek-harness session log",
+  "options": [
+   {
+    "id": "jsonl",
+    "label": "Append-only JSONL per chat; history derived; resumable",
+    "cost": "S",
+    "rec": true,
+    "desc": "Crash-safe, easy to replay and audit."
+   },
+   {
+    "id": "json",
+    "label": "Single JSON per chat",
+    "cost": "S",
+    "desc": "Simple, risk of corruption on crash."
+   },
+   {
+    "id": "eph",
+    "label": "Not stored",
+    "cost": "S",
+    "desc": "No memory between sessions."
+   }
+  ],
+  "why": "History is what lets a chat resume and be audited.",
+  "decided": {
+   "options": [
+    "jsonl"
+   ],
+   "note": "Second review (B25, 2026-10-07): Chats stay on the machine (gitignored); they are not shared through git.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F11f",
+  "phase": "channels",
+  "impact": 1,
+  "needs": [],
+  "title": "Assistant persona",
+  "ask": "Where does its tone and house style live?",
+  "learn": "control-center assistant.md, house-style.md",
+  "options": [
+   {
+    "id": "files",
+    "label": "Editable assistant.md and house-style.md in the system repo; include chat hygiene rules: lead with the answer, never narrate tool calls, plain simple English",
+    "cost": "S",
+    "rec": true,
+    "desc": "Versioned, overridable by the knowledge repo."
+   },
+   {
+    "id": "hard",
+    "label": "Hardcoded system prompt",
+    "cost": "S",
+    "desc": "Less flexible."
+   }
+  ],
+  "decided": {
+   "options": [
+    "files"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F4a",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F0a",
+   "F45"
+  ],
+  "title": "Transport",
+  "ask": "How does the bot receive messages?",
+  "why": "How the bot receives messages: decides whether you need a public URL. Telegram is a channel plugin (F41).",
+  "learn": "control-center telegram_bot.py (long-polling), paperclip (webhook)",
+  "rec_reason": "Polling needs no public URL or certificate and is already proven in control-center. Webhooks suit hosted servers, not a local console.",
+  "options": [
+   {
+    "id": "poll",
+    "label": "Long-polling (getUpdates)",
+    "cost": "S",
+    "rec": true,
+    "desc": "Works behind NAT, no public URL, no certificate. Proven in control-center.",
+    "lock": "low",
+    "pros": [
+     "Works behind NAT",
+     "No certificate or public URL"
+    ],
+    "cons": [
+     "Slight delay, an always-running process"
+    ],
+    "pick_if": "the console runs on your machine."
+   },
+   {
+    "id": "hook",
+    "label": "Webhook",
+    "cost": "M",
+    "desc": "Needs a public HTTPS URL on 443/80/88/8443. Awkward for a local app.",
+    "lock": "med",
+    "pros": [
+     "Instant delivery"
+    ],
+    "cons": [
+     "Needs public HTTPS on port 443/80/88/8443"
+    ],
+    "pick_if": "you host the console on a server."
+   },
+   {
+    "id": "both",
+    "label": "Polling default, webhook optional",
+    "cost": "M",
+    "desc": "Only worth it if you later host this on a server.",
+    "lock": "low",
+    "pros": [
+     "Flexible"
+    ],
+    "cons": [
+     "Two code paths"
+    ],
+    "pick_if": "you may move to a server later."
+   }
+  ],
+  "decided": {
+   "options": [
+    "poll"
+   ],
+   "note": "No public URL. The bot polls. Consistency fix (B24, 2026-10-07): Polling runs inside hl serve.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F4b",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F4a",
+   "F13a"
+  ],
+  "title": "What Telegram can do",
+  "ask": "Which capabilities ship in v1?",
+  "learn": "control-center, paperclip chat connectors",
+  "multi": true,
+  "options": [
+   {
+    "id": "notify",
+    "label": "Outbound notifications",
+    "rec": true,
+    "desc": "Approval needed, run finished, job error, blocked ticket."
+   },
+   {
+    "id": "chat",
+    "label": "Chat with the assistant",
+    "rec": true,
+    "desc": "Same assistant and history as the console."
+   },
+   {
+    "id": "cmds",
+    "label": "Commands: /status /new /use /stop",
+    "rec": true,
+    "desc": "Switch chats, interrupt a run, see what is going on."
+   },
+   {
+    "id": "approve",
+    "label": "Approve or deny with inline buttons",
+    "rec": true,
+    "desc": "Answer permission cards from the phone."
+   },
+   {
+    "id": "capture",
+    "label": "Quick capture: /todo /ticket",
+    "rec": true,
+    "desc": "Drop ideas in without opening the console."
+   },
+   {
+    "id": "voice",
+    "label": "Voice note to transcript to assistant",
+    "desc": "Needs a speech-to-text path (see F12)."
+   },
+   {
+    "id": "digest",
+    "label": "Daily digest",
+    "desc": "Morning summary: needs-you, due todos, yesterday's log."
+   }
+  ],
+  "why": "Each capability adds code, security surface and a command to learn.",
+  "mockups": [
+   "10-telegram"
+  ],
+  "decided": {
+   "options": [
+    "notify",
+    "chat",
+    "cmds",
+    "approve",
+    "capture"
+   ],
+   "note": "No voice notes and no daily digest in v1. Consistency fix (B24, 2026-10-07): No /log on Telegram (matches F6b). Telegram works only while hl serve runs.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F4c",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F4a"
+  ],
+  "title": "Security",
+  "ask": "Who may talk to the bot, and what may they approve?",
+  "why": "Who can talk to the bot and what they can approve.",
+  "learn": "control-center fail-closed allowlist",
+  "options": [
+   {
+    "id": "allow",
+    "label": "Fail-closed user-ID allowlist",
+    "cost": "S",
+    "rec": true,
+    "desc": "Unknown users get nothing. Sensitive tools (clipboard, screenshots, shell) are never approvable from Telegram."
+   },
+   {
+    "id": "allow-chat",
+    "label": "User allowlist + group/chat allowlist",
+    "cost": "S",
+    "desc": "Needed only if you use groups or topics."
+   },
+   {
+    "id": "pair",
+    "label": "Pairing code on first /start",
+    "cost": "M",
+    "desc": "Friendlier onboarding, slightly more code."
+   }
+  ],
+  "decided": {
+   "options": [
+    "allow"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F4d",
+  "phase": "channels",
+  "impact": 1,
+  "needs": [
+   "F4a"
+  ],
+  "title": "How chats map to work",
+  "ask": "What does one Telegram conversation correspond to?",
+  "learn": "paperclip, control-center",
+  "options": [
+   {
+    "id": "dm",
+    "label": "One DM = one open chat; /new starts another",
+    "cost": "S",
+    "rec": true,
+    "desc": "Simple. The working message is edited into the final answer."
+   },
+   {
+    "id": "ticket",
+    "label": "One chat or topic per ticket",
+    "cost": "M",
+    "desc": "Good for long-running work; needs forum topics."
+   },
+   {
+    "id": "bot-per-role",
+    "label": "One bot per agent role",
+    "cost": "M",
+    "desc": "Paperclip's model; more tokens to manage."
+   }
+  ],
+  "decided": {
+   "options": [
+    "dm"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F12",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F11d",
+   "F45"
+  ],
+  "title": "Voice, audio and mic",
+  "ask": "How far does voice go in v1?",
+  "why": "How far voice goes; the heavy options are a project of their own. Voice is a swappable slot (F41, F45). The voice jobs (dictation refiner, recognition engine, robustness) are F119 to F121.",
+  "learn": "control-center (desktop push-to-talk, web speech), deepseek-harness (dictation)",
+  "rec_reason": "One mic button using the browser costs almost nothing and proves the idea. Local whisper and Piper can follow without changing the assistant.",
+  "options": [
+   {
+    "id": "none",
+    "label": "None in v1",
+    "cost": "S",
+    "desc": "Design the assistant so voice can be added later.",
+    "lock": "low",
+    "pros": [
+     "Zero work"
+    ],
+    "cons": [
+     "No voice"
+    ],
+    "pick_if": "voice is not a day-one need."
+   },
+   {
+    "id": "web",
+    "label": "Browser Web Speech dictation + speechSynthesis read-aloud",
+    "cost": "S",
+    "rec": true,
+    "desc": "One mic button in the composer. Caveat: some browsers send audio to a vendor, so default off.",
+    "lock": "low",
+    "pros": [
+     "Small effort",
+     "Works in the console"
+    ],
+    "cons": [
+     "Some browsers send audio to a vendor",
+     "Quality varies"
+    ],
+    "pick_if": "you want to try it quickly."
+   },
+   {
+    "id": "ptt",
+    "label": "Push-to-talk button, local whisper.cpp server + Piper TTS",
+    "cost": "L",
+    "desc": "Private and offline; needs model downloads and a managed subprocess.",
+    "lock": "low",
+    "pros": [
+     "Private and offline",
+     "Better control"
+    ],
+    "cons": [
+     "Model downloads and a managed subprocess"
+    ],
+    "pick_if": "privacy matters."
+   },
+   {
+    "id": "desk",
+    "label": "Desktop global hotkey, wake word, hands-free",
+    "cost": "L",
+    "desc": "control-center's Rust shell. Not lite; its handoff says it was never verified with a real voice.",
+    "lock": "med",
+    "pros": [
+     "Global hotkey, wake word"
+    ],
+    "cons": [
+     "Rust shell; control-center never verified it with a real voice"
+    ],
+    "pick_if": "later, if voice becomes the main input."
+   }
+  ],
+  "decided": {
+   "options": [
+    "web"
+   ],
+   "note": "A mic button in the console. A global hotkey waits.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F72",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F11a"
+  ],
+  "title": "Provider presets for local and hosted servers",
+  "ask": "Ollama, LM Studio, vLLM, llama.cpp, OpenRouter and OpenAI all speak the same protocol. How does a user add one?",
+  "why": "Typing a base URL and compat switches by hand is where people give up. deepseek-harness has no Ollama or LM Studio preset or doc; this is a place to be better.",
+  "learn": "deepseek-harness provider routes and compat switches; its docs ship no local-server example",
+  "rec_reason": "Ship small preset files (base URL, protocol, keyless or not, compat defaults). Choosing \"Ollama\" fills the row; the user only confirms the URL and picks models.",
+  "options": [
+   {
+    "id": "presets",
+    "label": "Ship preset files for local servers (Ollama, LM Studio, vLLM, llama.cpp) and hosted gateways (OpenAI, OpenRouter, others); a custom row is always allowed",
+    "desc": "Pick, confirm, done.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "New provider in under a minute",
+     "Keyless local servers work without a dummy key",
+     "Presets are plain TOML anyone can edit or add"
+    ],
+    "cons": [
+     "Presets go stale as servers change",
+     "Defaults still need a real test (F73)"
+    ],
+    "pick_if": "you will try several local servers and gateways."
+   },
+   {
+    "id": "manual",
+    "label": "No presets: the user types base URL, protocol and compat switches",
+    "desc": "Fewer files.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to maintain"
+    ],
+    "cons": [
+     "Every user rediscovers the same compat switches",
+     "Easy to get wrong"
+    ],
+    "pick_if": "only you, one provider."
+   },
+   {
+    "id": "catalog",
+    "label": "Depend on a third-party catalog library for about 45 providers (pi-ai style)",
+    "desc": "Huge coverage.",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Many providers out of the box"
+    ],
+    "cons": [
+     "A large dependency, usually Node",
+     "You inherit its gaps (it has no local-server presets either)"
+    ],
+    "pick_if": "hosted providers matter most."
+   }
+  ],
+  "mockups": [
+   "08-onboarding",
+   "07-settings"
+  ],
+  "decided": {
+   "options": [
+    "presets"
+   ],
+   "note": "Ollama, LM Studio, vLLM, llama.cpp, OpenAI, OpenRouter, plus a custom row.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F73",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F72"
+  ],
+  "title": "Test connection and capability probe",
+  "ask": "How does the user know a provider works and what the model can do?",
+  "why": "deepseek-harness can only fetch the model list; there is no Test connection button, so mistakes show up mid-chat.",
+  "learn": "deepseek-harness discovery (GET /models); gaps listed in its limitations",
+  "rec_reason": "A one-click probe turns guesswork into recorded facts: reachable, auth ok, model list, streaming, tool calls, context size if the server reports it.",
+  "options": [
+   {
+    "id": "probe",
+    "label": "Test connection: reach the server, list models, send a tiny prompt, try streaming and a tiny tool call; save the results as capabilities in the model row",
+    "desc": "Evidence, not guesses.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "list",
+    "label": "Only fetch the model list (what deepseek-harness does)",
+    "desc": "Minimal.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No test; errors appear when used",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "mockups": [
+   "08-onboarding",
+   "07-settings"
+  ],
+  "decided": {
+   "options": [
+    "probe"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F74",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F11a"
+  ],
+  "title": "Context window and compaction for small and local models",
+  "ask": "Local models often have small windows. Who knows the real limit, and what happens near it?",
+  "why": "deepseek-harness guesses 262,144 tokens for any model it does not know, so a local model can silently truncate. Small windows also break its default compaction.",
+  "learn": "deepseek-harness compaction and its limitations list; Ollama and LM Studio overflow messages",
+  "rec_reason": "Record the window per model (configured or probed), estimate tokens before each request, warn near the limit, and shorten old turns. Skip clever compaction in v1.",
+  "options": [
+   {
+    "id": "basic",
+    "label": "Per-model context_window (configured or probed), token estimate before each call, warning at about 80%, and a simple rule that drops or summarises the oldest turns",
+    "desc": "Honest and small.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "No silent truncation",
+     "Works for 8k and 200k windows alike",
+     "Window is explicit in config"
+    ],
+    "cons": [
+     "Token estimates are approximate",
+     "Summaries cost an extra model call"
+    ],
+    "pick_if": "you will run local models with small windows."
+   },
+   {
+    "id": "full",
+    "label": "Full compaction: thresholds, overflow recovery, tool-result pruning, spill to file, per-model policies",
+    "desc": "deepseek-harness style.",
+    "cost": "L",
+    "lock": "low",
+    "pros": [
+     "Best long-session behaviour"
+    ],
+    "cons": [
+     "A subsystem of its own",
+     "Many knobs to tune"
+    ],
+    "pick_if": "long agent sessions are the norm."
+   },
+   {
+    "id": "none",
+    "label": "No management; rely on the server to error",
+    "desc": "Nothing to build.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Zero work"
+    ],
+    "cons": [
+     "Silent truncation on some servers",
+     "Confusing failures"
+    ],
+    "pick_if": "you only use large-window hosted models."
+   }
+  ],
+  "decided": {
+   "options": [
+    "basic"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F75",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F11a"
+  ],
+  "title": "Errors, retries and timeouts for model calls",
+  "ask": "What happens when a model call fails or is slow?",
+  "why": "Local models cold-load slowly and hosted ones rate-limit; both look like failures unless classified.",
+  "learn": "deepseek-harness stable error codes, retry policy, idle timeout",
+  "rec_reason": "Classify by HTTP status first (deepseek-harness lacks it and falls back to message regex), retry only retryable codes, and give local providers longer timeouts and backoff.",
+  "options": [
+   {
+    "id": "classified",
+    "label": "Stable error codes (auth, rate limit, timeout, context exceeded, server, bad request), a retry policy per provider honouring Retry-After, longer defaults for local servers, each retry logged",
+    "desc": "Predictable.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "basic",
+    "label": "A simple retry count with fixed backoff",
+    "desc": "Small.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No retries",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "classified"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F76",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F11a",
+   "F11c"
+  ],
+  "title": "Model roles and failover",
+  "ask": "Does one model do everything, or can different jobs use different models?",
+  "why": "A small local model may be fine for summaries and titles while a stronger one writes specs; failover keeps work going when one provider is down.",
+  "learn": "deepseek-harness: model per session, separate summarisation model, no automatic failover",
+  "options": [
+   {
+    "id": "roles",
+    "label": "Default model plus optional per-role models (assistant, agents, summariser, titles, vision for images, refiner for dictation); no automatic failover in v1",
+    "desc": "Flexible and predictable.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "one",
+    "label": "One model for everything",
+    "desc": "Simplest.",
+    "cost": "S"
+   },
+   {
+    "id": "failover",
+    "label": "Roles plus an automatic fallback chain when a provider fails",
+    "desc": "Resilient.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "roles"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F77",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F11a",
+   "F11d"
+  ],
+  "title": "Models without tool calling",
+  "ask": "Some local models cannot call tools. What does the assistant or an agent do with them?",
+  "why": "deepseek-harness has no tool-calling flag and no fallback, so such a model simply fails at the server.",
+  "rec_reason": "Record tool_calls as a model capability. Without it, the assistant runs in chat and knowledge-search mode (L1 or L2), and agents refuse the model with a clear message.",
+  "options": [
+   {
+    "id": "flag",
+    "label": "A tool_calls capability per model; models without it get chat and read-only search, and agents refuse them with a clear message",
+    "desc": "Honest limits.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "text",
+    "label": "Prompt-based tool fallback: the model writes commands as text that the console parses",
+    "desc": "Works with any model.",
+    "cost": "L"
+   },
+   {
+    "id": "require",
+    "label": "Only support models that can call tools",
+    "desc": "Simplest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "flag"
+   ],
+   "note": "No parsing of fake tool calls from plain text.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F78",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F11a"
+  ],
+  "title": "Usage and cost tracking",
+  "ask": "Do you track tokens and cost, and does anything stop at a budget?",
+  "why": "Paperclip tracks cost per run with warn and hard-stop budgets; deepseek-harness tracks tokens, speed and cache hits but no currency.",
+  "learn": "paperclip cost_events and budgets; deepseek-harness TokenUsage",
+  "rec_reason": "Log token usage per call to JSONL with a reported-or-unpriced flag (never show missing as zero). Add optional per-provider prices and warn at 80%; hard stops only when you ask for them.",
+  "options": [
+   {
+    "id": "log",
+    "label": "Usage per call in JSONL (uncached input, output, cache read and write, reasoning, tokens per second, time to first token) with an optional price table, warning at 80% of an optional budget; record the billing type (api or subscription) so tokens are tracked even when the dollar cost is zero; show per agent and per project",
+    "desc": "Measure first.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "budget",
+    "label": "Also hard budgets that pause agents at 100% (paperclip style)",
+    "desc": "Controlled spend.",
+    "cost": "L"
+   },
+   {
+    "id": "none",
+    "label": "No tracking",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "log"
+   ],
+   "note": "Warn at 80% of an optional budget. No hard stop unless you ask for one. Second review (B25, 2026-10-07): Usage files stay on the machine (gitignored).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F118",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F11d"
+  ],
+  "multi": true,
+  "title": "Assistant tasks: what the small helper does",
+  "ask": "The assistant is a small tool for small jobs. Which jobs do we give it?",
+  "mockups": [
+   "11-dictation-refiner",
+   "12-assistant-tools"
+  ],
+  "why": "Naming the jobs keeps the assistant small and useful, and shows which tools (clipboard, screenshots, microphone) need permission and a native bridge.",
+  "learn": "control-center assistant verbs, voice and capture; deepseek-harness dictation into the draft; paperclip chat connectors",
+  "options": [
+   {
+    "id": "ask",
+    "label": "Quick questions: chat plus search over the knowledge base",
+    "desc": "Ask about tickets, notes and standards.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "find",
+    "label": "Find a file or note by name or content across the knowledge repo and projects, and open it",
+    "desc": "Where is that spec?",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "clipboard",
+    "label": "Clipboard: read it (asks first) and put results back on it",
+    "desc": "Copy that as a todo.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "screenshot",
+    "label": "Screenshots and images: capture or paste, then describe, read the text (OCR) or answer questions about it",
+    "desc": "What is this error?",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "dictate",
+    "label": "Dictation refiner: turn a long spoken thought into a clean prompt, removing repetition and keeping your meaning",
+    "desc": "Talk long, get it short.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "capture",
+    "label": "Quick capture: a todo, log line or ticket draft from what you say",
+    "desc": "Capture without typing.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "summarise",
+    "label": "Summarise a ticket, file or log",
+    "desc": "Short versions of long things.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "verbs",
+    "label": "Run a CLI verb after confirmation",
+    "desc": "Move a ticket, add a decision.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "open",
+    "label": "Open a file, ticket or URL",
+    "desc": "Jump to it.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "translate",
+    "label": "Translate or rephrase text",
+    "desc": "Optional.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "ask",
+    "find",
+    "clipboard",
+    "screenshot",
+    "dictate",
+    "capture",
+    "summarise",
+    "verbs",
+    "open"
+   ],
+   "note": "Later (after v1, B25): clipboard, screenshots and OCR.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F119",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F118"
+  ],
+  "title": "Dictation refiner: long speech to a clean prompt",
+  "ask": "You talk for a long time, repeat yourself, and want a clean version to give an agent. How does it work?",
+  "mockups": [
+   "11-dictation-refiner"
+  ],
+  "why": "When people talk for long they repeat things and wander. A refiner that keeps your meaning but removes the noise is a high-value small task, as long as it never changes what you meant.",
+  "rec_reason": "Show the raw transcript and the refined version side by side with changes highlighted, so you can accept, undo or edit. Use the glossary and project names to fix mis-heard terms. Keep the original so nothing is lost.",
+  "options": [
+   {
+    "id": "pipeline",
+    "label": "Record, transcribe, show the raw text, then a refine pass: remove repetition and filler, fix doubtful terms from the glossary and project names, keep meaning and order, output in a chosen style (prompt, bullets, ticket text); show raw and refined side by side with highlights; copy or send to an agent; keep the original for 24 hours",
+    "desc": "Safe and visible.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "You see exactly what changed",
+     "Meaning is protected: nothing is silently rewritten",
+     "Mis-heard names get fixed from your own glossary",
+     "The refined text can go straight to an agent"
+    ],
+    "cons": [
+     "One extra model call per dictation",
+     "A weak local model may refine poorly; use a stronger refiner role (F76)"
+    ],
+    "pick_if": "you dictate long thoughts and want clean prompts."
+   },
+   {
+    "id": "direct",
+    "label": "Send the raw transcript straight to the agent",
+    "desc": "No refining.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Fastest, nothing to build"
+    ],
+    "cons": [
+     "Repetition and mis-hearings reach the agent",
+     "More tokens"
+    ],
+    "pick_if": "you speak short, clear sentences."
+   },
+   {
+    "id": "manual",
+    "label": "Only transcribe; you edit the text yourself",
+    "desc": "Manual.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Full control"
+    ],
+    "cons": [
+     "The tedious part stays with you"
+    ],
+    "pick_if": "accuracy matters more than speed."
+   }
+  ],
+  "decided": {
+   "options": [
+    "pipeline"
+   ],
+   "note": "Later (after v1, B25): the dictation refiner.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F120",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F119",
+   "F12"
+  ],
+  "title": "Speech recognition engine",
+  "ask": "Recognition sometimes mishears. Which engine gives you accuracy, privacy and a way to recover?",
+  "mockups": [
+   "11-dictation-refiner"
+  ],
+  "why": "Accuracy depends on the engine and on being able to bias it toward your vocabulary and re-run a bad transcript.",
+  "learn": "control-center desktop (whisper.cpp server with a Piper voice, push-to-talk) and browser Web Speech; deepseek-harness local SenseVoice (experimental dictation)",
+  "rec_reason": "Record the audio once and transcribe it with a local engine; keep the audio for a day so a bad transcript can be re-run with another engine. A browser engine is the zero-setup fallback.",
+  "options": [
+   {
+    "id": "hybrid",
+    "label": "v1: the browser engine (F12) only. Later, an optional local engine plugin (whisper style, separate process) biased by a vocabulary prompt, with a configured transcription endpoint as another option; when recording is on, keep the audio 24 hours so a bad transcript can be re-run",
+    "desc": "Recoverable.",
+    "short": "Local plus fallback",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Private and offline by default",
+     "A bad transcript can be re-run with another engine",
+     "Vocabulary biasing improves jargon and names"
+    ],
+    "cons": [
+     "Needs a model download and CPU or GPU time",
+     "Latency on long audio"
+    ],
+    "pick_if": "accuracy and privacy matter.",
+    "facts": {
+     "Privacy": "Audio stays on your machine by default",
+     "Setup": "Download a model once",
+     "Vocabulary": "Prompt biasing with glossary and project names",
+     "Recovery": "Audio kept 24 h to re-run"
+    }
+   },
+   {
+    "id": "web",
+    "label": "Browser speech recognition only",
+    "desc": "Zero setup.",
+    "short": "Browser only",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No install"
+    ],
+    "cons": [
+     "Some browsers send audio to a vendor",
+     "No vocabulary biasing, weaker on jargon",
+     "No audio kept to re-run"
+    ],
+    "pick_if": "you want to try voice quickly.",
+    "facts": {
+     "Privacy": "May go to a vendor",
+     "Setup": "None",
+     "Vocabulary": "None",
+     "Recovery": "None"
+    }
+   },
+   {
+    "id": "api",
+    "label": "An OpenAI-compatible audio transcription endpoint (hosted or a local server)",
+    "desc": "Good accuracy.",
+    "short": "Transcription endpoint",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Strong accuracy",
+     "Works with local servers that implement it"
+    ],
+    "cons": [
+     "Audio leaves the machine if hosted",
+     "Cost and an extra provider to configure"
+    ],
+    "pick_if": "you already run such an endpoint.",
+    "facts": {
+     "Privacy": "Depends on the endpoint",
+     "Setup": "Provider row (F72)",
+     "Vocabulary": "Prompt field if supported",
+     "Recovery": "Re-send the saved audio"
+    }
+   }
+  ],
+  "decided": {
+   "options": [
+    "hybrid"
+   ],
+   "note": "Local engine first, then the browser. A hosted transcription endpoint is used only if you configure one. Consistency fix (B24, 2026-10-07): Browser engine in v1; a local engine is a later optional plugin, so v1 needs no install (F123).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F121",
+  "phase": "channels",
+  "impact": 2,
+  "needs": [
+   "F120"
+  ],
+  "multi": true,
+  "title": "Making recognition robust",
+  "ask": "Which habits reduce mishearing and make it easy to recover?",
+  "why": "Names, ticket ids and project terms are exactly what recognition gets wrong. Small features fix most of it.",
+  "options": [
+   {
+    "id": "vocab",
+    "label": "Custom vocabulary from the glossary, project names and ticket ids to bias recognition",
+    "desc": "Fewer jargon errors.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "postfix",
+    "label": "A post-correction pass that checks the transcript against that vocabulary",
+    "desc": "Catches the rest.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "flag",
+    "label": "Doubtful words are highlighted; click to replace or type",
+    "desc": "You stay in control.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "ptt",
+    "label": "Push to talk and manual stop; a mic level meter",
+    "desc": "Cleaner audio.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "retry",
+    "label": "Re-transcribe saved audio with another engine",
+    "desc": "Recovery.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "spell",
+    "label": "Spell-out mode for ids and codes (T dash zero one four)",
+    "desc": "Exact ids.",
+    "cost": "S"
+   },
+   {
+    "id": "lang",
+    "label": "Language and accent setting",
+    "desc": "Better base accuracy.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "noise",
+    "label": "Noise suppression",
+    "desc": "Noisy rooms.",
+    "cost": "M"
+   }
+  ],
+  "decided": {
+   "options": [
+    "vocab",
+    "postfix",
+    "flag",
+    "ptt",
+    "retry",
+    "lang"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): Re-transcribe with another engine applies once the local engine plugin exists. Later (after v1, B25): robust recognition.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F122",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F118",
+   "F14"
+  ],
+  "title": "Clipboard, screenshots and privacy",
+  "ask": "Reading the clipboard and capturing the screen are sensitive. What are the rules?",
+  "mockups": [
+   "12-assistant-tools"
+  ],
+  "why": "Clipboards hold passwords and screens show everything. control-center already says Telegram must not approve these tools, but its tool list still gated clipboard-read in config, so the rule needs one enforced place.",
+  "learn": "control-center permission card and gated tools; paperclip Allowed, Ask first, Off per action",
+  "rec_reason": "Each sensitive tool is Allow, Ask first or Off. Clipboard read and screen capture default to Ask first, with a notice of which model and endpoint will see the content. They are never available from Telegram or other remote channels. Nothing is stored unless you save it.",
+  "options": [
+   {
+    "id": "askfirst",
+    "label": "Per-tool Allow, Ask first or Off; clipboard read and screen capture default to Ask first with a notice of the model and endpoint that will see the content; never available from Telegram or webhooks; images processed locally when a local vision model is configured; nothing stored unless saved",
+    "desc": "Safe by default.",
+    "short": "Ask first",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "You always know what is sent and where",
+     "Remote channels cannot reach the screen or clipboard",
+     "Settings show every tool state"
+    ],
+    "cons": [
+     "A prompt each time can be annoying; allow once per chat helps"
+    ],
+    "pick_if": "you will paste or capture sensitive material.",
+    "facts": {
+     "Default": "Ask first for clipboard read and screen capture",
+     "Remote": "Never from Telegram or webhooks",
+     "Storage": "Not stored unless saved"
+    }
+   },
+   {
+    "id": "allow",
+    "label": "Allow always for the console assistant",
+    "desc": "Fastest.",
+    "short": "Allow always",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No prompts"
+    ],
+    "cons": [
+     "A mistaken request can send a password to a model",
+     "Hard to audit"
+    ],
+    "pick_if": "a private machine you fully trust."
+   },
+   {
+    "id": "off",
+    "label": "Disable clipboard and screen tools",
+    "desc": "Safest.",
+    "short": "Disabled",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing sensitive is reachable"
+    ],
+    "cons": [
+     "Loses two of the most useful small jobs"
+    ],
+    "pick_if": "privacy outranks convenience."
+   }
+  ],
+  "decided": {
+   "options": [
+    "askfirst"
+   ],
+   "note": "Clipboard and screen capture ask first and are never available from Telegram. Consistency fix (B24, 2026-10-07): Exception: raw dictation text and audio are kept 24 hours (F119, F120). Later (after v1, B25): applies when clipboard and screenshots arrive.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F123",
+  "phase": "channels",
+  "impact": 3,
+  "needs": [
+   "F118",
+   "F0a"
+  ],
+  "title": "Where the assistant lives: browser or a small desktop helper",
+  "ask": "Clipboard, screen capture, a global hotkey and the microphone are easier from the desktop than from a browser tab. How do we get them?",
+  "mockups": [
+   "12-assistant-tools"
+  ],
+  "why": "A browser can paste images, record audio and ask to capture the screen, but cannot offer a global hotkey and has limited clipboard access. A native helper can, at the cost of another process.",
+  "learn": "control-center desktop shell in Rust (global hotkey, microphone, tray, OCR, screen capture, clipboard) and its loopback bridge; deepseek-harness Electron shell",
+  "rec_reason": "Start in the browser, since most jobs work there. Add an optional local helper as a plugin for the global hotkey, clipboard and screenshots. With TypeScript everywhere (F0a), the helper can be a Node process with a tiny native part for hotkey, clipboard and screenshots; the existing Tauri shell is the heavier option.",
+  "options": [
+   {
+    "id": "browser",
+    "label": "In the console only: paste or drag images, record with the browser, ask the browser to capture the screen, clipboard through browser permission prompts; a keyboard shortcut inside the page",
+    "desc": "No install.",
+    "short": "Browser only",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Nothing to install or keep running",
+     "Works on any machine with a browser"
+    ],
+    "cons": [
+     "No global hotkey",
+     "Clipboard and screen capture need permission prompts and have limits"
+    ],
+    "pick_if": "most jobs happen with the console open.",
+    "facts": {
+     "Global hotkey": "No",
+     "Clipboard": "With permission prompts",
+     "Screen capture": "Browser share prompt",
+     "Install": "None"
+    }
+   },
+   {
+    "id": "helper",
+    "label": "Browser plus an optional small local helper (loopback only, started on demand) for the global hotkey, clipboard, screenshots and microphone; a plugin",
+    "desc": "OS-level powers.",
+    "short": "Browser + helper",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Global hotkey and direct clipboard and screenshots",
+     "Optional: the console works without it"
+    ],
+    "cons": [
+     "Another process to start and secure",
+     "Windows specifics (permissions, hotkey conflicts)"
+    ],
+    "pick_if": "you want a push-to-talk hotkey anywhere.",
+    "facts": {
+     "Global hotkey": "Yes",
+     "Clipboard": "Direct, still Ask first",
+     "Screen capture": "Direct",
+     "Install": "A small local process"
+    }
+   },
+   {
+    "id": "tauri",
+    "label": "The Tauri desktop shell from control-center as the assistant window",
+    "desc": "Reuse what exists.",
+    "short": "Tauri shell",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Already has hotkey, microphone, tray, OCR and capture",
+     "Native feel"
+    ],
+    "cons": [
+     "Rust toolchain and a separate app",
+     "A different product from a local web console"
+    ],
+    "pick_if": "a desktop app is the goal.",
+    "facts": {
+     "Global hotkey": "Yes",
+     "Clipboard": "Direct",
+     "Screen capture": "Direct, with OCR",
+     "Install": "An app per OS"
+    }
+   }
+  ],
+  "decided": {
+   "options": [
+    "browser"
+   ],
+   "note": "The assistant lives in the console. No Tauri shell and no desktop helper in v1.",
+   "date": "2026-10-07"
+  }
+ }
+]

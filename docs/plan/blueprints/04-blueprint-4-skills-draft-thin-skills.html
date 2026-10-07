@@ -1,0 +1,19 @@
+<!-- title: Blueprint 4: skills (draft, thin skills) -->
+<p class="why">Principle (F30): a skill says when and how to behave and which verbs to call; state changes and file generation live in the console, not in the prompt.</p>
+      <table>
+        <thead><tr><th>Skill</th><th>Used by</th><th>Purpose</th><th>Console verbs it calls (F13b)</th></tr></thead>
+        <tbody>
+          <tr><td>kickoff</td><td>analyst</td><td>seed a ticket</td><td>ticket-create</td></tr>
+          <tr><td>spec</td><td>analyst</td><td>draft and freeze requirements</td><td>context, tracker-add, validate</td></tr>
+          <tr><td>clarify</td><td>analyst</td><td>close open questions into decisions</td><td>tracker-add, blockers</td></tr>
+          <tr><td>plan</td><td>planner</td><td>slices and tasks</td><td>validate, ticket-move</td></tr>
+          <tr><td>challenge</td><td>planner, verifier</td><td>fresh-eyes critique in a separate agent</td><td>tracker-add</td></tr>
+          <tr><td>do</td><td>builder</td><td>classify a request, run the right lane</td><td>claim, ticket-move, log-work</td></tr>
+          <tr><td>verify</td><td>verifier</td><td>review and tests with evidence</td><td>tracker-add, validate</td></tr>
+          <tr><td>fix</td><td>fixer</td><td>root cause and minimal patch</td><td>tracker-add</td></tr>
+          <tr><td>log-work</td><td>all</td><td>daily work log</td><td>log-work</td></tr>
+          <tr><td>todos</td><td>all</td><td>capture chores</td><td>todo-add, todo-done</td></tr>
+          <tr><td>close-work</td><td>verifier</td><td>finalise and close</td><td>blockers, ticket-move</td></tr>
+          <tr><td>trace-context</td><td>all</td><td>load ticket state in one call</td><td>context</td></tr>
+        </tbody>
+      </table>

@@ -1,0 +1,2315 @@
+[
+ {
+  "id": "F34",
+  "phase": "console",
+  "impact": 3,
+  "needs": [
+   "F0a",
+   "F33"
+  ],
+  "title": "Viewer technology",
+  "ask": "What draws the console pages, board and canvases now that the stack is TypeScript everywhere?",
+  "why": "What draws pages and canvases. Sets maintenance cost and whether a build step exists. The viewer fills the views slot and renders what plugins add. Motion is a browser feature first (CSS transitions, Web Animations, View Transitions); see F109 for the performance budget. Whether to add a component library is F131.",
+  "learn": "control-center vanilla SPA; lc-wms Python templates; paperclip React",
+  "rec_reason": "Decided direction for the stack is TypeScript everywhere, and the UI is independent from the Python-free back end by an API contract. Two independent reviews (Blueprint 23) found React the safest for the widget list; Svelte 5 is the runner-up at a third of the bundle size but with fewer polished widgets. A spike (F151) checks it before the console milestone.",
+  "options": [
+   {
+    "id": "vanilla",
+    "label": "Shared shell + one vanilla-JS viewer + one CSS file; page body is data",
+    "cost": "S",
+    "rec": false,
+    "desc": "No build step, cached once, themeable. This is how the plan page works today. Modern CSS and the View Transitions API already give smooth page and list animations without a library.",
+    "lock": "low",
+    "pros": [
+     "No build step, cached once",
+     "Easy to theme",
+     "Works offline, opens by double-click"
+    ],
+    "cons": [
+     "Hand-written DOM code",
+     "Fewer ready components"
+    ],
+    "pick_if": "screens are mostly lists, tables and forms."
+   },
+   {
+    "id": "preact",
+    "label": "Preact + htm, one vendored file, component style, no build",
+    "cost": "M",
+    "desc": "Components for the console UI without a toolchain.",
+    "lock": "low",
+    "pros": [
+     "Component model without a toolchain",
+     "One vendored file"
+    ],
+    "cons": [
+     "A third-party file to vendor and update"
+    ],
+    "pick_if": "the console UI grows complex.",
+    "rec": false
+   },
+   {
+    "id": "pytempl",
+    "label": "Python string templates per page (lc-wms brief.py)",
+    "cost": "S",
+    "desc": "Server-side only; static pages, little interactivity.",
+    "lock": "med",
+    "pros": [
+     "Server-only, stdlib, proven in lc-wms brief"
+    ],
+    "cons": [
+     "Static pages, little interactivity"
+    ],
+    "pick_if": "pages are read-only reports.",
+    "rec": false
+   },
+   {
+    "id": "react",
+    "label": "React 19 + TypeScript + Vite single-page app with a typed API client; the build is shipped inside the package, not committed to main",
+    "cost": "L",
+    "desc": "Widest ecosystem. The build is made locally by hl setup into a gitignored folder, never committed.",
+    "lock": "med",
+    "pros": [
+     "Every widget has a mature library (panels, drag and drop, graph, palette, chat)",
+     "Largest talent pool, and AI agents write it best (a judgement, not measured)",
+     "Types come from the shared Zod schemas, so the UI cannot drift from the API"
+    ],
+    "cons": [
+     "Largest dependency tree: 126 packages for a toy app (measured 2026-10-07)",
+     "A build step for people who change the UI; teammates get prebuilt files"
+    ],
+    "pick_if": "the screens are rich (board, graph, streaming chat) and UI quality matters more than size.",
+    "rec": true,
+    "must": "Decided stack: the UI is React 19, Vite, Tailwind 4 and shadcn/ui.",
+    "short": "React SPA"
+   },
+   {
+    "id": "svelte",
+    "label": "Svelte compiled with Vite, output committed",
+    "desc": "Built-in transitions and animations, small bundles.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Animations and transitions are built in",
+     "Compiles away the framework, so bundles stay small",
+     "Great for rich, animated components"
+    ],
+    "cons": [
+     "A build step and Node for UI contributors",
+     "Committed build output"
+    ],
+    "pick_if": "the UI is the product and you want fancy motion with small bundles.",
+    "rec": false
+   }
+  ],
+  "mockups": [
+   "layout"
+  ],
+  "decided": {
+   "options": [
+    "react"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F28",
+  "phase": "console",
+  "impact": 3,
+  "needs": [
+   "F33",
+   "F34"
+  ],
+  "title": "How ticket pages are produced",
+  "ask": "When and where is the ticket HTML made?",
+  "why": "When ticket pages exist: with or without the console running.",
+  "learn": "lc-wms kanban brief + live /ticket/{T}",
+  "rec_reason": "Write the file on every state change and also serve it live: it opens without the server and refreshes with it. That is how lc-wms does it today.",
+  "options": [
+   {
+    "id": "both",
+    "label": "File written on every state change, and the console serves the same page live with auto-reload",
+    "cost": "M",
+    "rec": true,
+    "desc": "Works without the server (open the file) and live with it. This is the lc-wms model.",
+    "lock": "low",
+    "pros": [
+     "Opens without the console",
+     "Live refresh when the console runs"
+    ],
+    "cons": [
+     "Two paths to keep consistent (same renderer for both)"
+    ],
+    "pick_if": "you want pages to survive without the server."
+   },
+   {
+    "id": "live",
+    "label": "Console renders live only, no file",
+    "cost": "S",
+    "desc": "Nothing to keep in git; no page without the server.",
+    "lock": "low",
+    "pros": [
+     "Nothing generated to store"
+    ],
+    "cons": [
+     "No page without the server"
+    ],
+    "pick_if": "the console is always running."
+   },
+   {
+    "id": "static",
+    "label": "Static files only",
+    "cost": "S",
+    "desc": "Simple; no live refresh.",
+    "lock": "low",
+    "pros": [
+     "Simple"
+    ],
+    "cons": [
+     "No live refresh"
+    ],
+    "pick_if": "occasional reports."
+   }
+  ],
+  "mockups": [
+   "03-ticket-page"
+  ],
+  "decided": {
+   "options": [
+    "both"
+   ],
+   "note": "The page is a file, so it opens with no server, and the console serves the same page live. Consistency fix (B24, 2026-10-07): The file and the live page use the same remark pipeline (F32), so they match.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F29",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F28"
+  ],
+  "title": "Ticket page sections",
+  "ask": "What does a ticket page show?",
+  "learn": "lc-wms brief page; control-center drawer",
+  "multi": true,
+  "options": [
+   {
+    "id": "head",
+    "label": "Header: title, goal, chips (stage, size, priority, owner, blocked)",
+    "rec": true,
+    "desc": "Always on top."
+   },
+   {
+    "id": "summary",
+    "label": "Summary and scope",
+    "rec": true,
+    "desc": "From spec.md."
+   },
+   {
+    "id": "dec",
+    "label": "Decisions table",
+    "rec": true,
+    "desc": "From decisions.toml; control-center lacks it."
+   },
+   {
+    "id": "q",
+    "label": "Open questions",
+    "rec": true,
+    "desc": "With blocking flag."
+   },
+   {
+    "id": "bugs",
+    "label": "Bugs and gaps",
+    "rec": true,
+    "desc": "Counts and rows."
+   },
+   {
+    "id": "tasks",
+    "label": "Tasks with AC trace and progress",
+    "rec": true,
+    "desc": "Who owns what and how far."
+   },
+   {
+    "id": "plan",
+    "label": "Plan (markdown + Mermaid diagrams)",
+    "rec": true,
+    "desc": "Rendered, not raw."
+   },
+   {
+    "id": "tests",
+    "label": "Test cases",
+    "desc": "TC to AC links."
+   },
+   {
+    "id": "files",
+    "label": "Files list, clickable",
+    "rec": true,
+    "desc": "control-center lists names only."
+   },
+   {
+    "id": "act",
+    "label": "Activity from the work log",
+    "desc": "Timeline."
+   },
+   {
+    "id": "links",
+    "label": "Repos and branches",
+    "desc": "From ticket.toml."
+   }
+  ],
+  "why": "The ticket page is where you read a ticket; its sections decide what you see at a glance.",
+  "mockups": [
+   "03-ticket-page"
+  ],
+  "decided": {
+   "options": [
+    "head",
+    "summary",
+    "dec",
+    "q",
+    "bugs",
+    "tasks",
+    "plan",
+    "tests",
+    "files",
+    "links"
+   ],
+   "note": "Test cases and repo links are on the page because the ticket folder already holds them.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F32",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F34"
+  ],
+  "title": "Rendering markdown and diagrams in pages",
+  "ask": "How does prose become HTML and how do diagrams draw?",
+  "learn": "lc-wms md_to_html + Mermaid via CDN",
+  "options": [
+   {
+    "id": "local",
+    "label": "One unified/remark pipeline in core (remark-gfm, sanitised) shared by the static ticket pages and the React UI + vendored Mermaid file (no CDN)",
+    "cost": "M",
+    "rec": true,
+    "desc": "Pages work offline and are self-contained."
+   },
+   {
+    "id": "cdn",
+    "label": "Same, Mermaid from a CDN",
+    "cost": "S",
+    "desc": "lc-wms today; diagrams break offline."
+   },
+   {
+    "id": "client",
+    "label": "Client-side library such as marked",
+    "cost": "M",
+    "desc": "Richer markdown; a vendored dependency."
+   }
+  ],
+  "why": "Decides whether pages work offline and how much markdown they can show.",
+  "decided": {
+   "options": [
+    "local"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F35",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F34"
+  ],
+  "title": "Canvases and diagrams",
+  "ask": "How are flows and other diagrams written?",
+  "why": "How cheaply flows can be drawn by agents.",
+  "options": [
+   {
+    "id": "dsl-mermaid",
+    "label": "Own node/edge data with auto-layout for flows; vendored Mermaid for sequence, ER and state diagrams",
+    "cost": "M",
+    "rec": true,
+    "desc": "Flows cost 150 to 300 tokens. Mermaid is loaded only on pages that need it, so it works offline."
+   },
+   {
+    "id": "dsl",
+    "label": "Own node/edge data only",
+    "cost": "S",
+    "desc": "Smallest; no sequence or ER diagrams."
+   },
+   {
+    "id": "mermaid",
+    "label": "Mermaid only",
+    "cost": "S",
+    "desc": "Familiar; flows are less controllable and the library is large."
+   },
+   {
+    "id": "svg",
+    "label": "Hand-written SVG",
+    "cost": "S",
+    "desc": "Pretty but thousands of tokens per diagram."
+   }
+  ],
+  "decided": {
+   "options": [
+    "dsl-mermaid"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F36",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F34"
+  ],
+  "title": "Page templates",
+  "ask": "Which generated pages ship in the template set?",
+  "multi": true,
+  "options": [
+   {
+    "id": "ticket",
+    "label": "Ticket page",
+    "rec": true,
+    "desc": "F29 sections."
+   },
+   {
+    "id": "plan",
+    "label": "Plan or planning document",
+    "rec": true,
+    "desc": "Like this page: ideas, canvases, option cards."
+   },
+   {
+    "id": "board",
+    "label": "Board",
+    "rec": true,
+    "desc": "Tickets by stage."
+   },
+   {
+    "id": "daily",
+    "label": "Daily work report",
+    "desc": "From logs."
+   },
+   {
+    "id": "decisions",
+    "label": "Decision log view",
+    "desc": "Table across tickets."
+   },
+   {
+    "id": "dash",
+    "label": "Dashboard",
+    "desc": "Needs live data."
+   }
+  ],
+  "decided": {
+   "options": [
+    "ticket",
+    "plan",
+    "board"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F37",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F33"
+  ],
+  "title": "How this plan page itself is stored",
+  "ask": "The plan page is ~24k tokens and each iteration re-reads it. What changes?",
+  "why": "Applies the same data-plus-viewer pattern to this planning page.",
+  "learn": "same pattern as the artifacts: data + shared viewer + build",
+  "options": [
+   {
+    "id": "split",
+    "label": "Split into data files (cards, flows, decisions, questions, log) + shared viewer + small build script",
+    "cost": "M",
+    "rec": true,
+    "desc": "Each iteration reads and edits only the file that changes; the HTML is generated."
+   },
+   {
+    "id": "asis",
+    "label": "Keep one self-contained HTML file",
+    "cost": "S",
+    "desc": "Opens by double-click; the whole file is re-read every time."
+   },
+   {
+    "id": "md",
+    "label": "Markdown plan + generated page",
+    "cost": "M",
+    "desc": "Prose is cheap; cards and canvases still need data files."
+   }
+  ],
+  "decided": {
+   "options": [
+    "split"
+   ],
+   "note": "This plan already works this way.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F38",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F33"
+  ],
+  "title": "Token guard rails",
+  "ask": "Which rules keep context small across the whole system?",
+  "learn": "control-center trace-context (~16x cheaper digest); lc-wms optimize-cursor-artifacts; deepseek-harness agent-experience",
+  "multi": true,
+  "options": [
+   {
+    "id": "ctx",
+    "label": "One context verb returns a ticket digest instead of reading files",
+    "rec": true,
+    "desc": "Agents start every turn from that."
+   },
+   {
+    "id": "deny",
+    "label": "Deny agent Read on generated output (site/)",
+    "rec": true,
+    "desc": "A settings.json permission rule."
+   },
+   {
+    "id": "budget",
+    "label": "Size budgets and a lint for CLAUDE.md, SKILL.md and agent files",
+    "rec": true,
+    "desc": "Fails CI when they grow."
+   },
+   {
+    "id": "ondemand",
+    "label": "Skills show name and description only; bodies load on demand",
+    "rec": true,
+    "desc": "Default Claude Code behaviour; keep descriptions short."
+   },
+   {
+    "id": "verbs",
+    "label": "Change state with verbs or small edits, never full rewrites",
+    "rec": true,
+    "desc": "Smaller diffs, fewer tokens."
+   },
+   {
+    "id": "map",
+    "label": "Generated artifact map and stable ids",
+    "rec": true,
+    "desc": "Findability without reading everything."
+   },
+   {
+    "id": "report",
+    "label": "Terse report shape for agent output",
+    "desc": "Fixed format: status, evidence, next."
+   },
+   {
+    "id": "cache",
+    "label": "Cache-friendly prompts: stable rules first, volatile state last",
+    "desc": "Cheaper repeated runs."
+   },
+   {
+    "id": "uideny",
+    "label": "Deny agent Read on the console UI code and its build (console/ui, dist) unless the task is about the console",
+    "desc": "The UI never costs everyday tokens.",
+    "short": "Keep the UI out",
+    "cost": "S",
+    "rec": true,
+    "must": "Decided 2026-10-07: agents read code and knowledge data; the UI is opened only when someone changes the console.",
+    "lock": "low",
+    "pros": [
+     "Everyday agent cost of the UI stays at zero whatever the UI size",
+     "Holds even when a session starts in the wrong folder"
+    ],
+    "cons": [
+     "One more deny rule to maintain"
+    ],
+    "pick_if": "the UI lives in the delivery repo next to code agents may open."
+   }
+  ],
+  "why": "These rules keep context small as the system grows.",
+  "decided": {
+   "options": [
+    "ctx",
+    "deny",
+    "budget",
+    "ondemand",
+    "verbs",
+    "map",
+    "uideny"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F10a",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F34"
+  ],
+  "title": "Console tabs",
+  "ask": "What top-level pages exist?",
+  "learn": "control-center, paperclip",
+  "multi": true,
+  "options": [
+   {
+    "id": "ov",
+    "label": "Overview (with the Inbox)",
+    "rec": true,
+    "desc": "Needs-you and what is happening."
+   },
+   {
+    "id": "tk",
+    "label": "Tickets",
+    "rec": true,
+    "desc": "Board and list."
+   },
+   {
+    "id": "td",
+    "label": "Todos",
+    "rec": true,
+    "desc": "Inbox and scoped."
+   },
+   {
+    "id": "wk",
+    "label": "Work",
+    "rec": true,
+    "desc": "Daily logs."
+   },
+   {
+    "id": "ag",
+    "label": "Agents and chat",
+    "rec": true,
+    "desc": "Runs and the assistant."
+   },
+   {
+    "id": "kc",
+    "label": "Knowledge",
+    "rec": true,
+    "desc": "Browse artifacts and wiki."
+   },
+   {
+    "id": "st",
+    "label": "Settings",
+    "rec": true,
+    "desc": "From F9."
+   },
+   {
+    "id": "an",
+    "label": "Analytics",
+    "desc": "Tokens, cost, cycle time. Later."
+   }
+  ],
+  "why": "Tabs are the console navigation; each one is a screen to build and maintain.",
+  "mockups": [
+   "01-overview",
+   "02-board",
+   "06-knowledge"
+  ],
+  "decided": {
+   "options": [
+    "ov",
+    "tk",
+    "td",
+    "wk",
+    "ag",
+    "kc",
+    "st"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F10b",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F10a"
+  ],
+  "title": "Overview widgets",
+  "ask": "What does the first screen show?",
+  "learn": "paperclip Dashboard, control-center Overview",
+  "multi": true,
+  "options": [
+   {
+    "id": "needs",
+    "label": "Needs you: approvals, blocked, open questions",
+    "rec": true,
+    "desc": "Top of the page."
+   },
+   {
+    "id": "funnel",
+    "label": "Tickets by stage",
+    "rec": true,
+    "desc": "Lane funnel with counts."
+   },
+   {
+    "id": "runs",
+    "label": "Agent runs: live and recent",
+    "rec": true,
+    "desc": "Status and duration."
+   },
+   {
+    "id": "today",
+    "label": "Today: work log and due todos",
+    "rec": true,
+    "desc": "Your day."
+   },
+   {
+    "id": "stale",
+    "label": "Stale and unowned tickets",
+    "rec": true,
+    "desc": "Things drifting."
+   },
+   {
+    "id": "activity",
+    "label": "Recent activity feed",
+    "rec": true,
+    "desc": "From the activity log."
+   },
+   {
+    "id": "cost",
+    "label": "Model usage and cost",
+    "desc": "Needs token capture."
+   },
+   {
+    "id": "setup",
+    "label": "Setup / health card",
+    "rec": true,
+    "desc": "Onboarding progress and doctor."
+   },
+   {
+    "id": "recent",
+    "label": "Recently changed artifacts",
+    "desc": "Knowledge feed."
+   },
+   {
+    "id": "inbox",
+    "label": "Inbox shortcut: items that need me",
+    "desc": "See F67.",
+    "cost": "S"
+   },
+   {
+    "id": "usage",
+    "label": "Model usage per day",
+    "desc": "Needs F78.",
+    "cost": "S"
+   }
+  ],
+  "why": "The first screen should answer: what is happening, does it need me, what do I do.",
+  "mockups": [
+   "01-overview"
+  ],
+  "decided": {
+   "options": [
+    "needs",
+    "funnel",
+    "runs",
+    "today",
+    "stale",
+    "activity",
+    "setup"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F10c",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F34"
+  ],
+  "title": "Live updates",
+  "ask": "How does the UI stay current?",
+  "learn": "deepseek-harness snapshot-then-follow",
+  "options": [
+   {
+    "id": "sse",
+    "label": "Server-sent events: snapshot then follow",
+    "cost": "M",
+    "rec": true,
+    "desc": "Simple in Hono and in the browser; live runs and approvals."
+   },
+   {
+    "id": "poll",
+    "label": "Polling every few seconds",
+    "cost": "S",
+    "desc": "Simplest; slightly laggy."
+   },
+   {
+    "id": "manual",
+    "label": "Manual refresh",
+    "cost": "S",
+    "desc": "Not enough for approvals."
+   }
+  ],
+  "why": "Approvals and agent runs must appear without a manual refresh.",
+  "decided": {
+   "options": [
+    "sse"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F10d",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F34"
+  ],
+  "title": "Design system",
+  "ask": "How is the UI kept consistent (a fixed light and dark pair, no theme editor)?",
+  "learn": "paperclip DESIGN.md",
+  "options": [
+   {
+    "id": "tokens",
+    "label": "CSS variable tokens only, hand-written components, no Tailwind",
+    "cost": "S",
+    "rec": false,
+    "desc": "No framework. Every screen answers: what is happening, does it need me, what do I do."
+   },
+   {
+    "id": "tw",
+    "label": "Tailwind 4 + shadcn/ui: copied components on CSS variables, one light and one dark palette, one status vocabulary, monospace IDs",
+    "cost": "M",
+    "desc": "Needs a build step.",
+    "rec": true,
+    "must": "Decided stack: Tailwind 4 and shadcn/ui, one light palette and one dark palette."
+   },
+   {
+    "id": "adhoc",
+    "label": "Ad hoc styling",
+    "cost": "S",
+    "desc": "Drifts quickly.",
+    "rec": false
+   }
+  ],
+  "mockups": [],
+  "rec_reason": "Editable themes are dropped, so the main argument for hand-written tokens is gone. Tailwind with shadcn/ui gives a consistent look fast, and agents write it well. Keep one status vocabulary and monospace IDs either way.",
+  "decided": {
+   "options": [
+    "tw"
+   ],
+   "note": "Follow the system light or dark setting, with a toggle. The plan page stays light.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F9a",
+  "phase": "console",
+  "impact": 2,
+  "needs": [],
+  "title": "Settings sections",
+  "ask": "What can you configure in the console?",
+  "learn": "control-center Settings, deepseek-harness",
+  "multi": true,
+  "options": [
+   {
+    "id": "ws",
+    "label": "Workspace and repos",
+    "rec": true,
+    "desc": "Paths, knowledge pointer, project registry."
+   },
+   {
+    "id": "models",
+    "label": "Models and providers",
+    "rec": true,
+    "desc": "Base URLs, keys by env name, default model."
+   },
+   {
+    "id": "agents",
+    "label": "Agents and backends",
+    "rec": true,
+    "desc": "Roles, runtime, autonomy."
+   },
+   {
+    "id": "perm",
+    "label": "Permissions and approvals",
+    "rec": true,
+    "desc": "Presets, gated tools, timeout."
+   },
+   {
+    "id": "tg",
+    "label": "Telegram",
+    "rec": true,
+    "desc": "Token, allowlist, features."
+   },
+   {
+    "id": "voice",
+    "label": "Voice",
+    "desc": "Dictation, read-aloud."
+   },
+   {
+    "id": "ui",
+    "label": "Appearance and notifications",
+    "desc": "Theme, density."
+   },
+   {
+    "id": "mcp",
+    "label": "Integrations (MCP)",
+    "desc": "Editor config writer."
+   }
+  ],
+  "why": "Plugin settings forms are generated (F44).",
+  "decided": {
+   "options": [
+    "ws",
+    "models",
+    "agents",
+    "perm",
+    "tg"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F9b",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F9a"
+  ],
+  "title": "Where settings are stored",
+  "ask": "How are settings split?",
+  "why": "Keeps secrets out of git while sharing config.",
+  "learn": "control-center, deepseek-harness",
+  "options": [
+   {
+    "id": "tiers",
+    "label": "Three tiers: committed TOML (shared), per-machine workspace.local.toml (gitignored, F103), write-only credentials file by env name",
+    "cost": "M",
+    "rec": true,
+    "desc": "Secrets never reach git; shared config is reviewable."
+   },
+   {
+    "id": "one",
+    "label": "One config file",
+    "cost": "S",
+    "desc": "Easy; mixes secrets with shared config."
+   },
+   {
+    "id": "db",
+    "label": "In a database",
+    "cost": "M",
+    "desc": "Needs a UI for everything."
+   }
+  ],
+  "decided": {
+   "options": [
+    "tiers"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F9c",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F9a"
+  ],
+  "title": "Settings screen build",
+  "ask": "How are the forms built?",
+  "options": [
+   {
+    "id": "hand",
+    "label": "Hand-built panels",
+    "cost": "S",
+    "rec": false,
+    "desc": "Faster for ten sections."
+   },
+   {
+    "id": "schema",
+    "label": "Schema-driven forms",
+    "cost": "M",
+    "desc": "Paperclip getConfigSchema style; pays off with many adapters.",
+    "rec": true
+   }
+  ],
+  "rec_reason": "Plugin settings are declared as schemas (F44) and the stack shares Zod schemas (F145), so forms are generated from them instead of hand-built per panel.",
+  "decided": {
+   "options": [
+    "schema"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F7f",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F5b"
+  ],
+  "title": "Ticket views",
+  "ask": "How do you look at tickets?",
+  "multi": true,
+  "options": [
+   {
+    "id": "board",
+    "label": "Kanban board by stage",
+    "rec": true,
+    "desc": "WIP limit on build."
+   },
+   {
+    "id": "list",
+    "label": "Filterable list",
+    "rec": true,
+    "desc": "Stage, owner, size, blocked."
+   },
+   {
+    "id": "detail",
+    "label": "Ticket detail with artifacts, trackers and comments",
+    "rec": true,
+    "desc": "One page per ticket."
+   },
+   {
+    "id": "inv",
+    "label": "Investigations board",
+    "desc": "Triage before ticketing."
+   }
+  ],
+  "mockups": [
+   "02-board"
+  ],
+  "decided": {
+   "options": [
+    "board",
+    "list",
+    "detail"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F2c",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F35"
+  ],
+  "title": "How graphs are drawn",
+  "ask": "What format do diagrams use?",
+  "learn": "control-center Vault, lc-wms data-graph",
+  "options": [
+   {
+    "id": "mermaid",
+    "label": "Mermaid in markdown, rendered in the console",
+    "cost": "S",
+    "rec": true,
+    "desc": "Text, diffable, agents can write it."
+   },
+   {
+    "id": "mermaid-vault",
+    "label": "Mermaid + a wikilink graph of the vault",
+    "cost": "M",
+    "desc": "Obsidian shows this natively; only worth building into the console for people without Obsidian."
+   },
+   {
+    "id": "svg",
+    "label": "Hand-made SVG files",
+    "cost": "M",
+    "desc": "Prettier, harder for agents to maintain."
+   },
+   {
+    "id": "rag",
+    "label": "Graph RAG data-graph",
+    "cost": "L",
+    "desc": "lc-wms has it; heavy. Skip for lite."
+   }
+  ],
+  "why": "Obsidian already gives a link graph of the vault, so the console need not build one.",
+  "decided": {
+   "options": [
+    "mermaid"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F18",
+  "phase": "console",
+  "impact": 1,
+  "needs": [],
+  "title": "Scheduler",
+  "ask": "Do routines and reminders exist?",
+  "learn": "paperclip routines, deepseek-harness schedule",
+  "options": [
+   {
+    "id": "none",
+    "label": "None in v1",
+    "rec": true,
+    "desc": "Add after the core is stable."
+   },
+   {
+    "id": "remind",
+    "label": "Reminders + daily digest only",
+    "cost": "M",
+    "desc": "Delivered to Telegram and the dashboard."
+   },
+   {
+    "id": "cron",
+    "label": "Cron routines that create tickets or runs",
+    "cost": "L",
+    "desc": "Concurrency rules needed."
+   }
+  ],
+  "why": "If built later, copy paperclip routines: cron, webhook or API triggers, a concurrency policy such as coalesce-if-active, and a catch-up policy.",
+  "decided": {
+   "options": [
+    "none"
+   ],
+   "note": "No routines in v1. Nothing starts a run on a timer.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F50",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F35"
+  ],
+  "title": "Flow diagram syntax",
+  "ask": "What text does an agent write to draw a flow?",
+  "why": "Diagrams are written by agents often; the syntax decides tokens and how well models get it right.",
+  "rec_reason": "Models already write Mermaid fluently. Our own layout can draw its flowchart subset without the 3 MB library. Measured on the two-repo flow: JSON nodes and edges 1070 characters, Mermaid-style text 612.",
+  "options": [
+   {
+    "id": "mm",
+    "label": "Mermaid-style flowchart text inside markdown fences, drawn by our own auto-layout; the full Mermaid library only for sequence, ER and state diagrams",
+    "desc": "Familiar syntax, our renderer.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Fewer tokens than JSON",
+     "Models know it",
+     "Readable in any editor"
+    ],
+    "cons": [
+     "You write a small parser for the subset"
+    ],
+    "pick_if": "agents will draw many flows."
+   },
+   {
+    "id": "json",
+    "label": "JSON nodes and edges (what this plan uses today)",
+    "desc": "Trivial to parse.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No parser to write"
+    ],
+    "cons": [
+     "Verbose to write",
+     "Easy to break with a stray comma"
+    ],
+    "pick_if": "a handful of diagrams."
+   },
+   {
+    "id": "full",
+    "label": "Full Mermaid library",
+    "desc": "All diagram types.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Every diagram type"
+    ],
+    "cons": [
+     "About 3 MB to vendor",
+     "Less control over layout and theme"
+    ],
+    "pick_if": "you need many diagram types."
+   }
+  ],
+  "decided": {
+   "options": [
+    "mm"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F67",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F10a"
+  ],
+  "title": "Inbox: what needs me",
+  "ask": "Is there one place that lists what needs your attention?",
+  "why": "Paperclip has Mine, Recent, Unread, All and Blocked views with per-user read state that resurfaces on new activity.",
+  "learn": "paperclip inbox",
+  "rec_reason": "Compute the inbox from the files (assigned to me, blocked, open questions, approvals waiting). Keep read and archive state per user in a local, gitignored file so the team shares no personal state.",
+  "options": [
+   {
+    "id": "derived",
+    "label": "Derived inbox from the files, with per-user read and archive state in a local file; archived items resurface on new activity",
+    "desc": "Needs-you in one list.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "widget",
+    "label": "Only the Needs-you widget on the Overview",
+    "desc": "Smaller.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No inbox",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "mockups": [
+   "05-inbox"
+  ],
+  "decided": {
+   "options": [
+    "derived"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): The inbox sits on the Overview tab.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F68",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F10d"
+  ],
+  "multi": true,
+  "title": "Console UX rules",
+  "ask": "Which paperclip UX habits do we copy?",
+  "learn": "paperclip DESIGN.md, keyboard shortcuts, empty states, mobile",
+  "options": [
+   {
+    "id": "keys",
+    "label": "Keyboard shortcuts: j/k, Enter, / search, ? help, c new, g then i inbox; off inside text fields",
+    "desc": "Speed.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "empty",
+    "label": "Empty states say what to do next",
+    "desc": "Guidance.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "toast",
+    "label": "No toast for state already visible; stale terminal toasts stay silent",
+    "desc": "Calm UI.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "mono",
+    "label": "One status vocabulary everywhere; ids and costs in monospace",
+    "desc": "Consistency.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "mobile",
+    "label": "Usable on a phone: large touch targets, readable inputs",
+    "desc": "Reach.",
+    "cost": "M"
+   },
+   {
+    "id": "diffs",
+    "label": "Changed files and a diff card at the end of an agent run",
+    "desc": "Review at a glance (deepseek-harness).",
+    "cost": "M"
+   }
+  ],
+  "mockups": [
+   "09-phone",
+   "05-inbox"
+  ],
+  "decided": {
+   "options": [
+    "keys",
+    "empty",
+    "toast",
+    "mono",
+    "mobile"
+   ],
+   "note": "Phone width is already required, so touch targets are in the rules.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F81",
+  "phase": "console",
+  "impact": 3,
+  "needs": [
+   "F34"
+  ],
+  "title": "Layout system: flexible, resizable panes",
+  "ask": "How flexible is the screen layout: can you drag to resize, collapse, and rearrange?",
+  "mockups": [
+   "layout",
+   "02-board",
+   "04-assistant-chat"
+  ],
+  "why": "The shell (sidebar, main, right panel, bottom drawer) frames every screen. Choosing a dock model later means rewriting how every page is placed.",
+  "learn": "control-center splitter.js (pointer and keyboard dividers, saved layout, 900px structural breakpoint); deepseek-harness ui-dockkit (split tree of tabbed panes with undo)",
+  "rec_reason": "Start with the resizable shell: it is what you described (drag to resize, collapse, expand) and control-center already proves it. Pane swapping is cheap. A full dock is a later upgrade if you want to split any pane. In React this is react-resizable-panels (F149).",
+  "options": [
+   {
+    "id": "shell",
+    "label": "Resizable shell: sidebar, main, optional right panel and bottom drawer; drag dividers by mouse, touch or arrow keys; collapse; drag a pane title to swap; below 900 px the side panels become a drawer; saved per user",
+    "desc": "Flexible but bounded.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Matches what you asked for",
+     "Keyboard accessible, proven in control-center",
+     "Predictable: every screen uses the same four regions"
+    ],
+    "cons": [
+     "Not every arrangement is possible",
+     "Each pane type needs a sensible minimum size"
+    ],
+    "pick_if": "you want flexibility without a window manager."
+   },
+   {
+    "id": "dock",
+    "label": "Full dock: split any pane, tabs, drag between panes, undo history (deepseek-harness ui-dockkit)",
+    "desc": "Like an IDE.",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Any arrangement",
+     "Power users love it"
+    ],
+    "cons": [
+     "A subsystem of its own",
+     "Many edge cases (drag targets, persistence, mobile)"
+    ],
+    "pick_if": "the console becomes your daily workbench."
+   },
+   {
+    "id": "fixed",
+    "label": "Fixed responsive layout, no resizing",
+    "desc": "Simplest.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Least code"
+    ],
+    "cons": [
+     "Not what you asked for",
+     "Small screens suffer"
+    ],
+    "pick_if": "layout never matters."
+   }
+  ],
+  "decided": {
+   "options": [
+    "shell"
+   ],
+   "note": "Drag to resize and collapse. A full dock waits until you ask for it.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F82",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F81"
+  ],
+  "title": "Responsive behaviour",
+  "ask": "What happens on a tablet or a phone?",
+  "mockups": [
+   "09-phone",
+   "01-overview"
+  ],
+  "why": "Telegram covers capture on the phone, but you will still open the console there; the panels must adapt, not break.",
+  "learn": "paperclip mobile rules (bottom nav that hides on scroll, 44px touch targets, 16px inputs)",
+  "rec_reason": "Panels adapt to their own width with container queries, so the same screen works in a narrow right pane and on a phone. Below 900 px side panels become drawers; a bottom bar replaces the sidebar on a phone. Tailwind 4 has container queries built in.",
+  "options": [
+   {
+    "id": "tiers",
+    "label": "Three tiers by width: desktop (sidebar, main, right), tablet (main plus drawers), phone (one column, bottom bar, large touch targets); container queries so panels adapt to their own width",
+    "desc": "One layout, adaptive.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "desktop",
+    "label": "Desktop only",
+    "desc": "Smallest.",
+    "cost": "S"
+   },
+   {
+    "id": "app",
+    "label": "A separate mobile app or installable PWA",
+    "desc": "Native feel.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "tiers"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F83",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F81",
+   "F9b"
+  ],
+  "title": "Where layout and appearance preferences are stored",
+  "ask": "Where are your pane sizes and your light or dark choice remembered?",
+  "why": "Personal taste must not create merge conflicts in a shared knowledge repo.",
+  "options": [
+   {
+    "id": "user",
+    "label": "Per-user preferences file outside the repos; the workspace can set a default theme and layout in workspace.toml",
+    "desc": "Personal wins, team has defaults.",
+    "cost": "S",
+    "rec": false
+   },
+   {
+    "id": "repo",
+    "label": "Stored in the knowledge repo",
+    "desc": "Shared everywhere.",
+    "cost": "S",
+    "rec": false
+   },
+   {
+    "id": "browser",
+    "label": "Browser storage only",
+    "desc": "No file.",
+    "cost": "S",
+    "rec": true
+   }
+  ],
+  "rec_reason": "Editable themes were dropped (2026-10-07), so what remains is tiny and per person: pane sizes, density and light or dark. Browser storage holds it with no file and no API; the workspace may set a default in workspace.toml.",
+  "decided": {
+   "options": [
+    "browser"
+   ],
+   "note": "Pane sizes and light or dark stay in this browser. The plan page stays light.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F84",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F10a"
+  ],
+  "multi": true,
+  "title": "UI parts to borrow from the four repos",
+  "ask": "Which proven UI ideas go into the design? Each links to a mockup where it applies.",
+  "learn": "see the Mockups section",
+  "why": "These are the pieces you said to take from all of them. Choosing now keeps the mockups honest.",
+  "options": [
+   {
+    "id": "needs",
+    "label": "Needs-you first on the overview; every screen answers what, does it need me, what do I do (paperclip)",
+    "desc": "Dashboard logic.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "stats",
+    "label": "Stat cards and the stage funnel (paperclip, control-center)",
+    "desc": "At-a-glance numbers.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "kanban",
+    "label": "Kanban with WIP limits and a ticket drawer (control-center)",
+    "desc": "Board.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "ticketpage",
+    "label": "Generated ticket page with decisions table (lc-wms)",
+    "desc": "Reading view.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "inbox",
+    "label": "Inbox with views and keyboard shortcuts (paperclip)",
+    "desc": "Needs me.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "palette",
+    "label": "Command palette (control-center palette.js): Ctrl+K to jump or run a verb",
+    "desc": "Fast navigation.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "stepper",
+    "label": "Wizard stepper with Save and exit left, Continue right (paperclip)",
+    "desc": "Onboarding.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "permcard",
+    "label": "Permission card in the chat flow with allow once, allow for this chat, deny (control-center)",
+    "desc": "Safe agents.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "picker",
+    "label": "Model picker grouped by provider with an Effort menu (deepseek-harness)",
+    "desc": "Models.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "diffs",
+    "label": "Changed-files and diff card at the end of a run (deepseek-harness)",
+    "desc": "Review.",
+    "cost": "M"
+   },
+   {
+    "id": "sessions",
+    "label": "Chats grouped by workspace with hover cards (deepseek-harness)",
+    "desc": "Chat list.",
+    "cost": "S"
+   },
+   {
+    "id": "hud",
+    "label": "Voice HUD overlay (control-center)",
+    "desc": "Voice.",
+    "cost": "L"
+   },
+   {
+    "id": "dock",
+    "label": "Split-tree dock with tabs (deepseek-harness)",
+    "desc": "Workbench.",
+    "cost": "L"
+   },
+   {
+    "id": "agentcards",
+    "label": "Dashboard agent cards showing each agent and its live or last task (paperclip)",
+    "desc": "Seen running.",
+    "cost": "S"
+   },
+   {
+    "id": "runlist",
+    "label": "Runs list with a trigger chip, tokens and the first result line (paperclip)",
+    "desc": "Seen running.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "quickadd",
+    "label": "One-line new task: describe it, pick project, assignee and model, send (paperclip)",
+    "desc": "Seen running.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "subnav",
+    "label": "Agent settings grouped in a left sub-navigation: Agent, Runtime, Governance, Audit (paperclip)",
+    "desc": "Seen running.",
+    "cost": "S"
+   },
+   {
+    "id": "treelist",
+    "label": "Task list as a tree of parent and child with status icons and a Recovery needed badge (paperclip)",
+    "desc": "Seen running.",
+    "cost": "S",
+    "rec": true
+   }
+  ],
+  "decided": {
+   "options": [
+    "needs",
+    "stats",
+    "kanban",
+    "ticketpage",
+    "inbox",
+    "palette",
+    "stepper",
+    "permcard",
+    "picker",
+    "runlist",
+    "quickadd",
+    "treelist"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F85",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F84"
+  ],
+  "title": "Mockup-first rule",
+  "ask": "Do we draw a screen before building it?",
+  "why": "You asked not to be blind at implementation time. A mockup is cheaper to change than code.",
+  "options": [
+   {
+    "id": "first",
+    "label": "Every screen gets a wireframe and a phone width before it is built; mockups stay in the plan and become the acceptance picture",
+    "desc": "No blind builds.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "big",
+    "label": "Mockups only for the big screens",
+    "desc": "Lighter.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "Build, then adjust",
+    "desc": "Fastest start.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "first"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F100",
+  "phase": "console",
+  "impact": 1,
+  "needs": [
+   "F29"
+  ],
+  "title": "Review comments on documents",
+  "ask": "Can a person comment on a specific passage of a spec or plan?",
+  "why": "Paperclip supports anchored comments and revision history on documents. In a files-only system git history gives revisions; anchored comments are the missing piece for team review.",
+  "learn": "paperclip README: Artifacts and Feedback",
+  "options": [
+   {
+    "id": "sidecar",
+    "label": "Sidecar comment records anchored to a quoted passage, shown beside the document on the ticket page",
+    "desc": "Review without a pull request.",
+    "cost": "M"
+   },
+   {
+    "id": "git",
+    "label": "Use git pull request review for comments",
+    "desc": "Nothing to build.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "inline",
+    "label": "Inline markdown comments",
+    "desc": "Simple but noisy.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "git"
+   ],
+   "note": "Comments on a spec happen in the git review, not as a second store in the console.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F109",
+  "phase": "console",
+  "impact": 2,
+  "needs": [
+   "F34"
+  ],
+  "title": "UI motion and performance budget",
+  "ask": "You want a UI with moving parts and animation, and you care about speed. What are the rules?",
+  "mockups": [
+   "01-overview"
+  ],
+  "why": "Animation is cheap to add and easy to make janky. A budget keeps the console fast on a modest laptop.",
+  "rec_reason": "Use the browser for motion: CSS transitions, the Web Animations API and View Transitions. Animate only transform and opacity. Set numeric budgets and respect reduced-motion settings.",
+  "options": [
+   {
+    "id": "budget",
+    "label": "CSS transitions, Web Animations and View Transitions; animate only transform and opacity; respect prefers-reduced-motion; budgets: input response within 100 ms, first paint within 300 ms on localhost, 60 frames per second, long lists paged or virtualised past a few hundred rows, live updates batched to at most one per 250 ms",
+    "desc": "Fancy and fast.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "lib",
+    "label": "Add an animation library (GSAP or Framer Motion style) for complex choreography",
+    "desc": "More power, more weight.",
+    "cost": "M"
+   },
+   {
+    "id": "none",
+    "label": "No animation, speed only",
+    "desc": "Fastest, plainest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "budget"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F131",
+  "phase": "console",
+  "impact": 3,
+  "needs": [
+   "F34"
+  ],
+  "title": "UI component library: build it ourselves or use one?",
+  "ask": "Which styling and component kit sits under the React UI? Editable themes are dropped, so only a light and dark pair is needed.",
+  "why": "Tokens are spent in three places: building the UI once, editing it later, and (if agents write screens) every screen. Libraries help with the first, and some make the third worse.",
+  "learn": "measured markup size of one screen part in each approach (Blueprint 20); control-center styles.css is about 28.8k tokens; Shoelace is sunset, Web Awesome succeeds it; Pico says it is no longer maintained; Bootstrap 5.3 themes colours at runtime but radius, fonts and spacing need Sass",
+  "mockups": [
+   "01-overview"
+  ],
+  "rec_reason": "With editable themes dropped and agents never reading UI code in daily use, the old objections to Tailwind (markup tokens, theming fight) no longer apply. shadcn/ui on Tailwind is the fastest path to a polished React console. Keep each hard widget wrapped behind our own component so a library swap touches one file (F147).",
+  "criteria": [
+   {
+    "id": "markup",
+    "label": "Cheap markup per screen",
+    "hint": "tokens to write one screen part (measured)"
+   },
+   {
+    "id": "effort",
+    "label": "Little effort to build the UI",
+    "hint": "CSS and widget code you do not write"
+   },
+   {
+    "id": "theme",
+    "label": "Runtime themes: colours, fonts, radius, density",
+    "hint": "your theme-pack requirement (F79)"
+   },
+   {
+    "id": "widgets",
+    "label": "Ready-made widgets",
+    "hint": "split panes, tabs, tree, drawer, dialog, colour picker"
+   },
+   {
+    "id": "look",
+    "label": "Can match the control-center look",
+    "hint": "not a generic Bootstrap look"
+   },
+   {
+    "id": "llm",
+    "label": "Models already know it",
+    "hint": "less documentation in context"
+   },
+   {
+    "id": "offline",
+    "label": "Works offline with no build step",
+    "hint": "vendored files, double-click"
+   },
+   {
+    "id": "maint",
+    "label": "Maintained, low lock-in",
+    "hint": "project health and exit cost"
+   },
+   {
+    "id": "a11y",
+    "label": "Accessibility built in",
+    "hint": "keyboard, focus, screen readers"
+   }
+  ],
+  "options": [
+   {
+    "id": "shadcn",
+    "label": "Tailwind 4 + shadcn/ui (Radix primitives copied into our repo) with TanStack Query and react-router; light and dark palettes as CSS variables; specialist widgets wrapped behind our own components",
+    "desc": "The mainstream kit.",
+    "short": "Tailwind + shadcn/ui",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Fast to build, agents know it very well",
+     "Accessible primitives (Radix) without owning them",
+     "Components are our files, so no kit upgrade can break them",
+     "Container queries and dark mode are built in"
+    ],
+    "cons": [
+     "Class-heavy markup (about 3 times a classless library per card; the cost falls only at build time)",
+     "Copied code is ours to maintain",
+     "cva and tailwind-merge churn"
+    ],
+    "pick_if": "you want a rich console quickly and keep themes simple.",
+    "facts": {
+     "Build step": "Part of Vite",
+     "Components": "Copied in, we own them",
+     "Themes": "Light and dark only",
+     "Agent skill": "Highest (judgement)"
+    },
+    "must": "Decided stack: the UI is React 19 with Tailwind 4 and shadcn/ui."
+   },
+   {
+    "id": "own",
+    "short": "Own tokens + vanilla",
+    "label": "Own design tokens and CSS with plain JavaScript components (what this plan page does)",
+    "desc": "Full control, no dependency.",
+    "cost": "M",
+    "lock": "med",
+    "facts": {
+     "Markup tokens": "149 for the sample part (the baseline, 100%)",
+     "CSS to write once": "About 5.7k tokens for this plan viewer; control-center needed about 28.8k",
+     "Themes": "Full: tokens, fonts, radius, density",
+     "Widgets": "Hand-built: split panes, tabs, tree, dialogs",
+     "Dependency": "None",
+     "Build step": "None"
+    },
+    "pros": [
+     "Cheapest markup and a full match to the control-center look",
+     "Runtime themes are exactly your token model",
+     "Nothing to update or outgrow"
+    ],
+    "cons": [
+     "You write and maintain every widget, including accessibility",
+     "Models must be told your class names (a catalog page helps)"
+    ],
+    "pick_if": "you want zero dependencies and are happy to build widgets.",
+    "scores": {
+     "markup": 5,
+     "effort": 2,
+     "theme": 5,
+     "widgets": 2,
+     "look": 5,
+     "llm": 2,
+     "offline": 5,
+     "maint": 3,
+     "a11y": 2
+    },
+    "rec": false
+   },
+   {
+    "id": "wa",
+    "short": "Own tokens + Web Awesome widgets",
+    "label": "Your token layer for look and themes, plus Web Awesome web components (free core) for the hard widgets, vendored with no build",
+    "desc": "Best of both, after a spike.",
+    "cost": "M",
+    "lock": "low",
+    "facts": {
+     "Markup tokens": "147 for the sample part (98%): tags like wa-card and wa-badge",
+     "CSS to write once": "Mostly your tokens; map them to its CSS custom properties",
+     "Themes": "CSS custom properties and design tokens; 10+ built-in themes",
+     "Widgets": "Split panel, tab group, tree, drawer, dialog, colour picker, popover, tooltip (free core, 50+ components)",
+     "Dependency": "One vendored library; MIT core, a paid Pro tier exists; successor to the sunset Shoelace",
+     "Build step": "None (autoloader or a vendored folder)"
+    },
+    "pros": [
+     "Fills the widget gap that costs the most hand-written JavaScript",
+     "Accessible and keyboard friendly out of the box",
+     "No build step; markup as short as your own",
+     "Themed through CSS variables, so it can follow your tokens"
+    ],
+    "cons": [
+     "A new library from a company with a paid tier; pin and vendor a version",
+     "Models know it less well than Bootstrap, so a short cheat sheet is needed",
+     "Styling must be mapped to your tokens (the spike checks this)"
+    ],
+    "pick_if": "you want ready-made widgets without giving up your own look.",
+    "scores": {
+     "markup": 5,
+     "effort": 4,
+     "theme": 4,
+     "widgets": 5,
+     "look": 4,
+     "llm": 3,
+     "offline": 4,
+     "maint": 4,
+     "a11y": 5
+    },
+    "rec": false
+   },
+   {
+    "id": "pico",
+    "short": "Pico + own components",
+    "label": "Pico CSS (classless semantic HTML) plus your own components for what it lacks",
+    "desc": "Tiny markup, few widgets.",
+    "cost": "M",
+    "lock": "med",
+    "facts": {
+     "Markup tokens": "133 for the sample part (89%): almost no classes",
+     "CSS to write once": "Small: Pico covers basic elements",
+     "Themes": "Over 130 CSS variables and about 20 colour themes",
+     "Widgets": "None for tabs, drawers, split panes or trees",
+     "Dependency": "Its site says it is no longer maintained",
+     "Build step": "None"
+    },
+    "pros": [
+     "Shortest markup of all the CSS options",
+     "Good defaults and dark mode without JavaScript",
+     "Themeable through variables"
+    ],
+    "cons": [
+     "Not maintained any more, which is a risk",
+     "You still build every interactive widget",
+     "Basic look; control-center style needs real work"
+    ],
+    "pick_if": "the UI is mostly forms and tables.",
+    "scores": {
+     "markup": 5,
+     "effort": 3,
+     "theme": 4,
+     "widgets": 1,
+     "look": 3,
+     "llm": 4,
+     "offline": 5,
+     "maint": 2,
+     "a11y": 3
+    },
+    "rec": false
+   },
+   {
+    "id": "bootstrap",
+    "short": "Bootstrap 5.3",
+    "label": "Bootstrap 5.3 with its classes and JavaScript, vendored",
+    "desc": "Familiar and complete.",
+    "cost": "S",
+    "lock": "med",
+    "facts": {
+     "Markup tokens": "251 for the sample part (168%): class-heavy",
+     "CSS to write once": "Almost none; the CSS file is large but agents never read it",
+     "Themes": "Colour modes via data-bs-theme at runtime; radius, fonts and spacing need Sass at build time",
+     "Widgets": "Tabs, offcanvas drawer, modal, dropdown; no split panes and no tree",
+     "Dependency": "Very mature",
+     "Build step": "None for the default build"
+    },
+    "pros": [
+     "Models know it very well, so little context is needed",
+     "Mature, accessible, huge community",
+     "No build step for the default build"
+    ],
+    "cons": [
+     "Markup is 1.7 times longer per screen",
+     "Runtime theming of radius, fonts and density is limited",
+     "The generic look fights the control-center style",
+     "No split panes or tree"
+    ],
+    "pick_if": "speed to a standard look matters more than a custom one.",
+    "scores": {
+     "markup": 3,
+     "effort": 4,
+     "theme": 2,
+     "widgets": 3,
+     "look": 2,
+     "llm": 5,
+     "offline": 5,
+     "maint": 5,
+     "a11y": 4
+    },
+    "rec": false
+   },
+   {
+    "id": "tailwind",
+    "short": "Tailwind",
+    "label": "Tailwind CSS utility classes with a build step",
+    "desc": "Maximum styling freedom, maximum markup.",
+    "cost": "M",
+    "lock": "med",
+    "facts": {
+     "Markup tokens": "481 for the sample part (321%): the longest",
+     "CSS to write once": "Config and a build, then none",
+     "Themes": "Possible with CSS variables and configuration",
+     "Widgets": "None; needs a headless component library as well",
+     "Dependency": "Mature; needs a build toolchain",
+     "Build step": "Required"
+    },
+    "pros": [
+     "Models know it very well",
+     "Any look is possible",
+     "Active and popular"
+    ],
+    "cons": [
+     "The longest markup, 3.2 times your own: the opposite of saving tokens",
+     "A build step, against your no-build preference",
+     "No widgets included"
+    ],
+    "pick_if": "a design team will craft a bespoke look.",
+    "scores": {
+     "markup": 1,
+     "effort": 3,
+     "theme": 3,
+     "widgets": 1,
+     "look": 5,
+     "llm": 5,
+     "offline": 1,
+     "maint": 4,
+     "a11y": 2
+    },
+    "rec": false
+   },
+   {
+    "id": "vsel",
+    "short": "VSCode Elements",
+    "label": "VSCode Elements: web components that look like Visual Studio Code, themed by CSS variables",
+    "desc": "VS look out of the box.",
+    "cost": "M",
+    "lock": "med",
+    "facts": {
+     "Markup tokens": "Similar to other web components",
+     "CSS to write once": "Small",
+     "Themes": "Follows CSS variables; can be themed outside VS Code",
+     "Widgets": "Tree, tabs, split layout, table, collapsible, text fields, context menu",
+     "Dependency": "Active (v2.5), built for editor extensions",
+     "Build step": "None"
+    },
+    "pros": [
+     "Matches your VS Dark and VS Light themes closely",
+     "Tree, tabs and split layout included"
+    ],
+    "cons": [
+     "Built for editor extensions, so a smaller general toolbox",
+     "Fewer dashboard widgets than Web Awesome",
+     "Models know it little"
+    ],
+    "pick_if": "the whole console should feel like VS Code.",
+    "scores": {
+     "markup": 5,
+     "effort": 4,
+     "theme": 4,
+     "widgets": 4,
+     "look": 4,
+     "llm": 2,
+     "offline": 4,
+     "maint": 3,
+     "a11y": 3
+    },
+    "rec": false
+   },
+   {
+    "id": "fw",
+    "short": "Svelte or React + components",
+    "label": "A built framework (Svelte or React) with a component kit, output committed",
+    "desc": "Most powerful, needs a build.",
+    "cost": "L",
+    "lock": "med",
+    "facts": {
+     "Markup tokens": "Compact component tags",
+     "CSS to write once": "Small with a kit",
+     "Themes": "Kits are themeable through CSS variables",
+     "Widgets": "A complete set (split panes, dock, tree, charts)",
+     "Dependency": "A toolchain and many packages",
+     "Build step": "Required (Vite)"
+    },
+    "pros": [
+     "The richest widgets and animation",
+     "Short component markup"
+    ],
+    "cons": [
+     "A build step and Node for UI contributors",
+     "A heavier stack than the rest of the plan"
+    ],
+    "pick_if": "the UI is the product (see F0a).",
+    "scores": {
+     "markup": 4,
+     "effort": 3,
+     "theme": 4,
+     "widgets": 5,
+     "look": 4,
+     "llm": 5,
+     "offline": 2,
+     "maint": 4,
+     "a11y": 4
+    },
+    "rec": false
+   }
+  ],
+  "decided": {
+   "options": [
+    "shadcn"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F148",
+  "phase": "console",
+  "impact": 3,
+  "needs": [
+   "F34",
+   "F112"
+  ],
+  "title": "Navigating tickets and their artifacts",
+  "ask": "From the board you click into a ticket, then into its plan page or any artifact, and back. How does the UI know what exists and where?",
+  "why": "A ticket is a folder of Markdown, TOML, JSONL and generated HTML. The UI should follow an index, not hard-coded paths, so a new artifact type appears without UI changes.",
+  "learn": "lc-wms ticket folders; paperclip issue pages; independent review 2026-10-07 (Blueprint 23)",
+  "mockups": [
+   "03-ticket-page"
+  ],
+  "rec_reason": "The server resolves each ticket.toml into an artifact index (id, title, kind, path, group). The UI maps each kind to a viewer, so Markdown, TOML, JSONL and generated HTML all open inside the console with normal routes, and the command palette uses the same index.",
+  "options": [
+   {
+    "id": "index",
+    "label": "The server resolves ticket.toml into an ordered artifact index (id, title, kind md|toml|jsonl|html, path, group); the UI maps each kind to a viewer (Markdown, TOML table, JSONL timeline, sandboxed iframe for generated HTML); routes /t/:ticket/:artifact; the command palette is built from the same index",
+    "desc": "Index-driven navigation.",
+    "short": "Artifact index + viewers",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Back, forward, deep links and breadcrumbs just work",
+     "A new artifact kind needs one viewer, not a new screen",
+     "Generated HTML opens inside the console safely"
+    ],
+    "cons": [
+     "The index must stay in step with the folder (generated, never hand-kept)",
+     "Sandboxed HTML cannot share cookies or storage with the app"
+    ],
+    "pick_if": "tickets hold mixed artifact kinds.",
+    "facts": {
+     "Routes": "/t/:ticket/:artifact",
+     "HTML": "iframe sandbox, no same-origin",
+     "Palette": "Built from the index"
+    }
+   },
+   {
+    "id": "links",
+    "label": "Plain links to files; the browser or editor opens them",
+    "desc": "No viewer code.",
+    "short": "Plain links",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "Breaks the console experience: no routes, no back, no inline view"
+    ],
+    "pick_if": "the console is only a launcher."
+   },
+   {
+    "id": "embed",
+    "label": "Inline every artifact into one generated ticket page",
+    "desc": "One page.",
+    "short": "One big page",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Opens without the server"
+    ],
+    "cons": [
+     "Large pages, stale copies, no live updates"
+    ],
+    "pick_if": "offline reading matters most."
+   }
+  ],
+  "decided": {
+   "options": [
+    "index"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F149",
+  "phase": "console",
+  "impact": 2,
+  "multi": true,
+  "needs": [
+   "F34",
+   "F147"
+  ],
+  "title": "Widget libraries behind our own components",
+  "ask": "Which libraries fill the hard widgets of the React console? Each is wrapped in one of our own components, so tick the ones you accept as dependencies.",
+  "why": "These widgets are expensive to hand-build. Choosing maintained libraries now, and wrapping them, keeps later swaps cheap.",
+  "learn": "Independent review 2026-10-07 (versions, sizes and licences from npm and GitHub); paperclip ui dependencies",
+  "rec_reason": "Take the mainstream choice for each widget and wrap it. The kanban library is the riskiest (dnd-kit core has not been released since December 2024), so the spike (F151) picks between dnd-kit and the sturdier pragmatic-drag-and-drop.",
+  "options": [
+   {
+    "id": "panels",
+    "label": "react-resizable-panels (drag to resize, collapse)",
+    "desc": "Layout.",
+    "short": "Resizable panels",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Active, used by paperclip"
+    ],
+    "cons": [
+     "Another dependency"
+    ],
+    "pick_if": "you want drag-resize panes."
+   },
+   {
+    "id": "dnd",
+    "label": "Kanban drag and drop: pragmatic-drag-and-drop or dnd-kit, chosen in the spike",
+    "desc": "Board.",
+    "short": "Kanban drag and drop",
+    "cost": "S",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Both are used in production"
+    ],
+    "cons": [
+     "dnd-kit core is stale; its successor is 0.x"
+    ],
+    "pick_if": "you want a board."
+   },
+   {
+    "id": "graph",
+    "label": "Graph: Cytoscape for analysis (about 150 KB gzipped) or React Flow for editable node views",
+    "desc": "Project graph.",
+    "short": "Graph view",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Handle a few hundred nodes"
+    ],
+    "cons": [
+     "Layout choice still to settle"
+    ],
+    "pick_if": "you show the project graph."
+   },
+   {
+    "id": "md",
+    "label": "Markdown: react-markdown with the same remark plugins as the core pipeline (F32), sanitised",
+    "desc": "Notes and plans.",
+    "short": "Markdown",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Standard, safe"
+    ],
+    "cons": [
+     "A few plugins to pin"
+    ],
+    "pick_if": "you render markdown."
+   },
+   {
+    "id": "palette",
+    "label": "Command palette: cmdk",
+    "desc": "Jump anywhere.",
+    "short": "Command palette",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Small and common"
+    ],
+    "cons": [
+     "Another dependency"
+    ],
+    "pick_if": "you want keyboard navigation."
+   },
+   {
+    "id": "query",
+    "label": "Data and routing: TanStack Query and react-router",
+    "desc": "Fetching and routes.",
+    "short": "Query and router",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Standard pair"
+    ],
+    "cons": [
+     "Two dependencies"
+    ],
+    "pick_if": "you have a typed API."
+   },
+   {
+    "id": "chart",
+    "label": "Charts: uPlot for time series, Chart.js for simple charts; avoid very large chart suites",
+    "desc": "Usage and funnel.",
+    "short": "Charts",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Small"
+    ],
+    "cons": [
+     "Two options to choose from"
+    ],
+    "pick_if": "you chart usage."
+   },
+   {
+    "id": "chat",
+    "label": "Streaming chat: our own message list over a fetch stream (assistant-ui as an option)",
+    "desc": "Assistant.",
+    "short": "Chat",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "About 100 lines, no dependency"
+    ],
+    "cons": [
+     "We own the edge cases"
+    ],
+    "pick_if": "you build the assistant chat."
+   }
+  ],
+  "decided": {
+   "options": [
+    "panels",
+    "dnd",
+    "graph",
+    "md",
+    "palette",
+    "query",
+    "chat"
+   ],
+   "note": "The kanban library is chosen in the front-end spike. Later (after v1, B25): the graph widget.",
+   "date": "2026-10-07"
+  }
+ }
+]

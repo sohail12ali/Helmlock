@@ -1,0 +1,2709 @@
+[
+ {
+  "id": "F5a",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F5b"
+  ],
+  "title": "Agent roles",
+  "ask": "Which agents exist? lc-wms has six; control-center adds an orchestrator.",
+  "why": "Roles define who owns each lane; fewer roles mean simpler prompts and handoffs. The agent pack is a plugin (F41).",
+  "learn": "lc-wms agents (analyst, planner, builder, verifier, fixer, deployer), control-center agents; Blueprint 18",
+  "multi": true,
+  "options": [
+   {
+    "id": "analyst",
+    "label": "Analyst: what and why, never design",
+    "desc": "Spec, shape, challenge spec.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "planner",
+    "label": "Planner: how, never code",
+    "desc": "Impact, design, slice, estimate; schema approval is a hard stop.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "builder",
+    "label": "Builder: code one slice",
+    "desc": "Progress per task; branch asks first.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "verifier",
+    "label": "Verifier: review first, then tests",
+    "desc": "Ends with a disposition: ready_to_close, needs_fix, blocked or needs_human.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "fixer",
+    "label": "Fixer: one to three file fixes and upkeep",
+    "desc": "Root cause and minimal patch.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "deployer",
+    "label": "Deployer: publish and stage (generic skeleton)",
+    "desc": "Release skills live in the workspace or project layer; publishing always asks.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "orch",
+    "label": "A separate orchestrator agent",
+    "desc": "lc-wms dropped it on purpose: do and kickoff orchestrate.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "analyst",
+    "planner",
+    "builder",
+    "verifier",
+    "fixer",
+    "deployer"
+   ],
+   "note": "The six lc-wms agents. No separate orchestrator; the do skill routes. Consistency fix (B24, 2026-10-07): Deployer stays a generic skeleton; there is no release lane in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F5c",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F0a",
+   "F45"
+  ],
+  "title": "Agent runtime",
+  "ask": "What actually executes an agent run?",
+  "why": "What actually runs an agent. Decides model choice for agents and how much tool plumbing you build. The runtime is an adapter plugin (F41, F45).",
+  "learn": "control-center backends, paperclip adapters",
+  "rec_reason": "One adapter contract with two implementations lets agents use Claude Code today and any OpenAI-compatible model later; the assistant needs the OpenAI path anyway.",
+  "options": [
+   {
+    "id": "both",
+    "label": "Adapter interface with Claude Code CLI, Cursor CLI (F136) and an OpenAI-compatible tool loop",
+    "cost": "L",
+    "rec": true,
+    "desc": "One execute(ctx) contract. The OpenAI loop gets read/write/list/search/run tools, path-confined, shell gated. Reuses the assistant's provider config.",
+    "lock": "med",
+    "pros": [
+     "Model choice for agents",
+     "Reuses the assistant provider config",
+     "Paperclip-style adapter contract keeps it tidy"
+    ],
+    "cons": [
+     "You build and secure a tool loop (read, write, search, shell)",
+     "More surface to test"
+    ],
+    "pick_if": "you want agents on non-Claude models."
+   },
+   {
+    "id": "claude",
+    "label": "Claude Code CLI only",
+    "cost": "M",
+    "desc": "Least code; no model choice for agents.",
+    "lock": "med",
+    "pros": [
+     "Least code",
+     "Claude Code already has tools, permissions and hooks"
+    ],
+    "cons": [
+     "Agents tied to Claude Code",
+     "No OpenAI-compatible agents"
+    ],
+    "pick_if": "Claude Code is your only runtime."
+   },
+   {
+    "id": "openai",
+    "label": "OpenAI-compatible loop only",
+    "cost": "L",
+    "desc": "Model-agnostic, but you build the whole tool loop.",
+    "lock": "med",
+    "pros": [
+     "Model-agnostic"
+    ],
+    "cons": [
+     "You rebuild everything Claude Code gives you"
+    ],
+    "pick_if": "you must avoid Claude Code."
+   }
+  ],
+  "decided": {
+   "options": [
+    "both"
+   ],
+   "note": "Claude Code, Cursor CLI, and an OpenAI-compatible loop behind one adapter. Later (after v1, B25): the OpenAI-compatible agent tool loop; v1 agents run on Claude Code and Cursor.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F5d",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F5c"
+  ],
+  "title": "Autonomy and gates",
+  "ask": "How much can an agent do without asking?",
+  "why": "How much an agent may do alone. The safety model for everything it touches.",
+  "learn": "lc-wms ACT/ASK, control-center gated_tools",
+  "rec_reason": "Free inside the workspace, ask for anything outward-facing or destructive, and deny on silence. This is the lc-wms ACT/ASK rule plus control-center's fail-closed card.",
+  "options": [
+   {
+    "id": "actask",
+    "label": "ACT/ASK boundary + approval cards, fail-closed",
+    "cost": "M",
+    "rec": true,
+    "desc": "Read and edit inside the workspace freely; commit, push, deploy, shell and schema changes ask. No answer within 5 minutes means deny.",
+    "lock": "low",
+    "pros": [
+     "Fast on safe work, safe on risky work",
+     "Matches your existing rules"
+    ],
+    "cons": [
+     "You must define the ASK list and keep it current"
+    ],
+    "pick_if": "you run agents unattended or from Telegram."
+   },
+   {
+    "id": "gated",
+    "label": "Every step approved",
+    "cost": "S",
+    "desc": "Safest, slowest.",
+    "lock": "low",
+    "pros": [
+     "Safest"
+    ],
+    "cons": [
+     "Slow, trains you to click yes"
+    ],
+    "pick_if": "first week of a new agent."
+   },
+   {
+    "id": "auto",
+    "label": "Autonomous inside the sandbox",
+    "cost": "S",
+    "desc": "Fast; only OK with a real sandbox, which Windows lacks.",
+    "lock": "low",
+    "pros": [
+     "Fastest"
+    ],
+    "cons": [
+     "Windows has no real sandbox",
+     "One bad run can touch anything"
+    ],
+    "pick_if": "a disposable machine."
+   }
+  ],
+  "mockups": [
+   "04-assistant-chat"
+  ],
+  "decided": {
+   "options": [
+    "actask"
+   ],
+   "note": "Free inside the workspace. Ask before anything outward or destructive. Silence denies.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F14",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F5d"
+  ],
+  "title": "Permissions and approvals",
+  "ask": "How are risky actions controlled?",
+  "why": "How risky actions are controlled, especially from Telegram or unattended runs.",
+  "learn": "deepseek-harness presets, control-center gated_tools",
+  "rec_reason": "Presets keep the choice to two words (scope and ask/never); a gated-tools list handles the specific dangerous tools.",
+  "options": [
+   {
+    "id": "preset",
+    "label": "Two knobs (workspace scope x ask/never) bundled in presets, plus a gated-tools list, fail-closed",
+    "cost": "M",
+    "rec": true,
+    "desc": "Each tool is Allow, Ask first or Off (paperclip), bundled with the two knobs into presets. A guard registry can only deny, so plugin order can never undo a denial (deepseek-harness).",
+    "lock": "low",
+    "pros": [
+     "Two simple knobs, logged per session",
+     "Specific dangerous tools still gated"
+    ],
+    "cons": [
+     "Needs path confinement and secret-file blocking in code on Windows"
+    ],
+    "pick_if": "you want one model for chat, agents and Telegram."
+   },
+   {
+    "id": "gated",
+    "label": "Gated-tools list only",
+    "cost": "S",
+    "desc": "Control-center's current model.",
+    "lock": "low",
+    "pros": [
+     "Simplest, already in control-center"
+    ],
+    "cons": [
+     "No notion of read-only vs write mode"
+    ],
+    "pick_if": "all runs look alike."
+   },
+   {
+    "id": "trust",
+    "label": "Full trust",
+    "cost": "S",
+    "desc": "Personal machine, no gating. Risky with Telegram.",
+    "lock": "low",
+    "pros": [
+     "No friction"
+    ],
+    "cons": [
+     "Unsafe with Telegram or unattended runs"
+    ],
+    "pick_if": "a private, throwaway machine."
+   }
+  ],
+  "decided": {
+   "options": [
+    "preset"
+   ],
+   "note": "Scope and ask/never, plus a gated-tools list. Fail closed.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F5e",
+  "phase": "agents",
+  "impact": 1,
+  "needs": [
+   "F5b"
+  ],
+  "title": "Depth scaling",
+  "ask": "Does every ticket run the full pipeline?",
+  "learn": "lc-wms S/M/L triage",
+  "options": [
+   {
+    "id": "size",
+    "label": "S/M/L triage: small skips challenge and breakdown",
+    "cost": "S",
+    "rec": true,
+    "desc": "Effort follows risk."
+   },
+   {
+    "id": "full",
+    "label": "Always the full pipeline",
+    "cost": "S",
+    "desc": "Uniform but wasteful for small work."
+   }
+  ],
+  "decided": {
+   "options": [
+    "size"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F5f",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F5a"
+  ],
+  "title": "Dispatcher",
+  "ask": "How does a free-form request reach the right agent or skill?",
+  "learn": "lc-wms /do, control-center /do",
+  "options": [
+   {
+    "id": "do",
+    "label": "One do skill: classify the request into a lane (deliver, skill, role, investigate, cross-repo), pick skills and agents through the layered skill index (F88), run; the Stop hook logs the work",
+    "cost": "M",
+    "rec": true,
+    "desc": "Single entry point across the three layers. The route table is data in the workspace layer; lc-wms adds an observe-and-clarify step, a decomposition ledger (up to 8 tasks, else hand to kickoff), a three-attempt loop, and one log entry per session."
+   },
+   {
+    "id": "manual",
+    "label": "No dispatcher; you invoke skills yourself",
+    "cost": "S",
+    "desc": "Predictable, more typing."
+   },
+   {
+    "id": "waves",
+    "label": "Waves/ledger orchestration",
+    "cost": "L",
+    "desc": "Parallel child agents per repo. Skip in v1."
+   }
+  ],
+  "why": "One entry point for free-form requests, or you pick skills yourself.",
+  "decided": {
+   "options": [
+    "do"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F5g",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F5a"
+  ],
+  "title": "Quality gates worth keeping",
+  "ask": "Which guard rails come over from lc-wms?",
+  "learn": "lc-wms",
+  "multi": true,
+  "options": [
+   {
+    "id": "challenge",
+    "label": "Fresh-eyes challenge by a separate agent (M/L)",
+    "rec": true,
+    "desc": "Red-teams the spec, plan or implementation."
+   },
+   {
+    "id": "freeze",
+    "label": "Requirements freeze checklist",
+    "rec": true,
+    "desc": "No open blockers before planning starts."
+   },
+   {
+    "id": "trace",
+    "label": "AC to task to test traceability check",
+    "rec": true,
+    "desc": "Validator fails on orphan ACs or tasks."
+   },
+   {
+    "id": "schema",
+    "label": "Hard stop on schema changes",
+    "desc": "Any new or altered table needs an approved question before slices exist; the plan records \"Approval: approved date by user\" and the validator fails a ticket past planning while it says pending; production SQL and database writes always ask (lc-wms)."
+   },
+   {
+    "id": "rerun",
+    "label": "Verifier re-run clause and anti-avoidance rules",
+    "rec": true,
+    "desc": "Verifier must re-run, not trust reports."
+   },
+   {
+    "id": "unverified",
+    "label": "UNVERIFIED and gap marking, never invent facts",
+    "rec": true,
+    "desc": "Unknowns are labelled, not guessed."
+   }
+  ],
+  "why": "These guard rails catch bad plans and false 'done' claims before they cost time.",
+  "decided": {
+   "options": [
+    "challenge",
+    "freeze",
+    "trace",
+    "schema",
+    "rerun",
+    "unverified"
+   ],
+   "note": "Schema changes need an approved question before slices, matching the SQL rule.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F13a",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F24",
+   "F40"
+  ],
+  "title": "Tool design: verb registry",
+  "ask": "How are tools defined so every front door shares them?",
+  "why": "One place for state-changing logic so skills, Telegram and the assistant never diverge. The verb registry is part of the core (F40). The CLI is the same verbs on the command line (F55, F57).",
+  "learn": "control-center verbs.toml",
+  "rec_reason": "One registry means a verb written once works from the CLI, skills, the assistant, Telegram and MCP. This is control-center's best idea. With TypeScript everywhere each verb is declared once with a Zod schema (F145), and the CLI, the HTTP API, the MCP server and the assistant tools are all derived from it.",
+  "options": [
+   {
+    "id": "reg",
+    "label": "One registry of verbs (id, handler, needs_ticket, needs_confirm) feeding CLI, MCP, assistant tools and Telegram commands",
+    "cost": "M",
+    "rec": true,
+    "desc": "Define once, expose everywhere. No-model deterministic verbs.",
+    "lock": "med",
+    "pros": [
+     "Define once, expose everywhere",
+     "Deterministic, no model needed",
+     "Gates and confirmations in one place"
+    ],
+    "cons": [
+     "A registry and dispatcher to build first"
+    ],
+    "pick_if": "more than two front doors will exist.",
+    "must": "Decided rule: only verbs write state, so every surface must share one registry."
+   },
+   {
+    "id": "cli",
+    "label": "Skills shell out to CLI only",
+    "cost": "S",
+    "desc": "Simple; the assistant and Telegram then need glue.",
+    "lock": "med",
+    "pros": [
+     "Simplest to start"
+    ],
+    "cons": [
+     "Assistant and Telegram need their own glue",
+     "Behaviour drifts"
+    ],
+    "pick_if": "only the terminal matters."
+   },
+   {
+    "id": "sep",
+    "label": "Separate implementations per surface",
+    "cost": "M",
+    "desc": "Drifts over time.",
+    "lock": "med",
+    "pros": [
+     "Each surface can specialise"
+    ],
+    "cons": [
+     "Duplicate logic that diverges"
+    ],
+    "pick_if": "never; this is what the registry prevents."
+   }
+  ],
+  "decided": {
+   "options": [
+    "reg"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F13b",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F13a"
+  ],
+  "title": "First verbs",
+  "ask": "Which verbs ship first?",
+  "multi": true,
+  "options": [
+   {
+    "id": "context",
+    "label": "context (one-call ticket digest)",
+    "rec": true,
+    "desc": "Cheap state load for agents."
+   },
+   {
+    "id": "ticket",
+    "label": "ticket-create / ticket-move / comment",
+    "rec": true,
+    "desc": "Lifecycle."
+   },
+   {
+    "id": "tracker",
+    "label": "tracker-add / blockers (questions, bugs)",
+    "rec": true,
+    "desc": "Gates via exit codes."
+   },
+   {
+    "id": "claim",
+    "label": "claim / release",
+    "rec": true,
+    "desc": "Ownership."
+   },
+   {
+    "id": "todo",
+    "label": "todo-add / todo-done",
+    "rec": true,
+    "desc": "Capture."
+   },
+   {
+    "id": "log",
+    "label": "log-work",
+    "rec": true,
+    "desc": "Work log."
+   },
+   {
+    "id": "search",
+    "label": "search (knowledge base)",
+    "rec": true,
+    "desc": "Grep + map."
+   },
+   {
+    "id": "status",
+    "label": "status / doctor",
+    "rec": true,
+    "desc": "Health."
+   },
+   {
+    "id": "validate",
+    "label": "validate (layout, traceability)",
+    "desc": "Artifact integrity."
+   }
+  ],
+  "why": "The first verbs are what every front door can do on day one; missing ones force hand editing.",
+  "decided": {
+   "options": [
+    "context",
+    "ticket",
+    "tracker",
+    "claim",
+    "todo",
+    "log",
+    "search",
+    "status",
+    "validate"
+   ],
+   "note": "validate is included because the write-rule hooks run hl validate.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F30",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F13a"
+  ],
+  "title": "Skill design principle",
+  "ask": "Where does the logic live: in the skill prompt or in the console?",
+  "why": "Where logic lives. Thin skills calling verbs keep prompts short and give the console control, as you asked.",
+  "learn": "control-center verbs; lc-wms has ~38 rich skills",
+  "rec_reason": "Thin by default: the prompt says when and how, and verbs do state and file generation. Spec and challenge stay rich because the judgment is the job. All-thin would flatten those two.",
+  "options": [
+   {
+    "id": "thin",
+    "label": "Thin skills: prompt says when and how to behave; verbs do all state and file generation",
+    "cost": "M",
+    "rec": false,
+    "desc": "Simple, cheap in tokens, testable. More control sits in the console, as you asked.",
+    "lock": "low",
+    "pros": [
+     "Short prompts, low token cost",
+     "Logic is testable code, not prose",
+     "Console stays in control"
+    ],
+    "cons": [
+     "You must build the verbs first"
+    ],
+    "pick_if": "the console is the source of truth."
+   },
+   {
+    "id": "rich",
+    "label": "Rich skills: logic described in the prompt",
+    "cost": "S",
+    "desc": "Faster to write, drifts, costs tokens, hard to test.",
+    "lock": "low",
+    "pros": [
+     "Fastest to write"
+    ],
+    "cons": [
+     "Drifts, costs tokens every run, hard to test"
+    ],
+    "pick_if": "prototyping a skill.",
+    "rec": false
+   },
+   {
+    "id": "mix",
+    "label": "Thin by default, rich only for judgment-heavy skills (spec, challenge)",
+    "cost": "M",
+    "desc": "A realistic middle path.",
+    "lock": "low",
+    "pros": [
+     "Realistic: thin by default, rich for judgment"
+    ],
+    "cons": [
+     "Needs a rule for which is which"
+    ],
+    "pick_if": "you want pragmatism.",
+    "rec": true
+   }
+  ],
+  "decided": {
+   "options": [
+    "mix"
+   ],
+   "note": "Thin by default. Spec and challenge stay rich.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F15",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F30"
+  ],
+  "title": "Agent and skill conventions",
+  "ask": "What rules keep agents and skills consistent?",
+  "learn": "deepseek-harness, lc-wms",
+  "multi": true,
+  "options": [
+   {
+    "id": "skillmd",
+    "label": "Skill contract (lc-wms): name equals the folder, description 40 to 300 characters with a \"Use when\" clause, body of usage, Reads/Writes, Steps, Rules, Output, at most 150 lines; siblings reference.md, templates and evals",
+    "rec": true,
+    "desc": "Compatible with Claude Code and Cursor."
+   },
+   {
+    "id": "lint",
+    "label": "Skill and agent format lint in CI (lc-wms harness_lint)",
+    "desc": "Stops skill sprawl.",
+    "rec": true
+   },
+   {
+    "id": "rulebook",
+    "label": "One short rulebook that keeps verbatim from lc-wms: the six gates, BE HONEST, keep solutions simple, how to communicate, ACT versus ASK, evidence, board contract, report shape with a STATUS line; repos, commit initials and special tickets move to the workspace layer",
+    "rec": true,
+    "desc": "Always loaded; others point to it."
+   },
+   {
+    "id": "hooks",
+    "label": "Session hooks: refresh board at start, log-work reminder at stop",
+    "rec": true,
+    "desc": "Keeps context current."
+   },
+   {
+    "id": "agentfiles",
+    "label": "Agent files: Scope, Never, Steps, Rules, Hand-off (lc-wms), linted",
+    "rec": true,
+    "desc": "Uniform shape from control-center."
+   },
+   {
+    "id": "tools",
+    "label": "Least-privilege tools in agent frontmatter (planner has no shell, deployer cannot write files) and a model field (control-center)",
+    "desc": "Safer agents.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "disposition",
+    "label": "Verifier ends with a disposition: ready_to_close, needs_fix, blocked or needs_human (control-center)",
+    "desc": "Clear handoff.",
+    "cost": "S",
+    "rec": true
+   }
+  ],
+  "why": "Conventions keep agents and skills uniform and cheap to load.",
+  "decided": {
+   "options": [
+    "skillmd",
+    "lint",
+    "rulebook",
+    "hooks",
+    "agentfiles",
+    "tools",
+    "disposition"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F16",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F5a",
+   "F30"
+  ],
+  "title": "Lite skill set (system layer)",
+  "ask": "Which skills ship in the system layer? lc-wms has 37; fourteen remain after merging. Domain skills move to the workspace and project layers (Blueprint 18).",
+  "learn": "lc-wms skills, with control-center improvements; skill-by-skill table in Blueprint 18",
+  "multi": true,
+  "options": [
+   {
+    "id": "do",
+    "label": "do: route a request, loop until done, --gated mode",
+    "desc": "The route table is data in the workspace layer.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "kickoff",
+    "label": "kickoff: drive the phases (absorbs prepare-ticket)",
+    "desc": "Modes staged, full, plan-only, build-to-verify.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "ticketdraft",
+    "label": "ticket-draft: idea to lightweight draft (generic version)",
+    "desc": "Tracker-coupled parts move to the workspace.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "spec",
+    "label": "spec: triage, draft, refine, freeze",
+    "desc": "One living file with a Decisions table.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "shape",
+    "label": "shape: question rounds and a confidence gate (absorbs clarify)",
+    "desc": "For large tickets.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "plan",
+    "label": "plan: impact, design, slice, estimate",
+    "desc": "Schema and stored-procedure design move to the project layer.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "challenge",
+    "label": "challenge: five-lens red team in three stages",
+    "desc": "Replaces four control-center challenge skills.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "progress",
+    "label": "progress: task status",
+    "desc": "Wrapper over the CLI.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "verify",
+    "label": "verify: test cases and readiness",
+    "desc": ".NET scopes move to the project layer.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "fix",
+    "label": "fix: root cause and minimal patch, or --revise",
+    "desc": "",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "trackers",
+    "label": "trackers: questions, bugs, todos, gaps, critique",
+    "desc": "One skill over the CLI verbs.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "close",
+    "label": "close: closure gates (merges close-ticket, close-work, validate-artifacts)",
+    "desc": "One closing skill.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "logwork",
+    "label": "log-work: one-line work log with a summary mode",
+    "desc": "Absorbs work-summary.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "projectlayout",
+    "label": "project-layout: repo routing and run {id}",
+    "desc": "Absorbs invoke-project-skill; the registry moves to workspace.toml.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "evolve",
+    "label": "evolve: harness maintenance (lint, papercuts)",
+    "desc": "Optional.",
+    "cost": "S"
+   },
+   {
+    "id": "trace",
+    "label": "trace-context: one-call state digest",
+    "desc": "Becomes hl context.",
+    "cost": "S"
+   },
+   {
+    "id": "caveman",
+    "label": "caveman: terse output toggle",
+    "desc": "Optional.",
+    "cost": "S"
+   },
+   {
+    "id": "cli",
+    "label": "A trimmed ticket CLI contract skill",
+    "desc": "From kanban or console.",
+    "cost": "S"
+   }
+  ],
+  "why": "Every skill is prompt text agents carry; fewer, thinner skills cost less and drift less. Domain skills stay available as workspace and project examples.",
+  "decided": {
+   "options": [
+    "do",
+    "kickoff",
+    "ticketdraft",
+    "spec",
+    "shape",
+    "plan",
+    "challenge",
+    "progress",
+    "verify",
+    "fix",
+    "trackers",
+    "close",
+    "logwork",
+    "projectlayout"
+   ],
+   "note": "The fourteen system skills. Domain skills stay in the workspace and project layers.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F17",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F2a"
+  ],
+  "title": "Templates to carry over",
+  "ask": "Which templates do we pick from your two repos?",
+  "learn": "lc-wms templates, control-center artifacts/_template",
+  "multi": true,
+  "options": [
+   {
+    "id": "spec",
+    "label": "lc-wms spec.md (Summary, Current state, Scope, BR, AC Given/When/Then, Decisions, Sources)",
+    "rec": true,
+    "desc": "Best spec shape."
+   },
+   {
+    "id": "ticket",
+    "label": "lc-wms ticket.toml + layout spec",
+    "rec": true,
+    "desc": "State model."
+   },
+   {
+    "id": "plan",
+    "label": "lc-wms plan.md + tasks.toml",
+    "rec": true,
+    "desc": "Slices and tasks."
+   },
+   {
+    "id": "cc",
+    "label": "control-center summary, progress, verification, decision-log",
+    "rec": true,
+    "desc": "Lighter set."
+   },
+   {
+    "id": "tests",
+    "label": "Test-case template (TC to AC)",
+    "rec": true,
+    "desc": "Traceable tests."
+   },
+   {
+    "id": "persona",
+    "label": "assistant.md + house-style.md",
+    "rec": true,
+    "desc": "Voice and tone."
+   },
+   {
+    "id": "settings",
+    "label": "settings.json hooks and permissions",
+    "desc": "Ask/deny defaults."
+   }
+  ],
+  "why": "Templates fix the shape of every new artifact, so they are the cheapest place to enforce consistency.",
+  "decided": {
+   "options": [
+    "spec",
+    "ticket",
+    "plan",
+    "cc",
+    "tests",
+    "persona"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F31",
+  "phase": "agents",
+  "impact": 1,
+  "needs": [],
+  "title": "Cursor support",
+  "ask": "Cursor CLI integration is a must (your decision). The how is F135 to F137.",
+  "learn": "lc-wms and control-center keep .cursor mirrors; lc-wms agent launcher uses add-dir",
+  "options": [
+   {
+    "id": "later",
+    "label": "Claude Code only now; add a generated .cursor mirror later if needed",
+    "cost": "S",
+    "desc": "One source of truth in .claude/. Avoids the duplicated hooks lc-wms regrets."
+   },
+   {
+    "id": "both",
+    "label": "Both Claude Code and Cursor CLI are first-class from the start: generated host config (F135), a Cursor runtime adapter (F136) and shared hooks (F137)",
+    "cost": "M",
+    "desc": "Works in both editors; double the config to maintain.",
+    "rec": true
+   },
+   {
+    "id": "never",
+    "label": "Never",
+    "cost": "S",
+    "desc": "Claude Code only."
+   }
+  ],
+  "decided": {
+   "options": [
+    "both"
+   ],
+   "note": "Your message, iteration 20: Cursor CLI integration is a must, like Claude Code.",
+   "date": "2026-10-06"
+  }
+ },
+ {
+  "id": "F57",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F13a",
+   "F24"
+  ],
+  "title": "Agent and CLI contract: who writes which file",
+  "ask": "Do agents call the CLI, or edit files themselves?",
+  "why": "Decides whether state stays valid when several agents and people touch the same files. Replaces F2d.",
+  "learn": "lc-wms verbs and validator hook; control-center verbs.toml; deepseek-harness approval design",
+  "rec_reason": "Split by file type. Prose (markdown) is what agents are good at editing, so they edit it directly. State (TOML, JSONL) is where mistakes corrupt things, so only the CLI writes it. This also keeps token cost down: the agent asks for a digest instead of reading files. Paperclip itself warns that installed MCP apps load their tools into context on every run, while permitted-only tools add no context cost; a CLI costs nothing until it is called. Also verify after writing: Paperclip had a run whose status write failed with an empty token and left a ticket in the wrong state until a later run re-read it.",
+  "options": [
+   {
+    "id": "cli",
+    "label": "CLI for all state, direct edits for prose. Agents call the CLI to change TOML and JSONL and to read digests; they edit markdown (spec, plan, notes) themselves. Direct writes to TOML are denied by permission rules and a validator hook checks everything",
+    "desc": "One safe write path for state.",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "State is always valid, atomic and emits events",
+     "Gates (blockers, approvals) cannot be skipped",
+     "Digests keep context small",
+     "Prose stays natural to edit"
+    ],
+    "cons": [
+     "Agents must learn the commands (CLAUDE.md section plus --help)",
+     "A process starts per call"
+    ],
+    "pick_if": "several agents or people share the workspace.",
+    "must": "Decided rule: CLI for all state, direct edits for prose."
+   },
+   {
+    "id": "direct",
+    "label": "Agents edit every file directly; the CLI only validates afterwards",
+    "desc": "No commands to learn.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to teach",
+     "Works with any editor"
+    ],
+    "cons": [
+     "Broken TOML, lost updates, no gates or events",
+     "Rules are advisory, not enforced"
+    ],
+    "pick_if": "one agent, one user, low stakes."
+   },
+   {
+    "id": "mcp",
+    "label": "Expose the verbs as an MCP server; agents call typed tools instead of the shell",
+    "desc": "Typed and discoverable.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Typed arguments and discovery",
+     "No shell quoting problems"
+    ],
+    "cons": [
+     "A server to run",
+     "Tool schemas take context each turn"
+    ],
+    "pick_if": "your host handles MCP tools well and loads them on demand."
+   }
+  ],
+  "decided": {
+   "options": [
+    "cli"
+   ],
+   "note": "Second review (B25, 2026-10-07): The deny rule covers knowledge-repo state paths only; agents edit TOML in product repos normally.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F58",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F57"
+  ],
+  "title": "What the main CLAUDE.md says about the CLI",
+  "ask": "How much of the CLI contract sits in the always-loaded CLAUDE.md?",
+  "why": "CLAUDE.md is paid for on every session. The CLI contract must be present but small.",
+  "rec_reason": "A short cheat-sheet plus an on-demand help command gives agents the habit without a large permanent cost.",
+  "options": [
+   {
+    "id": "sheet",
+    "label": "About 15 lines: the rule (state through the CLI, prose directly), the ten most used commands, exit codes, and `hl help agent` for the full contract on demand",
+    "desc": "Small and always loaded.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Cheap every session",
+     "Full detail is one command away",
+     "Kept short by a size lint"
+    ],
+    "cons": [
+     "Agents must run the help command for rare commands"
+    ],
+    "pick_if": "you want a lean CLAUDE.md."
+   },
+   {
+    "id": "full",
+    "label": "Full command reference inline in CLAUDE.md",
+    "desc": "Everything visible.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No lookup needed"
+    ],
+    "cons": [
+     "Large permanent token cost",
+     "Goes stale"
+    ],
+    "pick_if": "a tiny CLI of under ten commands."
+   },
+   {
+    "id": "skills",
+    "label": "Nothing in CLAUDE.md; rely on skills to mention commands",
+    "desc": "Smallest CLAUDE.md.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Smallest base cost"
+    ],
+    "cons": [
+     "Agents outside a skill forget the rule and edit TOML"
+    ],
+    "pick_if": "every action goes through a skill."
+   }
+  ],
+  "decided": {
+   "options": [
+    "sheet"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F59",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F57",
+   "F25"
+  ],
+  "multi": true,
+  "title": "Enforcing the write rule",
+  "ask": "Which guard rails make sure agents obey F57?",
+  "why": "A rule that is only written down gets broken on the first long session.",
+  "learn": "lc-wms PostToolUse validator hook (exit 2) and pre-commit; control-center gated_tools",
+  "options": [
+   {
+    "id": "deny",
+    "label": "Permission deny rules: no direct Edit or Write on the knowledge repo state files (ticket.toml, record folders, logs, activity, workspace and project TOML); product repos are not restricted",
+    "desc": "Host-enforced.",
+    "cost": "S",
+    "rec": true,
+    "must": "Decided rule: agents never hand-edit TOML or JSONL; a deny rule is what enforces it."
+   },
+   {
+    "id": "hook",
+    "label": "PostToolUse hook runs `hl validate` on any file an agent edits",
+    "desc": "Catches what slips through.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "commit",
+    "label": "Pre-commit hook and CI run `hl validate`",
+    "desc": "Last line of defence, also for people.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "hash",
+    "label": "The CLI refuses a write if the file changed since it was read (hash check)",
+    "desc": "Optimistic concurrency.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "perrec",
+    "label": "One file per record where conflicts matter (see F62)",
+    "desc": "Fewer collisions.",
+    "cost": "M"
+   }
+  ],
+  "decided": {
+   "options": [
+    "deny",
+    "hook",
+    "commit",
+    "hash"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F55",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F13a"
+  ],
+  "title": "CLI command grammar",
+  "ask": "How are commands named and grouped?",
+  "why": "This is the first thing you and the agents see every day.",
+  "learn": "control-center flat verbs; GitHub CLI noun-verb",
+  "options": [
+   {
+    "id": "noun",
+    "label": "Noun then verb: `hl ticket move T-001 plan`, `hl decision add`, `hl todo add`",
+    "desc": "Discoverable and consistent.",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Predictable; `hl ticket --help` lists everything for tickets",
+     "Plugins add whole nouns cleanly",
+     "Agents guess commands correctly"
+    ],
+    "cons": [
+     "Longer to type",
+     "Needs a few short aliases"
+    ],
+    "pick_if": "many commands and plugins will add more."
+   },
+   {
+    "id": "flat",
+    "label": "Flat verbs: `hl ticket-move T-001 plan` (control-center style)",
+    "desc": "Short and direct.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Simple dispatcher"
+    ],
+    "cons": [
+     "The list grows without structure",
+     "Hard to browse"
+    ],
+    "pick_if": "fewer than twenty commands."
+   },
+   {
+    "id": "both",
+    "label": "Noun-verb with flat aliases for the common ones (`hl move T-001 plan`)",
+    "desc": "Comfort on top.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Fast for daily use"
+    ],
+    "cons": [
+     "Two ways to do things to document"
+    ],
+    "pick_if": "you will type the commands yourself a lot."
+   }
+  ],
+  "decided": {
+   "options": [
+    "noun"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F56",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F55"
+  ],
+  "multi": true,
+  "title": "CLI experience features",
+  "ask": "Which features make the CLI pleasant for people and reliable for agents?",
+  "learn": "GitHub CLI and git conventions; lc-wms exit-code gates",
+  "options": [
+   {
+    "id": "json",
+    "label": "--json output on every read command",
+    "desc": "The agent contract.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "exit",
+    "label": "Meaningful exit codes: 0 ok, 1 error, 2 blocked by a gate",
+    "desc": "Gates as exit codes.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "help",
+    "label": "Examples in every --help, and `hl help agent`",
+    "desc": "Discoverability.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "human",
+    "label": "Readable tables, colour and short summaries in a terminal; plain output when piped",
+    "desc": "Human experience.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "dry",
+    "label": "--dry-run for any command that writes",
+    "desc": "Preview before change.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "suggest",
+    "label": "Typo suggestions and \"did you mean\" for ids and commands",
+    "desc": "Forgiving.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "wizard",
+    "label": "Interactive prompts only in a terminal and only when arguments are missing",
+    "desc": "Never blocks an agent.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "complete",
+    "label": "Shell completion (PowerShell, bash)",
+    "desc": "Speed.",
+    "cost": "M"
+   },
+   {
+    "id": "pager",
+    "label": "Pager for long output",
+    "desc": "Comfort.",
+    "cost": "S"
+   },
+   {
+    "id": "headless",
+    "label": "Headless one-shot run: `hl run \"task\"` with no prompts, for scripts and CI",
+    "desc": "Automation.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "cfgshow",
+    "label": "`hl config show`: the merged configuration with where each value came from",
+    "desc": "Explains the layering (deepseek-harness --dump-config).",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "where",
+    "label": "`hl where`: prints the delivery repo, workspace, projects, skill layers, log folder, and whether each path came from the .code-workspace folders or the .env",
+    "desc": "The map of where everything lives.",
+    "cost": "S",
+    "rec": true
+   }
+  ],
+  "why": "The CLI is the daily interface for you and the agents; small things decide whether it feels good.",
+  "decided": {
+   "options": [
+    "json",
+    "exit",
+    "help",
+    "human",
+    "dry",
+    "suggest",
+    "wizard",
+    "headless",
+    "cfgshow",
+    "where"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F60",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F39",
+   "F27"
+  ],
+  "title": "How the CLI is started",
+  "ask": "The delivery repo holds the CLI but must not know any workspace. How do you run it from a knowledge repo?",
+  "why": "Daily experience: what you type to start.",
+  "rec_reason": "A tiny launcher generated into the knowledge repo is the lightest way to honour independence and work on Windows and Unix.",
+  "options": [
+   {
+    "id": "launcher",
+    "label": "The scaffold generates a launcher in the knowledge repo (`hl` and `hl.cmd`). It reads the delivery path from the .code-workspace folders and passes the workspace",
+    "desc": "One pnpm install in the delivery repo; no global install.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "No install step",
+     "Delivery repo stays unaware",
+     "Command name follows the console name (F23)"
+    ],
+    "cons": [
+     "A generated file to keep in sync"
+    ],
+    "pick_if": "you want it to work right after cloning."
+   },
+   {
+    "id": "pip",
+    "label": "Install the delivery repo as an npm package so `hl` is on PATH",
+    "desc": "Standard.",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "One global command"
+    ],
+    "cons": [
+     "Install per machine",
+     "Which workspace? needs a flag or the current folder"
+    ],
+    "pick_if": "you run it from many places."
+   },
+   {
+    "id": "manual",
+    "label": "Run `node <delivery>/dist/hl.js --workspace .` yourself",
+    "desc": "No extras.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing generated"
+    ],
+    "cons": [
+     "Long to type",
+     "Poor experience"
+    ],
+    "pick_if": "a quick trial only."
+   }
+  ],
+  "decided": {
+   "options": [
+    "launcher"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F63",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F55"
+  ],
+  "title": "Doctor and preflight checks",
+  "ask": "How does the system tell you something is wrong before it fails mid-work?",
+  "why": "Paperclip runs doctor with about 12 checks and a repair mode, and blocks an agent run with a named blocker when config or secrets are missing, instead of failing the run.",
+  "learn": "paperclip cli/src/checks and pre-dispatch gate",
+  "rec_reason": "One command checks the whole setup (tools, paths, workspace.toml, plugin versions, provider reachable, permissions and hooks present, generated notes fresh). The same checks run before an agent starts.",
+  "options": [
+   {
+    "id": "doctor",
+    "label": "`hl doctor` with a check list and `--repair` for safe fixes, plus a preflight that blocks an agent run with a named reason when something is missing",
+    "desc": "Fails early and clearly.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "doctor-only",
+    "label": "Doctor command only, run by hand",
+    "desc": "Smaller.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No checks",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "doctor"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F65",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F5c"
+  ],
+  "title": "Run supervision: stuck, silent and retry limits",
+  "ask": "What happens when an agent run hangs, goes silent or fails repeatedly?",
+  "why": "Paperclip allows one automatic continuation, then escalates to a person, and flags silent runs at 5 and 15 minutes. Without limits an agent can loop or stall unseen.",
+  "learn": "paperclip bounded recovery and silent-run watchdog; deepseek-harness idle timeout",
+  "options": [
+   {
+    "id": "bounded",
+    "label": "Bounded recovery: one automatic retry, then mark the ticket blocked with a named owner; flag runs silent for 5 and 15 minutes; one run per ticket at a time (claim); plus a kill switch to pause, resume or stop an agent or all runs; a state write is verified by re-reading it, and a failed write shows as blocked with the reason, never a silent mismatch; stuck work gets a Recovery needed badge",
+    "desc": "No silent loops.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "timeout",
+    "label": "A single overall timeout per run",
+    "desc": "Simple.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No supervision",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "bounded"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F66",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F14"
+  ],
+  "title": "Untrusted input and low-trust mode",
+  "ask": "Text from Telegram, webhooks or issue bodies can carry instructions. How is it treated?",
+  "why": "Paperclip ships low-trust presets for hostile input. Your Telegram channel and any imported text are exactly that kind of input.",
+  "learn": "paperclip doc/LOW-TRUST-PRESETS.md",
+  "rec_reason": "Treat anything not typed by an allowed user in the console as data. Runs started from such input use a low-trust preset: read-only plus no shell and no outward actions without approval.",
+  "options": [
+   {
+    "id": "lowtrust",
+    "label": "A low-trust preset applied automatically to runs started from Telegram, webhooks or imported text; instructions found inside data are never followed",
+    "desc": "Safer channels.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "allowlist",
+    "label": "Rely on the Telegram user allowlist only",
+    "desc": "Smaller.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "Treat all input alike",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "lowtrust"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F69",
+  "phase": "agents",
+  "impact": 1,
+  "needs": [
+   "F16"
+  ],
+  "title": "Testing skills and agents",
+  "ask": "How do you know a skill still works after you edit it?",
+  "why": "Paperclip has Skill Studio with saved test inputs and eval suites; that is heavy, but some check is cheap.",
+  "learn": "paperclip Skill Studio and evals",
+  "options": [
+   {
+    "id": "golden",
+    "label": "A few saved example requests per skill with the verbs they should call, checked by `hl skill test`; plus the format lint",
+    "desc": "Light safety net.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "lint",
+    "label": "Format lint only",
+    "desc": "Smallest.",
+    "cost": "S"
+   },
+   {
+    "id": "evals",
+    "label": "Full eval suites",
+    "desc": "Heavy.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "golden"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F86",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F3a",
+   "F15"
+  ],
+  "title": "Three layers of CLAUDE.md, skills and agents",
+  "ask": "System, workspace and project each get their own CLAUDE.md, skills and agents.",
+  "why": "Decides where a rule or skill is written, who may change it and what loads in a session. Layers keep generic rules out of project code and project commands out of the system.",
+  "learn": "lc-wms and control-center: the umbrella owns process, each sub-project owns product, with its own CLAUDE.md and skills (project-layout, invoke-project-skill)",
+  "rec_reason": "You described exactly this model, and both of your repos already behave this way for projects. The new part is a middle layer: the knowledge repo carries team conventions and workspace skills.",
+  "decided": {
+   "options": [
+    "three"
+   ],
+   "note": "Your message, iteration 10: three layers (control center, knowledge center, projects), each with its own CLAUDE.md and skills.",
+   "date": "2026-10-06"
+  },
+  "options": [
+   {
+    "id": "three",
+    "label": "Three layers: system (delivery repo), workspace (knowledge repo), project (each project's repos, plus an optional overlay in the knowledge repo). Each has its own CLAUDE.md, skills and agents; paths come from the .code-workspace folders and workspace.toml maps folder names to layers; a skill name that exists in several layers is shown with every layer and description (F89)",
+    "desc": "Generic, team and code rules each in their place.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Generic rules stay in the system and are reused by every workspace",
+     "Team conventions live with the knowledge",
+     "Build and test commands live next to the code",
+     "Matches how lc-wms and control-center already treat projects"
+    ],
+    "cons": [
+     "More places to look",
+     "Precedence rules to learn",
+     "Duplication across layers must be linted"
+    ],
+    "pick_if": "you run several workspaces and projects."
+   },
+   {
+    "id": "two",
+    "label": "Two layers: system and workspace; project knowledge lives inside the workspace under projects/<name>",
+    "desc": "Simpler.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "One place to look"
+    ],
+    "cons": [
+     "Project repos stay unaware of the rules",
+     "People working only in the project repo lose them",
+     "Build commands drift from the code"
+    ],
+    "pick_if": "projects are small and owned by you."
+   },
+   {
+    "id": "one",
+    "label": "System layer only",
+    "desc": "Smallest.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to organise"
+    ],
+    "cons": [
+     "No place for team or project rules"
+    ],
+    "pick_if": "single user, no projects."
+   }
+  ]
+ },
+ {
+  "id": "F87",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F86",
+   "F3c"
+  ],
+  "title": "Where a project layer lives",
+  "ask": "A project may be a repo you own or one owned by another team. Where do its CLAUDE.md and skills sit?",
+  "why": "Adding .claude files to a repo someone else owns is not always welcome, and a project may already have its own.",
+  "rec_reason": "Honour the project repo own CLAUDE.md and .claude if present. Allow an overlay in the knowledge repo for what the workspace adds without touching the project. The overlay wins on conflict because it is the workspace deliberate choice.",
+  "options": [
+   {
+    "id": "both",
+    "label": "Use the project repo own CLAUDE.md and .claude when present, plus an optional overlay folder in the knowledge repo (projects/<name>/); overlay wins on conflict; the registry lists both",
+    "desc": "Flexible.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Works for your own and other teams repos",
+     "Project teams keep control of their files",
+     "The workspace can add rules without a pull request to the project"
+    ],
+    "cons": [
+     "Two places per project",
+     "Conflict rules need a lint"
+    ],
+    "pick_if": "you work on projects you do not fully own."
+   },
+   {
+    "id": "repo",
+    "label": "Only in the project repo",
+    "desc": "Simplest model.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "One place",
+     "Travels with the code"
+    ],
+    "cons": [
+     "Needs write access and agreement from the project"
+    ],
+    "pick_if": "you own every project."
+   },
+   {
+    "id": "overlay",
+    "label": "Only in the knowledge repo overlay; project repos stay untouched",
+    "desc": "No project changes.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Project repos never change"
+    ],
+    "cons": [
+     "Rules are far from the code",
+     "People in the project repo cannot see them"
+    ],
+    "pick_if": "projects are read-only to you."
+   }
+  ],
+  "decided": {
+   "options": [
+    "both"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F88",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F86",
+   "F5f"
+  ],
+  "title": "Skill discovery across layers",
+  "ask": "How does Claude find the right skill when skills live in three layers and several projects?",
+  "why": "In lc-wms the do skill matches against the live catalog of one repo. With three layers the catalog must span them, show where each skill comes from and flag conflicts.",
+  "learn": "lc-wms and control-center do skill (live catalog), invoke-project-skill (registry, read the project CLAUDE.md first, run from its root)",
+  "rec_reason": "Native discovery loads only what is in the session folders. A small generated index covers all three layers using the registry paths, ranks matches by description, and reports conflicts, so the dispatcher never guesses and never loads every skill body.",
+  "options": [
+   {
+    "id": "index",
+    "label": "A generated skill index: `hl skill list|find` scans the three layers (paths from the .code-workspace folders, layer roles from workspace.toml) and returns name, description, layer and path, including same-named skills side by side; the do dispatcher uses it; Claude Code native discovery still loads descriptions for the folders in the session",
+    "desc": "Layer-aware catalog.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "The dispatcher sees every layer",
+     "Conflicts and shadowing are visible",
+     "Skill bodies load only when chosen (token cost stays low)"
+    ],
+    "cons": [
+     "An index to keep fresh (generated on demand)",
+     "Simple matching can miss; the agent still judges"
+    ],
+    "pick_if": "you have more than one project with its own skills.",
+    "must": "Decided rule: same-named skills in several layers are all shown; discovery goes through the registry."
+   },
+   {
+    "id": "native",
+    "label": "Rely only on Claude Code native discovery (current folder and added directories)",
+    "desc": "No code.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "Project skills are not visible unless that folder is added",
+     "No view of conflicts",
+     "Cannot rank"
+    ],
+    "pick_if": "one workspace, one project."
+   },
+   {
+    "id": "manual",
+    "label": "The user names the skill explicitly",
+    "desc": "Predictable.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Zero magic"
+    ],
+    "cons": [
+     "No automation, which defeats do"
+    ],
+    "pick_if": "you prefer full control."
+   }
+  ],
+  "decided": {
+   "options": [
+    "index"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F89",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F86"
+  ],
+  "title": "Same skill name in several layers",
+  "ask": "A project may define build and so may the system. What does the user see and what does the dispatcher do?",
+  "why": "Silently picking one hides a skill. Showing both, with what each does, keeps the user in charge.",
+  "options": [
+   {
+    "id": "show",
+    "label": "Show all: when a name exists in several layers the index lists every one with its layer and description; the dispatcher never picks silently, it shows them and asks (and can remember a preference per name); each stays reachable by a layer-qualified name",
+    "desc": "Nothing hidden.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "The user always sees which skill is which",
+     "No override rules to learn",
+     "Works even if the host shows only one skill of a clashing name"
+    ],
+    "cons": [
+     "An extra question when the same name matches",
+     "Descriptions must actually say how they differ (lint warns when clashing names have near-identical descriptions)"
+    ],
+    "pick_if": "you want clarity over automation."
+   },
+   {
+    "id": "override",
+    "label": "More specific layer wins, only if it declares overrides",
+    "desc": "Intentional replacement.",
+    "cost": "S",
+    "pros": [
+     "No questions asked"
+    ],
+    "cons": [
+     "Hides the shadowed skill",
+     "Needs override rules and lint"
+    ],
+    "pick_if": "you want fully automatic runs."
+   },
+   {
+    "id": "unique",
+    "label": "Names must be unique across layers (lint fails otherwise)",
+    "desc": "No ambiguity.",
+    "cost": "S",
+    "pros": [
+     "Never ambiguous"
+    ],
+    "cons": [
+     "Forces awkward names like wms-build",
+     "Blocks reuse of natural names"
+    ],
+    "pick_if": "you control every layer."
+   }
+  ],
+  "rec_reason": "Your decision: if two layers have the same skill, show both with their descriptions so it is clear which is which.",
+  "decided": {
+   "options": [
+    "show"
+   ],
+   "note": "Your message, iteration 11: show both, with descriptions, so the user can tell which is which.",
+   "date": "2026-10-06"
+  }
+ },
+ {
+  "id": "F90",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F86",
+   "F58"
+  ],
+  "title": "CLAUDE.md across layers",
+  "ask": "Several CLAUDE.md files apply at once. How do they combine?",
+  "why": "Each is paid for in tokens and they must not contradict each other.",
+  "rec_reason": "Keep each short and about its own layer. The knowledge CLAUDE.md imports the system rulebook; a project CLAUDE.md is read when work starts in that project, as invoke-project-skill does. Verify how Claude Code loads CLAUDE.md from added directories before relying on it.",
+  "options": [
+   {
+    "id": "lazy",
+    "label": "Knowledge CLAUDE.md imports the system rulebook with @path; the registry tells the agent to read a project CLAUDE.md first when it works in that project",
+    "desc": "Layered and lazy.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "merged",
+    "label": "A session hook generates one merged CLAUDE.md",
+    "desc": "One file for the agent.",
+    "cost": "M"
+   },
+   {
+    "id": "copy",
+    "label": "Copy shared rules into every layer",
+    "desc": "No imports.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "lazy"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): hl harness sync writes the system rulebook into the generated Cursor rules, because Cursor does not follow @ imports.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F91",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F86",
+   "F63"
+  ],
+  "title": "Injecting workspace context at session start",
+  "ask": "How do workspace and project skills and state reach a new session without being asked for?",
+  "why": "You want to inject workspace-related skills later without editing the system.",
+  "rec_reason": "A SessionStart hook prints a small digest: tickets in flight, available skills by layer (names only), pending approvals. Anything added to the workspace layer appears automatically.",
+  "options": [
+   {
+    "id": "hook",
+    "label": "A SessionStart hook runs `hl context --session` and prints in-flight tickets, available skills by layer (names only) and waiting approvals; new workspace skills appear with no registration",
+    "desc": "Automatic and small.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "none",
+    "label": "Nothing at start; the agent asks for context",
+    "desc": "Simplest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "hook"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F92",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F86",
+   "F5c"
+  ],
+  "title": "Running agents inside a project",
+  "ask": "Work on a ticket touches a project repo. Where does the agent run?",
+  "why": "Running from the wrong folder uses the wrong commands and the wrong CLAUDE.md.",
+  "learn": "lc-wms and control-center invoke-project-skill: resolve the project from the ticket and registry, read its CLAUDE.md first, run from its repo root",
+  "options": [
+   {
+    "id": "pinned",
+    "label": "Resolve the project from the ticket and the registry, read its CLAUDE.md, run from its repo root; one child agent per project when a ticket spans repos; the parent owns the shared contract",
+    "desc": "Correct folder, correct rules.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "adddir",
+    "label": "One agent with every project added as a directory",
+    "desc": "Simpler.",
+    "cost": "S"
+   },
+   {
+    "id": "manual",
+    "label": "You tell the agent where to work",
+    "desc": "Manual.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "pinned"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): A project may span several repos; one child agent per repo when a ticket spans repos.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F97",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F5c",
+   "F65"
+  ],
+  "title": "Unattended runs: how an agent picks up assigned work",
+  "ask": "Paperclip agents wake when work is assigned. Do ours?",
+  "why": "\"Add a task, your agent works on it until done, then management reviews\" is Paperclip main promise. It needs a runner; it also needs the safety limits from F65 and the budgets from F78.",
+  "learn": "paperclip README: Heartbeats, runs wake on assignment, coalescing, concurrency, bounded recovery",
+  "rec_reason": "Start manual: you or the dispatcher starts runs. Keep the door open for a runner plugin that watches assignments, because the verbs, claim and gates already give it what it needs.",
+  "options": [
+   {
+    "id": "manual",
+    "label": "Manual start by you or the do dispatcher; a runner plugin may come later (a slot, not core)",
+    "desc": "Predictable.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Nothing runs behind your back",
+     "No scheduler or supervision to build first"
+    ],
+    "cons": [
+     "You must start each run"
+    ],
+    "pick_if": "you want control while the system is young."
+   },
+   {
+    "id": "runner",
+    "label": "A runner plugin: when a ticket is assigned to an agent it starts a run, one run per ticket (claim), duplicate wakes coalesced, a concurrency limit, budget checks, bounded recovery (F65)",
+    "desc": "Paperclip heartbeat.",
+    "cost": "L",
+    "lock": "low",
+    "pros": [
+     "Real hands-off delivery",
+     "Fits the slot model"
+    ],
+    "cons": [
+     "Needs F65 and F78 first",
+     "Unattended agents are the largest risk"
+    ],
+    "pick_if": "you want agents to work overnight."
+   },
+   {
+    "id": "timer",
+    "label": "Timer heartbeat: agents check for work every N minutes",
+    "desc": "Polling.",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Simple to reason about"
+    ],
+    "cons": [
+     "Wasted runs and tokens when there is nothing to do"
+    ],
+    "pick_if": "work arrives irregularly."
+   }
+  ],
+  "decided": {
+   "options": [
+    "manual"
+   ],
+   "note": "No self-wake. A person or the do skill starts a run. A runner plugin can be added later.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F98",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F14"
+  ],
+  "title": "Connections and whose identity agents use",
+  "ask": "Agents touch GitHub, other services and MCP servers. With whose account, and who approves each action?",
+  "why": "Paperclip separates human access, agent eligibility and per-action permissions (Allowed, Ask first, Off), and can use the account of the person directing the work.",
+  "learn": "paperclip README: Apps and Connections, shared agents with personal accounts, accountable connections",
+  "rec_reason": "A local-first system can keep this simple: agents use the account of the person running them, with per-action Allow, Ask or Off for each connection, and a revocable saved rule when you approve once.",
+  "options": [
+   {
+    "id": "person",
+    "label": "Agents use the credentials of the person running them (their git and tool logins); every connection action is Allow, Ask first or Off; approve once or save a revocable rule; commits carry a co-author line; AI connections are per person: a subscription login or an API key, and a task uses the responsible person connection (Paperclip shows \"responsible user connection\")",
+    "desc": "Accountable and simple.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "service",
+    "label": "A shared service account for agents",
+    "desc": "Central control.",
+    "cost": "M"
+   },
+   {
+    "id": "none",
+    "label": "No connection controls beyond the approval gate",
+    "desc": "Smallest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "person"
+   ],
+   "note": "Agents use the logins of the person running them.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F99",
+  "phase": "agents",
+  "impact": 1,
+  "needs": [
+   "F69"
+  ],
+  "title": "Agent and skill quality over time",
+  "ask": "How do you learn which agents and skills work well?",
+  "why": "Paperclip pillar 3 covers evals, quality metrics, active learning loops and performance reviews. lc-wms already has a papercuts-to-rules loop.",
+  "learn": "paperclip README: Agent Employee Training; lc-wms papercuts.toml",
+  "options": [
+   {
+    "id": "light",
+    "label": "Per agent and skill: runs, blocked rate and retries from the audit trail on the Agents tab, plus a papercuts file where friction is noted and later turned into rules (lc-wms)",
+    "desc": "Measure and learn.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "papercuts",
+    "label": "Papercuts file only",
+    "desc": "Cheapest.",
+    "cost": "S"
+   },
+   {
+    "id": "evals",
+    "label": "Eval suites and scheduled performance reviews",
+    "desc": "Paperclip style.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "light"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F96",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F46",
+   "F5g"
+  ],
+  "title": "Review and approval stages",
+  "ask": "Who must sign off before a ticket moves on or closes?",
+  "why": "Paperclip lets you configure review and approval stages and plan approvals so completion is governed, not self-declared by the agent.",
+  "learn": "paperclip README: Governance, execution policies, deep planning with plan approvals",
+  "rec_reason": "Gates are part of the workflow pack (F46). Offer three gate types and let each stage choose: verbs that must pass, a human approval, a second-agent challenge. Require human approval to close medium and large tickets.",
+  "options": [
+   {
+    "id": "gates",
+    "label": "Gate types in the workflow pack: verb gates (blockers, tests), human approval by a named role from the roster, second-agent challenge; plan approval before build and human approval to close, both for M and L tickets only; tickets carry reviewer and approver roles (monitor and watchdog roles later)",
+    "desc": "Completion is governed.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "verbs",
+    "label": "Verb gates only",
+    "desc": "Smaller.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No sign-off beyond the agent verify step",
+    "desc": "Fastest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "gates"
+   ],
+   "note": "Human approval to close medium and large tickets.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F110",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F55",
+   "F0a"
+  ],
+  "title": "CLI and server: does it matter whether the server is running?",
+  "ask": "If the console server is not running, does the CLI still work? How often must anything be started?",
+  "why": "Agents call the CLI dozens of times a session, and people open the console only sometimes. The files are the truth, so neither should depend on the other.",
+  "learn": "measurements: a CLI call costs about 60 to 100 ms in bundled Node; a server request costs 1 to 2 ms (Blueprint 15)",
+  "rec_reason": "The CLI works alone: every verb reads and writes files. The server is optional and starts on demand. When it is running, the CLI tells it about changes so open pages update live. Pages generated to files (F28) work with no server at all.",
+  "options": [
+   {
+    "id": "standalone",
+    "label": "Standalone CLI: every verb works with no server. The console server is optional (`hl serve`, or started on demand when you open the UI); a running server is notified of changes so pages refresh live",
+    "desc": "Nothing has to stay running.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "facts": {
+     "Per CLI call": "60 to 100 ms (Node start), the same whether or not a server runs",
+     "Needs running": "Nothing",
+     "If the server crashes": "CLI and agents are unaffected"
+    },
+    "pros": [
+     "Agents and scripts never depend on a running process",
+     "Nothing to keep alive; fits files-only",
+     "Server crashes cost only the live UI"
+    ],
+    "cons": [
+     "Live UI updates need the server and a change notification path",
+     "Two code paths: direct file work and notify-if-running"
+    ],
+    "pick_if": "agents and scripts must work anywhere, always.",
+    "must": "Agents call the CLI dozens of times a session and must never depend on a running server."
+   },
+   {
+    "id": "daemon",
+    "label": "A resident daemon is required: the CLI is a thin client that asks it to do the work",
+    "desc": "Fast calls once started.",
+    "cost": "M",
+    "lock": "med",
+    "facts": {
+     "Per CLI call": "Client start (about 56 ms Node, about 16 ms native) plus about 1 ms for the request",
+     "Needs running": "The daemon, always",
+     "If the server crashes": "The CLI stops working"
+    },
+    "pros": [
+     "Shared in-memory state and caches",
+     "Calls get faster if the client is a native binary"
+    ],
+    "cons": [
+     "Everything breaks if it is not running",
+     "Against the files-first independence you chose",
+     "Process management on Windows"
+    ],
+    "pick_if": "call volume becomes a real problem."
+   },
+   {
+    "id": "launcher",
+    "label": "Standalone CLI plus an optional tiny native launcher that forwards to a resident process when one exists, otherwise runs Node",
+    "desc": "Standalone, with a speed boost.",
+    "cost": "L",
+    "lock": "low",
+    "facts": {
+     "Per CLI call": "About 16 ms native forward plus 1 ms when a process runs; Node speed otherwise",
+     "Needs running": "Nothing (optional)",
+     "If the server crashes": "Falls back to Node"
+    },
+    "pros": [
+     "Fast when it matters, safe when it does not"
+    ],
+    "cons": [
+     "One more binary per OS to build and sign",
+     "More moving parts"
+    ],
+    "pick_if": "you measure CLI latency as a bottleneck."
+   }
+  ],
+  "decided": {
+   "options": [
+    "standalone"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): Telegram and outbound notifications work only while hl serve runs; the CLI never needs it. Second review (B25, 2026-10-07): Measure in milestone 1: hl validate on one file under 300 ms; if slower, mount plugins lazily per verb (F107).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F117",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F86"
+  ],
+  "title": "Base agents and skills: start from lc-wms",
+  "ask": "Which existing set do we build the agent and skill layer from?",
+  "why": "You said the lc-wms agents and skills are very good, tried and refined by you. Starting from them saves months; the work is trimming and sorting them into the three layers.",
+  "learn": "lc-wms (37 skills, 6 agents, refined) versus control-center (39 skills, 7 agents, the older ancestor); Blueprint 18",
+  "rec_reason": "Your preference, and the evidence agrees: lc-wms is the leaner and more consistent set (a skill format contract with a lint, agents as Scope/Never/Steps/Rules/Hand-off). Take the few things control-center does better: least-privilege tool lists, the verifier disposition, the generic ticket-draft, trace-context and the harness-standards gate wording.",
+  "decided": {
+   "options": [
+    "lcwms"
+   ],
+   "note": "Your message, iteration 15: select the lc-wms config for agents and skills.",
+   "date": "2026-10-06"
+  },
+  "options": [
+   {
+    "id": "lcwms",
+    "label": "Start from the lc-wms agents and skills: six agents and fourteen system skills after merging; domain skills move to the workspace and project layers as examples; take a few control-center improvements",
+    "desc": "Refined and tried.",
+    "short": "lc-wms base",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Already proven in your daily work",
+     "Has a format contract and a lint",
+     "Leaner than control-center and consistent in vocabulary"
+    ],
+    "cons": [
+     "Some skills are coupled to the kanban CLI and Projexa and must be adapted to our verbs",
+     "Domain skills need sorting into the layers"
+    ],
+    "pick_if": "you want the most mature base."
+   },
+   {
+    "id": "cc",
+    "label": "Start from the control-center set",
+    "desc": "Older and generic.",
+    "short": "control-center base",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "More generic wording"
+    ],
+    "cons": [
+     "Older, with overlapping skills (four challenge variants, several close and plan skills)",
+     "Obsolete agent format"
+    ],
+    "pick_if": "you prefer the generic ancestor."
+   },
+   {
+    "id": "scratch",
+    "label": "Write a new set from scratch",
+    "desc": "Clean slate.",
+    "short": "From scratch",
+    "cost": "L",
+    "lock": "low",
+    "pros": [
+     "No legacy"
+    ],
+    "cons": [
+     "Throws away refined work",
+     "Months of tuning to reach the same quality"
+    ],
+    "pick_if": "the old sets are unusable."
+   }
+  ]
+ },
+ {
+  "id": "F132",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F16",
+   "F5a"
+  ],
+  "title": "Per-agent skills, tools and \"applied on next run\"",
+  "ask": "Does every agent get every skill, or does each agent list its own?",
+  "mockups": [
+   "13-agents-and-runs"
+  ],
+  "why": "Paperclip enables skills per agent (\"Enabled for 2 agents\") and says a change applies on the next run. It also warns that installed tools cost context on every run while permitted-only tools cost nothing.",
+  "learn": "paperclip live instance: Skills page, agent Skills and Tools tabs",
+  "rec_reason": "Each agent file lists the skills it may use (default: the system set). Tools stay CLI verbs, which cost nothing until called. A change takes effect on the next run, and the console says so.",
+  "options": [
+   {
+    "id": "perfile",
+    "label": "The agent file lists its skills (and allowed verbs); the skill index respects it; changes apply on the next run and the console shows \"applies on next run\"; a \"test this agent\" check runs `hl doctor` for the agent",
+    "desc": "Least context, clear scope.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "all",
+    "label": "Every agent sees every skill",
+    "desc": "Simplest.",
+    "cost": "S"
+   },
+   {
+    "id": "profiles",
+    "label": "Tool profiles and policies layered over agents (Paperclip style)",
+    "desc": "Powerful and heavy.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "perfile"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F133",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F57",
+   "F96"
+  ],
+  "title": "Agents asking humans: question cards",
+  "ask": "When an agent needs a decision, how does it ask?",
+  "mockups": [
+   "13-agents-and-runs"
+  ],
+  "why": "Paperclip agents put structured question cards on the task (options plus free text); answering resumes the work, and a card can be withdrawn. This keeps questions out of long chat threads.",
+  "learn": "paperclip live instance: interaction cards on a task thread",
+  "rec_reason": "A question is a record on the ticket (the questions tracker, F7c) with options. The console shows it as a card, Telegram as inline buttons. Answering marks it answered and lets the agent continue; blockers gate the stage move.",
+  "options": [
+   {
+    "id": "cards",
+    "label": "Questions are ticket records with options and free text; the console shows a card, Telegram shows buttons; answering resumes the agent; unanswered blocking questions stop the stage move; a card can be withdrawn",
+    "desc": "Structured and resumable.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "comments",
+    "label": "Plain comments only",
+    "desc": "Simplest.",
+    "cost": "S"
+   },
+   {
+    "id": "chat",
+    "label": "Ask in the chat session",
+    "desc": "Immediate, easy to lose.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "cards"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F134",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F65",
+   "F97"
+  ],
+  "title": "Preventing wasted agent runs",
+  "ask": "Unattended agents can burn tokens doing nothing. How do we stop that?",
+  "mockups": [
+   "13-agents-and-runs"
+  ],
+  "why": "In your Paperclip instance, dozens of runs of 27k to 130k tokens each had results like \"nothing new came in; the comment that woke me is a copy of my own\". The agent comments, the comment wakes it, and it runs again. Across four agents that is 84 million tokens.",
+  "learn": "paperclip live instance: Runs page (trigger chips, tokens, first result line) and Costs page",
+  "rec_reason": "A wake must carry new input. Ignore wakes caused by the agent own comments or an unchanged state, allow one active run per ticket, coalesce duplicates, cap tokens per agent per day, and show trigger, tokens and the first result line for every run so wasted ones stand out.",
+  "options": [
+   {
+    "id": "guard",
+    "label": "No-op guard: a wake with no new input (the agent own comment, an unchanged state) starts no run; one active run per ticket; duplicates coalesce; an opt-in daily token cap per agent (off by default, F78); every run record shows trigger, tokens and the first result line, with no-op runs flagged",
+    "desc": "Stops the loop.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Prevents the self-wake loop seen in a real instance",
+     "Cost and quota stay predictable",
+     "Run lists show what happened at a glance"
+    ],
+    "cons": [
+     "Needs run records and a notion of new input",
+     "A too-strict guard could miss a real change"
+    ],
+    "pick_if": "any agent runs without you watching."
+   },
+   {
+    "id": "cap",
+    "label": "A token cap per agent only",
+    "desc": "Blunt.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Simple"
+    ],
+    "cons": [
+     "Stops useful work too, only after the waste"
+    ],
+    "pick_if": "agents rarely run unattended."
+   },
+   {
+    "id": "none",
+    "label": "No guard",
+    "desc": "Nothing to build.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to do"
+    ],
+    "cons": [
+     "The loop above"
+    ],
+    "pick_if": "never."
+   }
+  ],
+  "decided": {
+   "options": [
+    "guard"
+   ],
+   "note": "A wake with no new input does not start a run. Later (after v1, B25): the daily token cap.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F135",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F15",
+   "F57"
+  ],
+  "title": "One source, generated Claude Code and Cursor config",
+  "ask": "Cursor CLI integration is a must, like Claude Code. How do we support both without the two configs drifting apart?",
+  "why": "Both of your repos mirror .claude and .cursor by hand and have drifted: a dead Cursor hooks file, MCP servers that disagree, a README pointing to deleted files. Cursor does not mention CLAUDE.md, uses AGENTS.md, and has its own hooks, permissions and MCP files.",
+  "learn": "lc-wms and control-center .cursor mirrors; Cursor docs (rules, hooks, permissions, skills); installed cursor-agent 2026.07.23; Blueprint 21",
+  "rec_reason": "Keep one source and generate the host files. Skills and agents stay in .claude with portable frontmatter because both CLIs read them. AGENTS.md is the canonical rulebook and CLAUDE.md imports it. A check in pre-commit catches drift.",
+  "options": [
+   {
+    "id": "generated",
+    "label": "A harness source (harness.toml for permissions, hooks, MCP servers, ignore globs and run modes; rules as markdown) generates .claude/settings.json, .mcp.json, .cursor/hooks.json (v1), .cursor/mcp.json, .cursor/cli.json, .cursor/rules/*.mdc, .cursorignore and the AGENTS.md snippet, each stamped GENERATED with a hash; AGENTS.md is canonical and CLAUDE.md imports it; skills and agents live in .claude with portable frontmatter; `hl harness sync --check` runs in pre-commit",
+    "desc": "No drift.",
+    "short": "Generated",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "One place to edit, both hosts follow",
+     "Drift is caught by a check, not by surprise",
+     "Fixes the dead hooks file and mismatched MCP servers you have today"
+    ],
+    "cons": [
+     "A generator to build and keep current with two hosts that change",
+     "Two config schemas to understand"
+    ],
+    "pick_if": "Cursor and Claude Code are both first-class.",
+    "facts": {
+     "Rules": "AGENTS.md canonical, CLAUDE.md imports it",
+     "Skills and agents": ".claude with portable frontmatter",
+     "Hooks": "Generated for each host schema",
+     "Permissions": "Generated: settings.json and cli.json",
+     "Drift check": "sync --check in pre-commit"
+    },
+    "must": "Decided: Cursor CLI support is required alongside Claude Code (F31)."
+   },
+   {
+    "id": "manual",
+    "label": "Maintain both by hand (what lc-wms and control-center do)",
+    "desc": "No generator.",
+    "short": "By hand",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "Drift: you already have a dead hooks file, mismatched MCP lists and stale docs",
+     "Every change is made twice"
+    ],
+    "pick_if": "Cursor is a side use."
+   },
+   {
+    "id": "claude",
+    "label": "Claude Code files only; let Cursor read .claude where it can",
+    "desc": "Smallest.",
+    "short": "Claude only",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing extra"
+    ],
+    "cons": [
+     "No Cursor hooks, permissions or ignore",
+     "Rules not applied (Cursor does not read CLAUDE.md)",
+     "Not a real integration"
+    ],
+    "pick_if": "Cursor is only an editor."
+   }
+  ],
+  "decided": {
+   "options": [
+    "generated"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): The system rulebook is inlined into the Cursor rules (F90).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F136",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F5c",
+   "F135"
+  ],
+  "title": "Cursor CLI as an agent runtime",
+  "ask": "How does Helmlock launch Cursor as an agent, the way it launches Claude Code?",
+  "why": "Both of your consoles already do it, with different strengths: control-center has the watchdog, tree kill, failure classes and worktrees; lc-wms has the mode ladder, --add-dir, partial streaming, tool_call parsing and run records. control-center also passes a mode the CLI rejects, so its write mode does not work.",
+  "learn": "control-center console/config/agents.toml and agent_backends.py; lc-wms .kanban/agents/backends.py; Cursor CLI docs; installed cursor-agent help",
+  "rec_reason": "One adapter that takes the best of both forks, with a mode ladder that is tested against the CLI help, a shared stream normalizer tested on recorded real output, and the Windows guards (sandbox disabled, newline guard).",
+  "options": [
+   {
+    "id": "one",
+    "label": "One Cursor adapter: headless -p with --output-format stream-json --trust --workspace --model; a mode ladder plan, ask, auto-review, force (never default); --add-dir for workspace and projects; --resume per turn; --stream-partial-output for chat; --sandbox disabled on Windows; a newline guard for the .cmd shim; --approve-mcps; one stream normalizer with recorded fixtures; run records, a watchdog and tree kill; tokens only",
+    "desc": "Best of both forks.",
+    "short": "One adapter",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Write mode works and is tested",
+     "Tokens and tool calls are parsed correctly",
+     "Windows pitfalls are handled once",
+     "Run records and the watchdog come from your proven code"
+    ],
+    "cons": [
+     "Cursor has no steering: one process per turn",
+     "Cursor reports tokens only, so no dollar budgets"
+    ],
+    "pick_if": "Cursor runs agents for you.",
+    "facts": {
+     "Process": "One per turn, resumed with --resume",
+     "Steering": "No",
+     "Cost": "Tokens only",
+     "Windows": "sandbox disabled; newline guard"
+    }
+   },
+   {
+    "id": "claude",
+    "label": "Claude Code for runs; Cursor only as an editor",
+    "desc": "Simplest.",
+    "short": "Claude only",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No Cursor adapter"
+    ],
+    "cons": [
+     "Not what you asked: Cursor CLI integration is a must"
+    ],
+    "pick_if": "never."
+   },
+   {
+    "id": "cloud",
+    "label": "Add Cursor cloud agents for background work (the & prefix)",
+    "desc": "Remote.",
+    "short": "Cursor cloud",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Offloads long tasks"
+    ],
+    "cons": [
+     "Not local; a separate surface",
+     "Needs an account and network"
+    ],
+    "pick_if": "later, as an extra."
+   }
+  ],
+  "decided": {
+   "options": [
+    "one"
+   ],
+   "note": "Cursor is a runtime, not only an editor. Cloud agents are not in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F137",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F135",
+   "F14"
+  ],
+  "title": "Approvals and hooks on Cursor",
+  "ask": "Claude Code has a \"permission needed\" card driven by a hook. What do we do for Cursor?",
+  "why": "Your control-center has no approval card for cursor-agent at all, and lc-wms documents that Cursor has no hooks. The installed CLI does have them, so a card is possible.",
+  "learn": "Cursor hooks docs (sessionStart, beforeShellExecution, afterFileEdit, stop, preToolUse; exit 2 blocks); lc-wms hook scripts with --claude switch",
+  "options": [
+   {
+    "id": "unified",
+    "label": "One script per hook with a --host claude|cursor switch for the JSON envelope; mapped events (SessionStart to sessionStart, Stop to stop, edits to afterFileEdit, shell to beforeShellExecution with allow, deny or ask); a Cursor permission card from a preToolUse hook once verified headless; each hook emitted to one place so it does not fire twice",
+    "desc": "Same behaviour on both.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "clijson",
+    "label": "Permissions only through .cursor/cli.json allow and deny lists",
+    "desc": "Static.",
+    "cost": "S"
+   },
+   {
+    "id": "dup",
+    "label": "Separate scripts for each host (today)",
+    "desc": "No sharing.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "unified"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ }
+]

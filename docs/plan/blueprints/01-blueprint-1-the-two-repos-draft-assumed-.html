@@ -1,0 +1,27 @@
+<!-- title: Blueprint 1: the two repos (draft, assumed layout) -->
+<p><b>Rule:</b> nothing in the delivery repo names, lists or points to a knowledge repo. The knowledge repo picks the delivery repo and the projects. The console is told the workspace at launch (current folder or <code>--workspace</code>).</p>
+<pre>
+DELIVERY REPO  (system, shared, upgradeable)
+  CLAUDE.md              one short rulebook for the system
+  .claude/agents/        analyst, planner, builder, verifier, fixer  (*.md)
+  .claude/skills/        &lt;skill&gt;/SKILL.md  (thin: call console verbs)
+  console/               server, CLI, static UI, verbs.toml
+  config/                stages.toml, verbs.toml, defaults
+  templates/
+    knowledge-repo/      static tree copied by the scaffold, with {{vars}}
+    artifacts/           spec.md, plan.md, *.toml per-ticket templates
+
+KNOWLEDGE REPO  (workspace root, per user or per project, any path)
+  workspace.toml         name, console name, delivery repo, projects[]   (committed)
+  workspace.local.toml   absolute machine paths                          (gitignored)
+  &lt;name&gt;.code-workspace  generated per machine from workspace.toml
+  CLAUDE.md              short; imports the delivery rulebook with @path, adds project rules
+  .claude/settings.json  permissions (deny reading site/**), hooks, delivery repo as added dir (assumed)
+                         skills and agents load from the delivery repo; no copies
+  artifacts/&lt;T&gt;/        one folder per ticket (see blueprint 2)
+  artifacts/_shared/     general todos, notes
+  logs/YYYY-MM/          daily work logs
+  wiki/                  durable notes
+  templates/             optional overrides of delivery templates
+  site/                  generated HTML: ticket pages, board (assumed gitignored)
+</pre>

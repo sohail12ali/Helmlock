@@ -1,0 +1,17 @@
+<!-- title: lc-wms-cursor-config (yours): agents, skills, pipeline, artifacts -->
+<div class="cols">
+        <div><b>Take</b><ul>
+          <li>One always-loaded rulebook (<code>CLAUDE.md</code>) with gates and an ACT/ASK boundary.</li>
+          <li>Six roles: analyst, planner, builder, verifier, fixer, deployer.</li>
+          <li>Ticket folder with <code>ticket.toml</code> state, flat markdown docs, trackers in TOML mutated only through CLI verbs; <code>blockers</code> exit codes act as gates.</li>
+          <li>S/M/L triage scales depth; a fresh-eyes challenge agent; a freeze checklist; hard stop on schema changes.</li>
+          <li>AC-to-task traceability check; verifier re-run clause; skill format contract with a lint.</li>
+          <li>Per-author daily work log in TOML; papercuts-to-rules loop.</li>
+        </ul></div>
+        <div><b>Skip</b><ul>
+          <li>~38 skills (612 KB) and the ShopLC-specific ones (carrier, release, SQL).</li>
+          <li>~51k-line console: voice, themes, analytics, worktrees, MCP, timesheet push.</li>
+          <li>Three layers of orchestration (/do, /kickoff, rules), five trackers, Graph RAG, estimation/forecast, duplicate Cursor hooks.</li>
+        </ul></div>
+      </div>
+      <p class="why">There is no system-vs-knowledge split there: harness and vault live in one umbrella repo. The split that exists is umbrella vs product repos, routed via <code>projects.toml</code>. Our two-repo design is new.</p>

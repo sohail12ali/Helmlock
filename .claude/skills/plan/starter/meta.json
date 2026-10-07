@@ -1,0 +1,28 @@
+{
+ "title": "Project plan",
+ "iteration": 0,
+ "updated": "",
+ "phase": "Idea",
+ "phases": [
+  {
+   "id": "foundations",
+   "title": "Foundations",
+   "blurb": "Decisions everything else depends on."
+  },
+  {
+   "id": "approach",
+   "title": "Approach",
+   "blurb": "How the main parts work and fit together."
+  },
+  {
+   "id": "scope",
+   "title": "Scope",
+   "blurb": "What is in, what is out, how much."
+  },
+  {
+   "id": "sequence",
+   "title": "Sequence",
+   "blurb": "What to build, in what order."
+  }
+ ]
+}

@@ -1,0 +1,2335 @@
+[
+ {
+  "id": "F2a",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F24"
+  ],
+  "title": "Ticket folder layout",
+  "ask": "How are artifacts organised in the knowledge repo?",
+  "why": "The folder shape every ticket uses. Agents, the validator and ticket pages all depend on it.",
+  "learn": "lc-wms layout 3, control-center artifacts, paperclip llm-wiki",
+  "rec_reason": "One folder per ticket with state in TOML and prose in markdown is the shape both of your repos converged on.",
+  "options": [
+   {
+    "id": "folder",
+    "label": "Folder per ticket: ticket.toml + flat markdown",
+    "cost": "M",
+    "rec": true,
+    "desc": "lc-wms layout 3: state in TOML, docs as {T}-spec.md, {T}-plan.md and so on, plus a wiki/ area for durable notes.",
+    "lock": "high",
+    "pros": [
+     "Everything about a ticket in one place",
+     "Easy to validate with a layout spec",
+     "Maps to a generated ticket page"
+    ],
+    "cons": [
+     "Many small files",
+     "Moving a ticket means moving a folder"
+    ],
+    "pick_if": "tickets carry several artifacts each."
+   },
+   {
+    "id": "flat",
+    "label": "Flat markdown with YAML frontmatter",
+    "cost": "S",
+    "desc": "Simplest, but state in frontmatter is easy to corrupt.",
+    "lock": "high",
+    "pros": [
+     "Simplest to start"
+    ],
+    "cons": [
+     "State in frontmatter is easy to corrupt",
+     "No clean place for trackers"
+    ],
+    "pick_if": "tickets are just notes."
+   },
+   {
+    "id": "wiki",
+    "label": "Wiki-style raw/ and wiki/ only",
+    "cost": "S",
+    "desc": "Good for notes, weak for delivery workflow.",
+    "lock": "high",
+    "pros": [
+     "Good for durable notes"
+    ],
+    "cons": [
+     "No delivery workflow, trackers or gates"
+    ],
+    "pick_if": "this is only a notebook."
+   }
+  ],
+  "decided": {
+   "options": [
+    "folder"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F2b",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F2a"
+  ],
+  "title": "Artifact types",
+  "ask": "What lives in the knowledge center?",
+  "why": "The set of artifacts the system must create, validate and display.",
+  "learn": "lc-wms, control-center",
+  "multi": true,
+  "options": [
+   {
+    "id": "spec",
+    "label": "Spec / requirements (BR, AC)",
+    "rec": true,
+    "desc": "One spec edited in place; decisions table inside."
+   },
+   {
+    "id": "plan",
+    "label": "Plan + tasks",
+    "rec": true,
+    "desc": "Slices, tasks with acceptance-criteria links."
+   },
+   {
+    "id": "tests",
+    "label": "Test cases",
+    "rec": true,
+    "desc": "TC ids traced to ACs."
+   },
+   {
+    "id": "graphs",
+    "label": "Graphs and diagrams",
+    "rec": true,
+    "desc": "Flows, architecture, data models."
+   },
+   {
+    "id": "decisions",
+    "label": "Decision log",
+    "rec": true,
+    "desc": "What was chosen, why, what was rejected."
+   },
+   {
+    "id": "questions",
+    "label": "Questions and bugs trackers",
+    "rec": true,
+    "desc": "TOML trackers per ticket."
+   },
+   {
+    "id": "logs",
+    "label": "Daily work logs",
+    "rec": true,
+    "desc": "Per author per day."
+   },
+   {
+    "id": "wiki",
+    "label": "Wiki / durable notes",
+    "rec": true,
+    "desc": "Knowledge that outlives tickets."
+   },
+   {
+    "id": "tpl",
+    "label": "Templates",
+    "rec": true,
+    "desc": "Starting files for every artifact kind."
+   },
+   {
+    "id": "inv",
+    "label": "Investigations (no ticket)",
+    "desc": "Triage dossiers before a ticket exists."
+   },
+   {
+    "id": "rel",
+    "label": "Release notes",
+    "desc": "Per ticket or per release."
+   }
+  ],
+  "decided": {
+   "options": [
+    "spec",
+    "plan",
+    "tests",
+    "decisions",
+    "questions",
+    "logs",
+    "wiki",
+    "tpl"
+   ],
+   "note": "Your saved picks (plan-picks.json). Diagrams live inside spec and plan markdown, not as a separate artifact type.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F2e",
+  "phase": "model",
+  "impact": 1,
+  "needs": [],
+  "title": "Finding things",
+  "ask": "How do you and the assistant search the knowledge base?",
+  "options": [
+   {
+    "id": "grep",
+    "label": "Ripgrep + a generated artifact map",
+    "cost": "S",
+    "rec": true,
+    "desc": "Fast, no extra infrastructure."
+   },
+   {
+    "id": "embed",
+    "label": "Add embeddings later",
+    "cost": "M",
+    "desc": "Semantic search once the corpus grows."
+   },
+   {
+    "id": "none",
+    "label": "Browse only",
+    "cost": "S",
+    "desc": "Tree view in the console."
+   }
+  ],
+  "why": "No database: search is ripgrep plus a generated JSON index, and Obsidian search over the markdown.",
+  "decided": {
+   "options": [
+    "grep"
+   ],
+   "note": "Ripgrep plus a generated index. No embeddings in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F5b",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F2a",
+   "F46"
+  ],
+  "title": "Stages (board lanes)",
+  "ask": "What is the lifecycle of a ticket?",
+  "why": "Lifecycle lanes drive the board, the pipeline gates and every agent scope. Lanes come from the workflow plugin (F46); this card picks the default pack.",
+  "learn": "lc-wms board-ticket.toml, paperclip statuses",
+  "rec_reason": "Six lanes cover the real pipeline (requirements, plan, build, verify) without the release lane you do not need yet. Blocked is a flag, not a lane.",
+  "options": [
+   {
+    "id": "six",
+    "label": "backlog > spec > plan > build > verify > done, plus a blocked flag",
+    "cost": "S",
+    "rec": true,
+    "desc": "Lite version of lc-wms lanes, blocked is a flag not a lane.",
+    "lock": "med",
+    "pros": [
+     "Maps one-to-one to agents and gates",
+     "Small enough to see on a board"
+    ],
+    "cons": [
+     "No release lane until you add one"
+    ],
+    "pick_if": "you want a clear delivery pipeline."
+   },
+   {
+    "id": "seven",
+    "label": "lc-wms: backlog, requirements, planning, build, verify, release, done (+parked)",
+    "cost": "M",
+    "desc": "Includes a release lane.",
+    "lock": "med",
+    "pros": [
+     "Includes release and parked",
+     "Proven in lc-wms"
+    ],
+    "cons": [
+     "Release handling is out of scope for lite"
+    ],
+    "pick_if": "you ship releases through the same board."
+   },
+   {
+    "id": "pc",
+    "label": "paperclip: backlog, todo, in_progress, in_review, done, blocked, cancelled",
+    "cost": "S",
+    "desc": "Generic task statuses; no spec/plan stages.",
+    "lock": "med",
+    "pros": [
+     "Generic and familiar statuses"
+    ],
+    "cons": [
+     "No spec or plan stages, so agents lose their lanes"
+    ],
+    "pick_if": "you only track tasks, not delivery."
+   },
+   {
+    "id": "three",
+    "label": "todo, doing, done",
+    "cost": "S",
+    "desc": "Very light; loses the delivery pipeline.",
+    "lock": "med",
+    "pros": [
+     "Dead simple"
+    ],
+    "cons": [
+     "Loses the whole pipeline",
+     "Gates have nowhere to attach"
+    ],
+    "pick_if": "never for a delivery system."
+   }
+  ],
+  "decided": {
+   "options": [
+    "six"
+   ],
+   "note": "Default pack: backlog, spec, plan, build, verify, done. Blocked is a flag, not a lane. No release lane in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F7a",
+  "phase": "model",
+  "impact": 2,
+  "needs": [],
+  "title": "Ticket IDs",
+  "ask": "How are tickets named?",
+  "learn": "lc-wms, paperclip (PAP-12)",
+  "options": [
+   {
+    "id": "seq",
+    "label": "Local sequential: T-001, T-002",
+    "cost": "S",
+    "rec": true,
+    "desc": "Counter in the knowledge repo."
+   },
+   {
+    "id": "prefix",
+    "label": "Prefix per project: WMS-12, APP-4",
+    "cost": "S",
+    "desc": "Clearer with many projects."
+   },
+   {
+    "id": "ext",
+    "label": "Adopt an external tracker key (Jira, Projexa)",
+    "cost": "M",
+    "desc": "Never guessed; needs sync."
+   }
+  ],
+  "why": "Ids appear in file names, links and commit messages; changing them later is painful.",
+  "decided": {
+   "options": [
+    "seq"
+   ],
+   "note": "Readable counter. F61 adds an author or random suffix so two branches cannot mint the same id. Consistency fix (B24, 2026-10-07): Superseded in format by F61: T-014-sa.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F7b",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F2a"
+  ],
+  "title": "Ticket fields",
+  "ask": "What does a ticket carry?",
+  "multi": true,
+  "options": [
+   {
+    "id": "core",
+    "label": "Title, summary, stage, blocked flag",
+    "rec": true,
+    "desc": "Minimum."
+   },
+   {
+    "id": "size",
+    "label": "Size S/M/L",
+    "rec": true,
+    "desc": "Drives pipeline depth."
+   },
+   {
+    "id": "prio",
+    "label": "Priority",
+    "rec": true,
+    "desc": "critical, high, medium, low."
+   },
+   {
+    "id": "owner",
+    "label": "Owner (human or agent)",
+    "rec": true,
+    "desc": "Who is on it."
+   },
+   {
+    "id": "links",
+    "label": "Repo, branch and artifact links",
+    "rec": true,
+    "desc": "Routes agent work."
+   },
+   {
+    "id": "labels",
+    "label": "Labels",
+    "desc": "Free-form tags."
+   },
+   {
+    "id": "parent",
+    "label": "Parent / sub-tickets",
+    "desc": "Epics."
+   },
+   {
+    "id": "hours",
+    "label": "Estimate and actual hours",
+    "desc": "Feeds timesheets."
+   },
+   {
+    "id": "due",
+    "label": "Due date",
+    "desc": "Shows on the dashboard."
+   },
+   {
+    "id": "goal",
+    "label": "Goal or project link (why this ticket exists)",
+    "desc": "Paperclip ancestry: tickets roll up to goals.",
+    "cost": "S"
+   }
+  ],
+  "why": "Fields drive the board, filters and agent decisions, and each one is another thing to keep valid.",
+  "decided": {
+   "options": [
+    "core",
+    "size",
+    "prio",
+    "owner",
+    "links",
+    "goal"
+   ],
+   "note": "Core fields plus a project and goal link, so agents receive why the ticket exists (F94).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F7c",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F24"
+  ],
+  "title": "Per-ticket trackers",
+  "ask": "Which TOML trackers sit inside each ticket?",
+  "learn": "lc-wms has five; two overlap",
+  "multi": true,
+  "options": [
+   {
+    "id": "q",
+    "label": "Questions",
+    "rec": true,
+    "desc": "Open questions with blockers exit code."
+   },
+   {
+    "id": "b",
+    "label": "Bugs",
+    "rec": true,
+    "desc": "QA failures and regressions."
+   },
+   {
+    "id": "t",
+    "label": "Todos",
+    "rec": true,
+    "desc": "Ticket-scoped chores (see F8)."
+   },
+   {
+    "id": "g",
+    "label": "Gaps",
+    "desc": "Missing information found during analysis."
+   },
+   {
+    "id": "c",
+    "label": "Critique findings",
+    "desc": "Output of challenge passes."
+   }
+  ],
+  "why": "Trackers are the gates: open questions or bugs stop a ticket moving on.",
+  "decided": {
+   "options": [
+    "q",
+    "b",
+    "t"
+   ],
+   "note": "Questions, bugs and todos. Gaps and critique findings can be added when those skills need them.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F7d",
+  "phase": "model",
+  "impact": 1,
+  "needs": [],
+  "title": "Ownership and claiming",
+  "ask": "How do you stop two agents doing the same ticket?",
+  "learn": "paperclip atomic checkout",
+  "options": [
+   {
+    "id": "claim",
+    "label": "Atomic claim with conflict error (never retry)",
+    "cost": "S",
+    "rec": true,
+    "desc": "claimed_by and claimed_at; second claimer gets a 409-style refusal."
+   },
+   {
+    "id": "none",
+    "label": "No claiming (single user, one agent at a time)",
+    "cost": "S",
+    "desc": "Simplest; breaks when you run agents in parallel."
+   }
+  ],
+  "decided": {
+   "options": [
+    "claim"
+   ],
+   "note": "One claimer. A second claim is refused and not retried. Consistency fix (B24, 2026-10-07): Atomic on one machine; a duplicate claim across branches is caught by hl validate on merge.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F7e",
+  "phase": "model",
+  "impact": 1,
+  "needs": [],
+  "title": "External tracker sync",
+  "ask": "Do tickets sync with anything outside?",
+  "options": [
+   {
+    "id": "none",
+    "label": "None in v1",
+    "rec": true,
+    "desc": "Local is the source of truth."
+   },
+   {
+    "id": "gh",
+    "label": "GitHub issues",
+    "cost": "M",
+    "desc": "Two-way later."
+   },
+   {
+    "id": "jira",
+    "label": "Jira / Projexa push",
+    "cost": "L",
+    "desc": "Status and time push."
+   }
+  ],
+  "decided": {
+   "options": [
+    "none"
+   ],
+   "note": "The knowledge repo is the source of truth in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F8a",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F2a"
+  ],
+  "title": "Model",
+  "ask": "How do todos and tasks relate?",
+  "why": "How chores and plan work relate; affects capture speed and traceability.",
+  "learn": "control-center todos, lc-wms tasks.toml",
+  "rec_reason": "Todos stay light and never block; plan tasks carry acceptance-criteria links. Keeping them separate keeps both simple.",
+  "options": [
+   {
+    "id": "split",
+    "label": "Two things: todos (light, optional ticket) and tasks (plan tasks with AC links)",
+    "cost": "S",
+    "rec": true,
+    "desc": "Todos never block. Tasks belong to a plan and trace to ACs.",
+    "lock": "med",
+    "pros": [
+     "Light capture",
+     "Plan tasks stay traceable"
+    ],
+    "cons": [
+     "Two concepts to explain"
+    ],
+    "pick_if": "you want quick capture and strict planning."
+   },
+   {
+    "id": "one",
+    "label": "One unified item with an optional ticket and plan slot",
+    "cost": "M",
+    "desc": "Fewer concepts, more fields.",
+    "lock": "med",
+    "pros": [
+     "One list"
+    ],
+    "cons": [
+     "More fields on every item",
+     "Blurs chores and plan work"
+    ],
+    "pick_if": "you want a single backlog."
+   },
+   {
+    "id": "todos",
+    "label": "Todos only",
+    "cost": "S",
+    "desc": "Drops plan-level task tracking.",
+    "lock": "med",
+    "pros": [
+     "Simplest"
+    ],
+    "cons": [
+     "No plan-level tracing"
+    ],
+    "pick_if": "no formal planning."
+   }
+  ],
+  "decided": {
+   "options": [
+    "split"
+   ],
+   "note": "Todos stay light and never block. Plan tasks carry acceptance-criteria links.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F8b",
+  "phase": "model",
+  "impact": 1,
+  "needs": [
+   "F8a"
+  ],
+  "title": "Todo features",
+  "ask": "What can a todo do?",
+  "multi": true,
+  "options": [
+   {
+    "id": "inbox",
+    "label": "General inbox (not tied to a ticket)",
+    "rec": true,
+    "desc": "The _shared scope."
+   },
+   {
+    "id": "scoped",
+    "label": "Ticket-scoped, movable in and out",
+    "rec": true,
+    "desc": "Promote a todo into a ticket."
+   },
+   {
+    "id": "prio",
+    "label": "Priority and due date",
+    "rec": true,
+    "desc": "Dashboard sorts by these."
+   },
+   {
+    "id": "capture",
+    "label": "Capture from Telegram and voice",
+    "rec": true,
+    "desc": "Same verb as the console."
+   },
+   {
+    "id": "check",
+    "label": "Checklists",
+    "desc": "Sub-items."
+   },
+   {
+    "id": "recur",
+    "label": "Recurring and reminders",
+    "desc": "Needs the scheduler (F18)."
+   }
+  ],
+  "decided": {
+   "options": [
+    "inbox",
+    "scoped",
+    "prio",
+    "capture"
+   ],
+   "note": "No recurring todos: there is no scheduler in v1 (F18).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F6a",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F24"
+  ],
+  "title": "Work log format",
+  "ask": "Work is logged as one file per person per day in the knowledge repo, as in lc-wms and control-center (kept). Which line format?",
+  "learn": "lc-wms logs/YYYY-MM/YYYY-MM-DD.author.toml; control-center the same path as markdown with ## Work bullets",
+  "options": [
+   {
+    "id": "toml",
+    "label": "TOML entries per person per day (lc-wms): ticket, category, text, weight, hours",
+    "cost": "S",
+    "rec": true,
+    "desc": "Structured and queryable, easy for the Work tab.",
+    "pros": [
+     "Totals, weights and timesheets are easy",
+     "Tool validates every entry",
+     "Never conflicts in git (one file per person per day)"
+    ],
+    "cons": [
+     "Not visible in Obsidian unless notes are generated (F52)"
+    ],
+    "pick_if": "you need timesheets or per-ticket totals.",
+    "lock": "med",
+    "must": "Decided rule: TOML for structure, one file per person per day."
+   },
+   {
+    "id": "md",
+    "label": "Markdown bullets per person per day (control-center): author in frontmatter, ## Work lines",
+    "cost": "S",
+    "desc": "Easy to read; harder to aggregate.",
+    "pros": [
+     "Native in Obsidian and any editor",
+     "Simplest to read"
+    ],
+    "cons": [
+     "Hours and weights are text to parse",
+     "Easy to hand-edit into inconsistency"
+    ],
+    "pick_if": "the log is for reading, not totals.",
+    "lock": "med"
+   },
+   {
+    "id": "jsonl",
+    "label": "Append-only activity JSONL",
+    "cost": "S",
+    "desc": "Paperclip-style audit log of everything; great for dashboards, noisy for humans.",
+    "pros": [
+     "Append-safe for machine events"
+    ],
+    "cons": [
+     "Poor for a human timesheet",
+     "Mixes intent with audit noise (that is F70)"
+    ],
+    "pick_if": "you only want an event stream.",
+    "lock": "med"
+   }
+  ],
+  "why": "The log feeds the work view, timesheets and standup digests. One file per person per day also means two people never conflict in git.",
+  "rec_reason": "Structured entries let the console total hours and weights and build timesheets. Obsidian sees the markdown notes the console generates (F52); control-center style markdown is the readable alternative.",
+  "decided": {
+   "options": [
+    "toml"
+   ],
+   "note": "One TOML file per person per day. The console generates the readable note.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F6b",
+  "phase": "model",
+  "impact": 1,
+  "needs": [
+   "F6a"
+  ],
+  "title": "How entries get created",
+  "ask": "Who writes the log?",
+  "multi": true,
+  "options": [
+   {
+    "id": "manual",
+    "label": "/log-work skill and console quick-add",
+    "rec": true,
+    "desc": "Human-intent entries."
+   },
+   {
+    "id": "hook",
+    "label": "Automatic from agent runs (Stop hook)",
+    "rec": true,
+    "desc": "Run summary appended when an agent finishes."
+   },
+   {
+    "id": "tg",
+    "label": "Telegram /log",
+    "desc": "Capture from the phone."
+   },
+   {
+    "id": "moves",
+    "label": "Automatic on ticket moves",
+    "rec": true,
+    "desc": "Stage changes logged without typing."
+   }
+  ],
+  "why": "Who writes the log. Agent runs are attributed to the person who ran them, with no agent names in the text.",
+  "decided": {
+   "options": [
+    "manual",
+    "hook"
+   ],
+   "note": "A person, a finished agent run, or a stage change. No separate Telegram log command. Consistency fix (B24, 2026-10-07): The Stop hook is the only automatic log for runs; the do skill does not log again. Second review (B25, 2026-10-07): Ticket moves go to the activity log, not the work log.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F6c",
+  "phase": "model",
+  "impact": 1,
+  "needs": [
+   "F6a"
+  ],
+  "title": "Reports",
+  "ask": "What do you read back?",
+  "multi": true,
+  "options": [
+   {
+    "id": "day",
+    "label": "Work tab: today and yesterday",
+    "rec": true,
+    "desc": "Entries grouped by ticket."
+   },
+   {
+    "id": "ts",
+    "label": "Timesheet by ticket",
+    "desc": "Hours per ticket per day (lc-wms had at least 8h/day)."
+   },
+   {
+    "id": "week",
+    "label": "Weekly summary",
+    "desc": "Generated from logs."
+   },
+   {
+    "id": "standup",
+    "label": "Standup digest",
+    "desc": "Active, blocked, at risk, closed."
+   }
+  ],
+  "decided": {
+   "options": [
+    "day"
+   ],
+   "note": "Today and yesterday first. Timesheet and standup can be generated later from the same file.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F61",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F24"
+  ],
+  "title": "Ids that survive branches and teams",
+  "ask": "How are ticket and record ids created when several people work on branches?",
+  "why": "Two people creating T-014 on different branches collide at merge.",
+  "rec_reason": "A sequential counter is easy to read but collides across branches. A short per-author or random suffix avoids collisions at a small readability cost.",
+  "options": [
+   {
+    "id": "dated",
+    "label": "Short unique ids: a counter plus the author's initials, for example T-014-sa",
+    "desc": "Collision-free.",
+    "cost": "S",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "No merge collisions",
+     "Still short enough to type"
+    ],
+    "cons": [
+     "Less pretty than T-014",
+     "Gaps in numbering"
+    ],
+    "pick_if": "two or more people create tickets on branches."
+   },
+   {
+    "id": "counter",
+    "label": "Plain sequential counter (T-001, T-002) stored in one file",
+    "desc": "Pretty.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Easy to read and say aloud"
+    ],
+    "cons": [
+     "Merge conflict on the counter file",
+     "Duplicate ids across branches"
+    ],
+    "pick_if": "a single person, one branch."
+   },
+   {
+    "id": "ulid",
+    "label": "Time-ordered random ids (ULID)",
+    "desc": "Safe.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Globally unique, sortable"
+    ],
+    "cons": [
+     "Long and ugly for humans",
+     "Needs a friendly alias on top"
+    ],
+    "pick_if": "ids are mostly machine-referenced."
+   }
+  ],
+  "decided": {
+   "options": [
+    "dated"
+   ],
+   "note": "Assumed: several people edit on branches, so ids must not collide.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F62",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F24",
+   "F2a"
+  ],
+  "title": "Record granularity: one file per record or per kind",
+  "ask": "Do decisions, questions and bugs live as many entries in one file or one file each?",
+  "why": "Teams editing the same ticket on different branches merge cleanly only if they touch different files.",
+  "rec_reason": "One file per record makes git merges and Obsidian notes line up one-to-one, at the cost of more files. Combine both: records are files, a generated index lists them.",
+  "options": [
+   {
+    "id": "perrec",
+    "label": "One file per record (decisions/D-003-sa.toml, same author suffix as tickets, F61) plus a generated index",
+    "desc": "Merge friendly.",
+    "cost": "M",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "Two people editing different records never conflict",
+     "Maps one-to-one to an Obsidian note",
+     "Easy history per record"
+    ],
+    "cons": [
+     "Many small files",
+     "Listing needs the index or a directory scan"
+    ],
+    "pick_if": "a team shares the knowledge repo."
+   },
+   {
+    "id": "perkind",
+    "label": "One file per kind per ticket (decisions.toml with many entries)",
+    "desc": "Compact.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Few files",
+     "Easy to read as a whole"
+    ],
+    "cons": [
+     "Same-place appends conflict in git",
+     "Harder to link to one entry"
+    ],
+    "pick_if": "a single person works on each ticket."
+   },
+   {
+    "id": "hybrid",
+    "label": "Per kind for small kinds (tasks), per record for those that attract concurrent edits (decisions, bugs)",
+    "desc": "Pragmatic.",
+    "cost": "M",
+    "lock": "high",
+    "pros": [
+     "Fewer files where conflicts are rare"
+    ],
+    "cons": [
+     "Two rules to remember"
+    ],
+    "pick_if": "you want a middle path."
+   }
+  ],
+  "decided": {
+   "options": [
+    "perrec"
+   ],
+   "note": "One file per record so two people can edit the same ticket on different branches. Spec and plan stay flat at the ticket root (F2a).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F52",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F24",
+   "F2a"
+  ],
+  "title": "How structured records show up in Obsidian",
+  "ask": "Obsidian only graphs markdown notes. How do TOML records appear in the knowledge graph?",
+  "why": "Decides whether decisions, bugs and tasks are visible, linked and searchable in Obsidian, or invisible.",
+  "learn": "Obsidian core: links, backlinks, graph, Properties (YAML frontmatter), Bases; Dataview community plugin",
+  "rec_reason": "Keep TOML as the source (safe to write) and generate readable markdown notes from it. The generated notes carry wikilinks and YAML properties, which are what Obsidian understands. Generated files may use YAML frontmatter because Obsidian requires it.",
+  "options": [
+   {
+    "id": "gen",
+    "label": "Generated markdown notes: a verb writes hub notes for each ticket and each record, with wikilinks and properties; the TOML stays the source",
+    "desc": "Best of both.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Records join the graph, backlinks and search",
+     "Source stays TOML (safe to write)",
+     "Notes are read-only views, so nobody edits the wrong copy"
+    ],
+    "cons": [
+     "Generated notes must be kept fresh (events, git hook)",
+     "Duplicated information on disk"
+    ],
+    "pick_if": "you want Obsidian to be a real window on the whole knowledge base.",
+    "must": "Decided rule: Obsidian only graphs markdown, so a verb writes notes from the TOML."
+   },
+   {
+    "id": "native",
+    "label": "Records are markdown with YAML properties, one file per record (Obsidian-native); no TOML for records",
+    "desc": "No generation.",
+    "cost": "M",
+    "lock": "high",
+    "pros": [
+     "Native in Obsidian, Dataview and Bases",
+     "One file, two audiences"
+    ],
+    "cons": [
+     "Needs a YAML-frontmatter parser and writer dependency",
+     "Hand edits can corrupt state",
+     "Reverses the TOML decision (F24)"
+    ],
+    "pick_if": "Obsidian is the primary editor for everyone."
+   },
+   {
+    "id": "none",
+    "label": "Obsidian shows only authored markdown (spec, plan, notes, wiki); records stay invisible to it",
+    "desc": "No extra work.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "Decisions, bugs and tasks are missing from the graph"
+    ],
+    "pick_if": "Obsidian is only for reading prose."
+   }
+  ],
+  "mockups": [
+   "06-knowledge"
+  ],
+  "decided": {
+   "options": [
+    "gen"
+   ],
+   "note": "TOML stays the source. A verb writes the markdown notes Obsidian graphs. Consistency fix (B24, 2026-10-07): Notes are not in git (F129); hl notes (or the session-start hook) builds them locally from the shared TOML.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F53",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F52",
+   "F27"
+  ],
+  "title": "Obsidian vault setup",
+  "ask": "Is the knowledge repo itself an Obsidian vault, and what ships in it?",
+  "why": "Teams need the same graph, templates and exclusions without sharing personal layout.",
+  "learn": "Obsidian ignores folders starting with a dot; .obsidian holds shared config and per-user state",
+  "options": [
+   {
+    "id": "ship",
+    "label": "The scaffold commits a minimal .obsidian (graph colours per artifact kind, templates folder, excluded folders, core plugins on) and gitignores per-user state (workspace.json)",
+    "desc": "Same view for everyone.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Same graph groups and templates for the whole team",
+     "Generated HTML and logs stay out of the graph"
+    ],
+    "cons": [
+     "Shared config can clash with personal taste"
+    ],
+    "pick_if": "a team uses the vault."
+   },
+   {
+    "id": "none",
+    "label": "No .obsidian in the repo; each person configures their own",
+    "desc": "Hands off.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No config to maintain"
+    ],
+    "cons": [
+     "Everyone has a different graph; no shared templates"
+    ],
+    "pick_if": "only you use Obsidian."
+   },
+   {
+    "id": "plugins",
+    "label": "Also ship community plugins (Dataview, Templater)",
+    "desc": "Powerful.",
+    "cost": "L",
+    "lock": "low",
+    "pros": [
+     "Queries and rich templates"
+    ],
+    "cons": [
+     "Plugins must be installed and trusted by every user",
+     "Fragile across versions"
+    ],
+    "pick_if": "you want dashboards inside Obsidian."
+   }
+  ],
+  "decided": {
+   "options": [
+    "ship"
+   ],
+   "note": "A minimal .obsidian ships with the vault. Core features only. No Dataview or other community plugins.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F64",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F5b"
+  ],
+  "title": "What blocked means",
+  "ask": "Can a ticket just be marked blocked, or must it say why and who acts?",
+  "why": "Paperclip requires a named owner and next action for blocked; a prose-only \"blocked\" hides stuck work.",
+  "learn": "paperclip execution semantics",
+  "rec_reason": "Blocked is a flag with required fields: blocked_by (a ticket, question or person) and next_action. The inbox and dashboard show these first.",
+  "options": [
+   {
+    "id": "required",
+    "label": "Blocked requires blocked_by and next_action; the validator refuses a bare flag",
+    "desc": "No hidden stuck work.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "flag",
+    "label": "A plain blocked flag",
+    "desc": "Simplest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "required"
+   ],
+   "note": "Blocked needs blocked_by and next_action. A bare flag is invalid.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F70",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F6a"
+  ],
+  "title": "Audit trail",
+  "ask": "Is every state change recorded as who did what, when?",
+  "why": "Paperclip logs every action with actor and entity. The work log (F6) is human intent; an audit trail is every verb call. It powers the dashboard feed and \"who changed this\".",
+  "options": [
+   {
+    "id": "audit",
+    "label": "Every verb call appends a line to an activity JSONL, one file per person per day (like the work log): actor (agent or person), verb, entity, time, result and the person on whose behalf it ran",
+    "desc": "Cheap and complete.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "gitonly",
+    "label": "Rely on git history",
+    "desc": "Nothing extra.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "audit"
+   ],
+   "note": "Every verb appends one JSONL line. The work log stays the human timesheet. Second review (B25, 2026-10-07): Activity is committed (one file per person per day).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F93",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F6a"
+  ],
+  "multi": true,
+  "title": "Work log rules",
+  "ask": "Which rules keep the work log trustworthy? These come from lc-wms log-work, which you already use.",
+  "learn": "lc-wms log-work: the tool owns storage, author, dedupe and hours; control-center logs",
+  "options": [
+   {
+    "id": "tool",
+    "label": "The tool owns storage, author, file layout, duplicate detection (about 70% similar text on the same day is skipped) and hour allocation; you supply one sentence",
+    "desc": "Cheap and consistent.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "sentence",
+    "label": "One plain sentence, up to about 160 characters, no agent or skill names: the log is a timesheet for people",
+    "desc": "Readable by humans.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "weights",
+    "label": "Weight 1 to 5 as a share of the day; hours only for a fixed block such as a meeting; day length override",
+    "desc": "Fair splits.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "cats",
+    "label": "Categories: Development, Code Review, Testing, Design, Documentation, Internal",
+    "desc": "Reporting.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "special",
+    "label": "Special tickets for meetings and leave, kept out of delivery tickets",
+    "desc": "Clean timesheets.",
+    "cost": "S"
+   },
+   {
+    "id": "roster",
+    "label": "Author comes from the people roster, never guessed, one file per author per day",
+    "desc": "Attribution.",
+    "cost": "S",
+    "rec": true,
+    "must": "Decided rule: the author is read from the roster, never guessed."
+   }
+  ],
+  "why": "A timesheet nobody trusts is worse than none. These rules, proven in lc-wms, keep entries short, unique and attributed.",
+  "decided": {
+   "options": [
+    "tool",
+    "sentence",
+    "weights",
+    "cats",
+    "roster"
+   ],
+   "note": "The tool owns the file. The author comes from the roster and is never guessed.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F94",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F7b"
+  ],
+  "title": "Goal context for agents",
+  "ask": "Do agents see why a ticket exists, not just its title?",
+  "why": "Paperclip links tasks to projects and goals so agents receive the goal behind their work. A one-line why changes what an agent builds.",
+  "learn": "paperclip README: Goal Alignment, goal-aware execution",
+  "rec_reason": "Keep it light: a ticket links to a project and a goal (a short markdown note). The context digest includes that chain, so agents get the why for free.",
+  "options": [
+   {
+    "id": "chain",
+    "label": "Ticket links to a project and a goal; `hl context` includes the goal chain in the digest",
+    "desc": "The why travels with the work.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "field",
+    "label": "A free-text \"why\" field on the ticket only",
+    "desc": "Simpler.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "Titles and specs only",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "chain"
+   ],
+   "note": "A ticket points at its project and goal. hl context includes that chain.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F95",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F2a"
+  ],
+  "title": "Ticket thread and run history",
+  "ask": "Where do comments, plans, blockers and agent run history live relative to the ticket?",
+  "mockups": [
+   "03-ticket-page"
+  ],
+  "why": "Paperclip task threads keep conversation, plans, blockers, files and run history attached to the work. Today our plan has comments only as a verb; there is no thread or run list on the ticket page.",
+  "learn": "paperclip README: Task Threads; control-center ticket comments tracker",
+  "rec_reason": "A comments record per ticket for the human conversation, plus a run record per agent run (who, what, result, usage) listed on the ticket page. Both are files, so they travel with the ticket.",
+  "options": [
+   {
+    "id": "both",
+    "label": "Per-ticket comment records (author, time, text) and per-run records (agent, start, end, result, usage, transcript link) shown as Thread and Runs tabs on the ticket page",
+    "desc": "Everything about the work in one place.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "comments",
+    "label": "Comments only",
+    "desc": "Smaller.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No thread; discuss in chat or git",
+    "desc": "Nothing to build.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "both"
+   ],
+   "note": "A ticket thread and a run list. Comments on a spec passage stay in git review (F100), not a second store. Second review (B25, 2026-10-07): Comments and run records are committed; transcripts and audio stay on the machine.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F111",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F5b"
+  ],
+  "title": "Slicing model and vocabulary",
+  "ask": "How is a ticket broken into work? What do we call the pieces: phase, slice, layer, task, wave?",
+  "mockups": [
+   "03-ticket-page"
+  ],
+  "why": "The words decide how plans, tasks.toml, agents and the board talk to each other. Mixed vocabulary is how plans end up with 60 tasks and no shippable increment.",
+  "learn": "lc-wms plan: slices S1..Sn, tasks S1-T1, layers db|api|ui|test|env|spike|docs, waves for parallel dispatch; control-center breakdown-tasks: phases, slices, tasks with ids like 2-3-2; control-center idea doc: layer-as-phase",
+  "rec_reason": "lc-wms uses the model that works: a slice is a thin vertical cut that delivers at least one acceptance criterion end to end; a task is one layer. Phase is a pipeline stage, wave is parallel dispatch, and neither is a way to slice. control-center T-017 grew to 4 phases, 10 slices and about 60 tasks, which shows why.",
+  "options": [
+   {
+    "id": "vertical",
+    "label": "Ticket, then slices, then tasks. A slice is a thin vertical cut through every layer it needs, delivering at least one acceptance criterion end to end, riskiest first, testable on its own. A task belongs to exactly one layer (db, api, ui, test, env, spike, docs; the list is configurable). One slice for size S, two to five for M and L, more than six means split the ticket. Phase means a pipeline stage and wave means parallel dispatch; neither slices work",
+    "desc": "The lc-wms model.",
+    "short": "Slices + one-layer tasks",
+    "cost": "S",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Every slice can be shipped and verified alone",
+     "Risk is retired first",
+     "Tasks map to one layer, one owner, one test",
+     "Plans stay small enough to read"
+    ],
+    "cons": [
+     "Needs discipline to keep slices vertical",
+     "Cross-slice dependencies must be stated"
+    ],
+    "pick_if": "you want plans that deliver working increments."
+   },
+   {
+    "id": "phases",
+    "label": "Phases, then slices, then tasks (control-center implementation-plan template), task ids like 2-3-2",
+    "desc": "More levels.",
+    "short": "Phases, slices, tasks",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Familiar project-plan shape",
+     "Room for very large tickets"
+    ],
+    "cons": [
+     "Layer-as-phase means nothing works until the last phase lands (lc-wms rejects it)",
+     "One real ticket reached about 60 tasks",
+     "Three-part ids are hard to read"
+    ],
+    "pick_if": "tickets are program-sized."
+   },
+   {
+    "id": "flat",
+    "label": "A flat list of up to six tasks per ticket, no slices",
+    "desc": "Lightest.",
+    "short": "Flat task list",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Fastest for small tickets"
+    ],
+    "cons": [
+     "No structure for medium and large work",
+     "No definition of done per increment"
+    ],
+    "pick_if": "every ticket is small."
+   }
+  ],
+  "decided": {
+   "options": [
+    "vertical"
+   ],
+   "note": "A slice delivers one acceptance criterion end to end. A task is one layer. Phase is a pipeline stage.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F112",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F2a",
+   "F62",
+   "F26"
+  ],
+  "title": "Ticket folder structure",
+  "ask": "What folders and files does a ticket get? Where do SQL scripts, rollback scripts, plans, decisions, trackers, tests and source material go?",
+  "mockups": [
+   "03-ticket-page"
+  ],
+  "why": "This is what the scaffold creates and the validator checks. Agents, the console and Obsidian all rely on it. Blueprint 16 has the full tree with a reason per entry.",
+  "learn": "lc-wms ticket-layout.toml (layout 3) and real tickets WLC-973, WLC-975; control-center flat _template of 13 files; both repos",
+  "rec_reason": "Keep what works in lc-wms (data-driven layout, lazy folders, source and test-cases dirs) and fix its rough edges: one spelling for release folders, visible forward and rollback pairs, trackers as per-record files (F62), prefixed unique file names (F26).",
+  "options": [
+   {
+    "id": "proposed",
+    "label": "Flat root with a few lazy subfolders: ticket.toml, spec, plan, tasks.toml; decisions, questions, bugs and gaps folders of one TOML file per record; architecture/, db/ (forward, rollback, dev, README), test-cases/, tests/, source/, investigations/. Lazy: a folder exists only when it holds a file",
+    "desc": "Blueprint 16.",
+    "short": "Proposed layout",
+    "cost": "M",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "Everything for a ticket in one place with a clear home for each thing",
+     "Forward and rollback SQL are visible as pairs",
+     "Merge-friendly per-record files",
+     "Matches what you have already refined"
+    ],
+    "cons": [
+     "A migration path from lc-wms tickets",
+     "More folders than the flat control-center layout"
+    ],
+    "pick_if": "tickets carry SQL, tests and several trackers."
+   },
+   {
+    "id": "lcwms",
+    "label": "lc-wms layout 3 as it is: ticket-scripts/{development-scripts, handy-scripts, reference-scripts, release-scripts/{created-or-altered, inserts-or-deletes, rollback-scripts}}",
+    "desc": "Tried and tested.",
+    "short": "lc-wms layout 3",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Already in use and validated by your tooling"
+    ],
+    "cons": [
+     "Deep nesting; three spellings of the insert and delete folder across skills",
+     "Pairing of forward and rollback is not enforced",
+     "The inserts folder is not staged (a known pitfall)"
+    ],
+    "pick_if": "you want zero change from today."
+   },
+   {
+    "id": "flat",
+    "label": "control-center flat layout: {T}-{artifact}.md files at the root, scripts in ticket-scripts/",
+    "desc": "Simplest.",
+    "short": "Flat layout",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Few folders"
+    ],
+    "cons": [
+     "No home for SQL pairs, tests and evidence",
+     "Grows into 20+ flat files"
+    ],
+    "pick_if": "tickets are small and have no SQL."
+   }
+  ],
+  "decided": {
+   "options": [
+    "proposed"
+   ],
+   "note": "New tickets use this tree. Existing lc-wms tickets keep their folders until an optional migrate. The validator reads the layout version from ticket.toml. Consistency fix (B24, 2026-10-07): ticket.toml and tasks.toml keep fixed names; markdown files carry the ticket prefix (F26).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F113",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F112"
+  ],
+  "title": "Database scripts and rollback",
+  "ask": "Where do SQL scripts and rollback scripts live, how are they named and ordered, and what approves them?",
+  "why": "SQL is the riskiest thing a ticket ships. lc-wms already has hard stops for it; the structure should make pairing and order checkable by a program.",
+  "learn": "lc-wms database-operations, prepare-release-sql, stage-release, plan schema gate; tickets WLC-973, WLC-975, WLC-980",
+  "rec_reason": "One numbering rule does three jobs: sort order is run order, the same number pairs a rollback with its forward script, and a validator can check it. Drop the type folders and the inserts folder that cause staging pitfalls.",
+  "options": [
+   {
+    "id": "paired",
+    "label": "db/forward/NN_{schema}.{object}.sql and db/rollback/NN_{schema}.{object}.rollback.sql with the same NN; sort is run order; db/dev/ for throwaway diagnostics; db/README.md lists catalog order and rollback order; DML goes in forward with a preview flag; multi-catalog tickets use numbered folders; schema changes need an approved question before slices; the validator warns on an unpaired script",
+    "desc": "Checkable pairing.",
+    "short": "Paired forward and rollback",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Pairs are obvious and machine-checkable",
+     "No ordering bugs from type folders",
+     "DML cannot be forgotten by staging",
+     "Rollback order is documented where the scripts are"
+    ],
+    "cons": [
+     "Differs from lc-wms folder habits",
+     "Staging tooling must read the new layout"
+    ],
+    "pick_if": "you want safe, reviewable database changes.",
+    "must": "Requested: SQL forward and rollback scripts with the same number in the ticket."
+   },
+   {
+    "id": "lcwms",
+    "label": "lc-wms nesting: created-or-altered/[type]/ and rollback-scripts/, with a separate inserts-or-deletes folder",
+    "desc": "As today.",
+    "short": "lc-wms nesting",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Matches your release skills now"
+    ],
+    "cons": [
+     "Pairing not enforced",
+     "Rollback naming suffix is not matched by the validator",
+     "inserts-or-deletes is not copied by staging"
+    ],
+    "pick_if": "you will keep the existing release skills unchanged."
+   },
+   {
+    "id": "project",
+    "label": "SQL lives only in the project repo migrations; the ticket links to it",
+    "desc": "Single source.",
+    "short": "Project migrations only",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "One place for scripts"
+    ],
+    "cons": [
+     "The ticket is no longer a self-contained package",
+     "Review needs the project branch"
+    ],
+    "pick_if": "the project has a strong migration tool of its own."
+   }
+  ],
+  "decided": {
+   "options": [
+    "paired"
+   ],
+   "note": "Same number pairs a forward script with its rollback. Release packaging (run-all, rollback-all, DEPLOY.md) stays a workspace or project skill, not in the system layer. Second review (B25, 2026-10-07): These SQL rules ship in the software-delivery pack (F141), not the system ticket model.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F114",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F112"
+  ],
+  "title": "Test artifacts",
+  "ask": "Where do test cases and executable checks live?",
+  "why": "lc-wms keeps test-case documents in the ticket but real tests in product repos, which works; ticket-local scripts need a home too.",
+  "learn": "lc-wms test-cases with TC-U/I/E/N/B/X ids traced to AC; generate-e2e-tests writes into a separate test repo",
+  "options": [
+   {
+    "id": "split",
+    "label": "test-cases/ in the ticket (TC ids traced to AC, reports, evidence/); product tests live in the project repo; ticket-local executable checks (SQL, Python, shell) in tests/, linked from the test cases; every PASS shows the command and output",
+    "desc": "Documents here, code there.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "ticket",
+    "label": "Everything including product tests in the ticket",
+    "desc": "One place.",
+    "cost": "S"
+   },
+   {
+    "id": "project",
+    "label": "All tests in the project; the ticket only references them",
+    "desc": "Single source.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "split"
+   ],
+   "note": "Test-case documents live in the ticket. Product tests live in the project repo.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F115",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F3a"
+  ],
+  "title": "Shared knowledge across projects",
+  "ask": "Every knowledge center has information that belongs to every project. Where does it live, and what about things that are useful but not skills?",
+  "mockups": [
+   "06-knowledge"
+  ],
+  "why": "Standards, glossary, environment notes, runbooks, SQL snippets, contracts and the team roster are used by many tickets and projects. Today lc-wms spreads them across wiki, data-graph, _shared artifacts and skills.",
+  "learn": "lc-wms wiki, data-graph catalog (projects.toml, glossary, status-codes, fk-map), _shared/common-handy-scripts, templates/checklists; control-center wiki",
+  "rec_reason": "One shared area at the root of the knowledge repo for cross-project reference, one folder per project for project-specific notes (the overlay from F87), artifacts per ticket and logs per person. Skills stay procedures and link to shared reference instead of embedding it.",
+  "options": [
+   {
+    "id": "shared",
+    "label": "A shared/ area (wiki with standards, decisions, runbooks, environments, glossary; sql snippets and diagnostics; templates; checklists; contracts and data dictionaries; people and special tickets) plus projects/<id>/ for per-project notes and the overlay (F87), artifacts/ per ticket, logs/ per person",
+    "desc": "Blueprint 17.",
+    "short": "shared/ and projects/",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Each kind of knowledge has an obvious home",
+     "Agents find reference through one index, not by loading it",
+     "Skills stay small"
+    ],
+    "cons": [
+     "Folders to explain",
+     "Existing wiki notes must be sorted into them"
+    ],
+    "pick_if": "several projects share conventions and data."
+   },
+   {
+    "id": "wiki",
+    "label": "One flat wiki with tags",
+    "desc": "Simplest.",
+    "short": "One flat wiki",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "One place"
+    ],
+    "cons": [
+     "Reference and per-project notes mix",
+     "Hard to apply per-project rules"
+    ],
+    "pick_if": "a single project."
+   },
+   {
+    "id": "skills",
+    "label": "Reference lives inside skills (lc-wms today for SQL rules and verify scopes)",
+    "desc": "Nothing separate.",
+    "short": "Inside skills",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Always next to the procedure"
+    ],
+    "cons": [
+     "Loaded as skill text, costing tokens",
+     "Duplicated across skills",
+     "Invisible to people and Obsidian"
+    ],
+    "pick_if": "a handful of tiny rules."
+   }
+  ],
+  "decided": {
+   "options": [
+    "shared"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F116",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F115"
+  ],
+  "title": "Reference versus skill",
+  "ask": "When is something a skill and when is it reference?",
+  "why": "A clear rule keeps skills small and reference findable. The wrong choice either wastes tokens or hides knowledge.",
+  "rec_reason": "A skill is a procedure the agent executes. Reference is a fact the agent looks up. Reference is never loaded automatically; skills link to it, and a generated index (one line per shared document) lets agents and people find it.",
+  "options": [
+   {
+    "id": "rule",
+    "label": "A skill is a procedure; reference is a fact. Reference is never auto-loaded: a generated shared/INDEX.md lists each document in one line, hl search finds it, and skills link to it instead of embedding it",
+    "desc": "Light and discoverable.",
+    "cost": "S",
+    "rec": true,
+    "must": "Requested: reference material that is useful but is not a skill."
+   },
+   {
+    "id": "embed",
+    "label": "Embed standards in the skills that use them",
+    "desc": "No lookups.",
+    "cost": "S"
+   },
+   {
+    "id": "claude",
+    "label": "Put standards in CLAUDE.md",
+    "desc": "Always visible.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "rule"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F124",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F2a",
+   "F5b"
+  ],
+  "title": "Lifecycle tiers: what archiving and deleting mean",
+  "ask": "As tickets pile up, too many files confuse the LLM. What happens to a ticket after it closes?",
+  "why": "Without a lifecycle the knowledge base only grows, search gets noisy and agents read stale material. lc-wms and control-center only flag stale and archive on the board; neither has a real archive or a delete.",
+  "learn": "lc-wms close-ticket and board archive flag (nothing deleted); control-center close-work archive step (skill text only) and reset (dry run, typed confirmation); deepseek-harness archived/manifest with sha256 and a value test before deleting; paperclip 7/30/90-day retention and reopen cooldown",
+  "rec_reason": "Four tiers. Active tickets stay small. Closing writes a digest and hides drafts. After a retention window the ticket moves to a restorable archive with a hash manifest. Deletion is allowed only for archived tickets, after a value check, with a tombstone left behind.",
+  "options": [
+   {
+    "id": "four",
+    "label": "Four tiers: Active (capped file count, a keep pin, stale is only a flag); Closed (a closure digest, drafts moved to a hidden _work/); Archived (moved to archive/YYYY-MM/T-xxx with ticket.toml, the digest and a sha256 manifest; restorable); Deleted (purge with a dry run, typed confirmation, a value check and a tombstone)",
+    "desc": "Compact, reversible, deletable.",
+    "short": "Four tiers",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Active work stays small and readable",
+     "Archiving is reversible: restore verifies the hashes",
+     "Deleting is possible, but only with safeguards and a record",
+     "Matches the patterns in all four repos"
+    ],
+    "cons": [
+     "More verbs and states to learn",
+     "Digests must actually be written well"
+    ],
+    "pick_if": "the workspace will grow past a few dozen tickets."
+   },
+   {
+    "id": "two",
+    "label": "Two tiers: active and archived; nothing is ever deleted (lc-wms today: an archived flag on the board)",
+    "desc": "Safest.",
+    "short": "Archive only",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing is lost",
+     "Least code"
+    ],
+    "cons": [
+     "Files keep accumulating",
+     "The LLM still sees them unless hidden",
+     "No way to remove information that should not be kept"
+    ],
+    "pick_if": "storage and noise are not a concern yet."
+   },
+   {
+    "id": "git",
+    "label": "Remove closed tickets from the tree; git history is the archive",
+    "desc": "Smallest tree.",
+    "short": "Git history only",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "The working tree stays small",
+     "No archive structure to maintain"
+    ],
+    "cons": [
+     "Hard to find or restore (git archaeology)",
+     "Search and Obsidian lose the context",
+     "deepseek-harness rejects history as the only copy"
+    ],
+    "pick_if": "git is the only record you trust."
+   }
+  ],
+  "decided": {
+   "options": [
+    "four"
+   ],
+   "note": "Active, closed (digest), archived (restorable), deleted (only after a dry run and a typed confirmation).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F125",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F124"
+  ],
+  "title": "The closure digest",
+  "ask": "What stays readable after a ticket closes, so the full folder can be hidden or archived?",
+  "why": "A short, fixed-shape summary lets people and agents learn what a ticket did without reading 20 files. It is the compaction of information.",
+  "learn": "lc-wms closure_summary on the graph node; deepseek-harness 8-section compaction checkpoint (merge, do not copy; (none) for empty sections); control-center context digest (about 16 times fewer tokens)",
+  "rec_reason": "A fixed-section digest of about 400 words: outcome, decisions with their reasons, key files and links, caveats, follow-ups, each saying (none) when empty. The close skill writes it and a verb checks the shape and size. It stays in the working tree and in Obsidian after the rest is archived.",
+  "options": [
+   {
+    "id": "fixed",
+    "label": "A fixed-section closure digest of up to about 400 words (outcome, decisions with reasons, key files and links, caveats, follow-ups); the close skill drafts it, a verb validates shape and size; it stays in the tree and the Obsidian graph",
+    "desc": "Short and uniform.",
+    "short": "Fixed-section digest",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Anyone can learn what happened in a minute",
+     "Uniform shape is easy for agents to parse",
+     "Lasting rationale survives deletion of the rest"
+    ],
+    "cons": [
+     "Someone (or the agent) must write it well at close",
+     "A bad digest hides detail"
+    ],
+    "pick_if": "tickets close faster than people re-read them."
+   },
+   {
+    "id": "free",
+    "label": "A free-text summary line",
+    "desc": "Lightest.",
+    "short": "Summary line",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No template"
+    ],
+    "cons": [
+     "Too thin to replace the folder",
+     "Inconsistent"
+    ],
+    "pick_if": "tickets are small."
+   },
+   {
+    "id": "none",
+    "label": "No digest; keep or archive the whole folder",
+    "desc": "Nothing to write.",
+    "short": "No digest",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Zero effort"
+    ],
+    "cons": [
+     "Archived tickets cannot be understood without opening everything",
+     "Deleting loses the story"
+    ],
+    "pick_if": "you never delete."
+   }
+  ],
+  "decided": {
+   "options": [
+    "fixed"
+   ],
+   "note": "About 400 words: outcome, decisions, key files, caveats, follow-ups. Consistency fix (B24, 2026-10-07): On archive, the digest note is written to shared/digests/ so the graph keeps it.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F126",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F124"
+  ],
+  "title": "Keeping old material out of the LLM context",
+  "ask": "How do we make sure agents and search do not read closed and archived files by accident?",
+  "why": "deepseek-harness hides its archive with a single ignore line; lc-wms hides nothing and its index still lists closed items; control-center caps its digest at 1,200 characters. Hiding is the part that actually protects the model.",
+  "rec_reason": "Layer the protections: hidden folders, host deny rules, search and context defaults that cover only hot tickets, and size caps on every digest the agent loads at session start.",
+  "options": [
+   {
+    "id": "layered",
+    "label": "Layers: _work/ and archive/ in the ignore files for search tools and in host deny rules (Claude Read deny, Cursor Read deny); hl search and hl context cover active and capped closed digests by default, with --archived to include the rest; the session-start digest and the generated index are capped (about 12 rows or 1,200 characters); Obsidian excludes the archive folder",
+    "desc": "Defence in depth.",
+    "short": "Layered hiding",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Agents never wander into old files by accident",
+     "Search stays sharp as the workspace grows",
+     "Explicit access still works when you ask for it"
+    ],
+    "cons": [
+     "Several config files to keep in sync (generated from one source)"
+    ],
+    "pick_if": "you expect hundreds of tickets."
+   },
+   {
+    "id": "search",
+    "label": "Search and context defaults only; no ignore files",
+    "desc": "Light.",
+    "short": "Search defaults",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Little config"
+    ],
+    "cons": [
+     "Agents can still list and read archived folders directly",
+     "Editor search shows everything"
+    ],
+    "pick_if": "few tickets."
+   },
+   {
+    "id": "none",
+    "label": "No hiding",
+    "desc": "Nothing to do.",
+    "short": "No hiding",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No effort"
+    ],
+    "cons": [
+     "The problem you described: too many files confuse the LLM"
+    ],
+    "pick_if": "never."
+   }
+  ],
+  "decided": {
+   "options": [
+    "layered"
+   ],
+   "note": "Archive and drafts are hidden from search and from host read rules. Agents load digests, not old folders. Consistency fix (B24, 2026-10-07): Archived digests stay visible through shared/digests/.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F127",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F124"
+  ],
+  "title": "Retention triggers and thresholds",
+  "ask": "When does a ticket move from closed to archived, and when may it be deleted?",
+  "why": "Thresholds should be settings, not code, and nothing should be deleted by a timer.",
+  "learn": "lc-wms stale_days 14 and control-center 7 (flag only); deepseek-harness archive by judgement, not age; paperclip idle auto-archive after 90 days, deletion needs a person, reopen cooldown 7 days",
+  "rec_reason": "Archive is suggested by age (for example 30 days after close) and done by a verb with a dry run. Deleting is never automatic: eligible after a longer window (for example 180 days) and always confirmed. A keep pin overrides everything. All numbers live in workspace.toml.",
+  "options": [
+   {
+    "id": "suggest",
+    "label": "[retention] in workspace.toml (stale days, archive after, purge eligible after, keep pin); the session-start digest suggests what is eligible (\"12 tickets can be archived\"); archive and purge are verbs with a dry run; nothing deletes by itself",
+    "desc": "Suggest, then confirm.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "auto",
+    "label": "Archive automatically after the window; deletion still manual",
+    "desc": "Hands-off tidy-up.",
+    "cost": "M"
+   },
+   {
+    "id": "none",
+    "label": "No thresholds; archive when someone remembers",
+    "desc": "Simplest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "suggest"
+   ],
+   "note": "Starting point: suggest archive 30 days after close, purge-eligible after 180. Nothing deletes itself. A new link restores the digest only.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F128",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F124",
+   "F125"
+  ],
+  "title": "Deleting tickets and information safely",
+  "ask": "You want the option to delete tickets and information. What safeguards make that acceptable?",
+  "why": "Deletion is the one irreversible step. lc-wms has no delete verb at all; control-center only has reset with a dry run and typed confirmation; paperclip hard deletes inside a transaction and leaves an audit entry; deepseek-harness leaves no trace, so inbound links must be repaired by hand.",
+  "rec_reason": "Purge only archived tickets (or give a reason to override), show a dry run, require a typed confirmation, check the value first (move lasting rationale to the shared wiki or decision log), check inbound links, keep a tombstone record, and offer a short trash window. The same rules apply to other information kinds.",
+  "options": [
+   {
+    "id": "safe",
+    "label": "hl purge: only archived tickets (override needs a reason); dry run first; typed confirmation; a value check that promotes lasting decisions to shared/wiki/decisions; inbound link check (refuse or repair); a tombstone line (id, title, closed, deleted, reason, digest, hash) appended to archive/tombstones.jsonl; an optional trash window of N days; one audit line. The same verbs for other kinds: hl delete note, decision, log",
+    "desc": "Deletable, never careless.",
+    "short": "Guarded purge",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Deletion is possible and recorded",
+     "Lessons are not lost with the folder",
+     "References never dangle silently",
+     "A mistake can be undone inside the trash window"
+    ],
+    "cons": [
+     "Several steps for something rare",
+     "Tombstones and the trash folder to maintain"
+    ],
+    "pick_if": "you want to remove information with confidence."
+   },
+   {
+    "id": "hard",
+    "label": "A plain delete verb with a confirm prompt",
+    "desc": "Fastest.",
+    "short": "Plain delete",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Simple"
+    ],
+    "cons": [
+     "No value check, no record, broken links",
+     "Easy to regret"
+    ],
+    "pick_if": "a throwaway workspace."
+   },
+   {
+    "id": "never",
+    "label": "Never delete; archive only",
+    "desc": "Safest.",
+    "short": "No delete",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing is lost"
+    ],
+    "cons": [
+     "You asked for deletion",
+     "Information that must go (wrong, sensitive) stays"
+    ],
+    "pick_if": "compliance requires keeping everything."
+   }
+  ],
+  "decided": {
+   "options": [
+    "safe"
+   ],
+   "note": "Purge only an archived ticket, after a dry run, a typed confirmation, a value check and a tombstone. Later (after v1, B25): purge and tombstones; archive is in v1.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F129",
+  "phase": "model",
+  "impact": 2,
+  "needs": [
+   "F124",
+   "F6a"
+  ],
+  "multi": true,
+  "title": "Compacting logs, chats and generated files",
+  "ask": "Tickets are not the only things that grow. How do we compact the rest?",
+  "learn": "deepseek-harness compaction checkpoints, spill-to-file with preview, tiered retention; paperclip tiered backups; lc-wms logs archived by month",
+  "options": [
+   {
+    "id": "rotate",
+    "label": "Rotate JSONL history (chat, usage, audit, events) monthly and compress old months with gzip (gzip is built into Node; zstd later if wanted)",
+    "desc": "Smaller files.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "rollup",
+    "label": "Roll usage and audit lines up into daily aggregates and keep the raw lines compressed",
+    "desc": "Dashboards stay fast.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "chats",
+    "label": "Summarise old chats into a fixed-section checkpoint (primary request, files, pending work, next step, critical context) and keep the raw log compressed",
+    "desc": "Long sessions stay usable.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "worklog",
+    "label": "Leave daily work logs alone; add a monthly summary note and move old months to a logs archive",
+    "desc": "Readable history.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "generated",
+    "label": "Generated pages and notes are never stored in git; they are rebuilt on demand",
+    "desc": "Nothing to compact.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "spill",
+    "label": "Large tool or agent output is spilled to a file with a short preview and a pointer, then swept after about 30 days",
+    "desc": "Small prompts.",
+    "cost": "M"
+   },
+   {
+    "id": "budget",
+    "label": "Size budgets with warnings: files per active ticket, evidence size, digest length, index rows",
+    "desc": "Early warning.",
+    "cost": "S",
+    "rec": true
+   }
+  ],
+  "why": "Logs, chats and generated files grow faster than tickets. Compact them early and the knowledge base stays fast and readable.",
+  "decided": {
+   "options": [
+    "rotate",
+    "rollup",
+    "chats",
+    "worklog",
+    "generated",
+    "budget"
+   ],
+   "note": "Generated HTML is written for people and not committed. Agents read the source files. Consistency fix (B24, 2026-10-07): Obsidian notes are rebuilt locally by hl notes. Second review (B25, 2026-10-07): Rotation and gzip apply only to local files (chats, usage, transcripts); committed files are never gzipped. Later (after v1, B25): chat checkpoints and usage roll-ups.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F143",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F115",
+   "F3c"
+  ],
+  "title": "A project as the unit of knowledge",
+  "ask": "Each knowledge center holds several projects, and each project keeps its own knowledge, graphs and nodes. What is inside a project?",
+  "mockups": [
+   "06-knowledge",
+   "14-project-graph"
+  ],
+  "why": "Paperclip projects own tasks, goals and workspaces; yours should also own the knowledge about the thing being built, so an agent working on a project finds everything in one folder.",
+  "learn": "paperclip projects and project workspaces; lc-wms data-graph catalog and per-project registry; control-center wiki; Blueprint 22",
+  "rec_reason": "One folder per project in the knowledge center: a project.toml (id, owners, code repos, goals, status), a hub note, a wiki for architecture, runbooks and environments, a graph of nodes, and an optional CLAUDE.md and skills overlay. Tickets link to the project id.",
+  "options": [
+   {
+    "id": "folder",
+    "label": "projects/<id>/ with project.toml (owners, code repos by .code-workspace folder name, goals, status), a hub note, wiki (architecture, runbooks, environments, project decisions, glossary), nodes/ (the project graph, F140) and an optional CLAUDE.md and .claude overlay (F87); tickets reference the project id",
+    "desc": "Everything about a project in one place.",
+    "short": "Project folder",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "An agent working on a project loads one folder, not the whole workspace",
+     "Project knowledge survives tickets and people",
+     "Matches the project layer of CLAUDE.md and skills (F86)"
+    ],
+    "cons": [
+     "More structure to keep tidy",
+     "Cross-project facts must go to shared/ deliberately"
+    ],
+    "pick_if": "a workspace holds more than one project.",
+    "facts": {
+     "Holds": "project.toml, hub note, wiki, graph, overlay",
+     "Linked from": "tickets by project id",
+     "Shared facts": "Go to shared/",
+     "Effort": "Medium"
+    },
+    "must": "Decided rule: a project is the unit of knowledge, one folder per project."
+   },
+   {
+    "id": "registry",
+    "label": "Projects are only rows in workspace.toml; all knowledge lives in shared/",
+    "desc": "Light.",
+    "short": "Registry only",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Fewer folders"
+    ],
+    "cons": [
+     "Project knowledge mixes with everyone else",
+     "No natural home for project graphs"
+    ],
+    "pick_if": "projects are tiny.",
+    "facts": {
+     "Holds": "A row of paths",
+     "Linked from": "workspace.toml",
+     "Shared facts": "Everything",
+     "Effort": "Small"
+    }
+   },
+   {
+    "id": "repo",
+    "label": "Each project keeps its knowledge in its own code repo",
+    "desc": "Travels with the code.",
+    "short": "In the code repo",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Knowledge is next to the code"
+    ],
+    "cons": [
+     "Other teams own some repos",
+     "Breaks the single knowledge center per team",
+     "Hard to graph across projects"
+    ],
+    "pick_if": "you own every repo.",
+    "facts": {
+     "Holds": "Docs in the product repo",
+     "Linked from": "Repo paths",
+     "Shared facts": "Duplicated",
+     "Effort": "Medium"
+    }
+   }
+  ],
+  "decided": {
+   "options": [
+    "folder"
+   ],
+   "note": "projects/<id>/ holds project.toml, a hub note, a wiki, nodes/ and an optional overlay.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F140",
+  "phase": "model",
+  "impact": 3,
+  "needs": [
+   "F143",
+   "F52"
+  ],
+  "title": "The project knowledge graph",
+  "ask": "Each project keeps graphs and nodes about what it is built from. How rich is the graph, and who keeps it current?",
+  "mockups": [
+   "14-project-graph"
+  ],
+  "why": "A graph lets an agent find the right five nodes instead of reading the project. lc-wms has a powerful one that drifted, so the shape and upkeep rules matter more than the depth.",
+  "learn": "lc-wms data-graph (186 files, typed edges, agent index, LLM-maintained, drifted); control-center Vault graph (wikilinks and containment, typed edges dropped); paperclip llm-wiki (raw and wiki, index, log, contradiction flags); Blueprint 22",
+  "rec_reason": "Keep typed edges (the part that makes impact analysis possible) but fix what drifted: outgoing edges only with computed inverses, one generator that writes the graph, index and lint report, a closed type set, and an agent contract that cites ids and marks unknowns UNVERIFIED. No catalogs that duplicate nodes, no confidence scores, no Obsidian CLI dependency.",
+  "options": [
+   {
+    "id": "lite",
+    "label": "Typed node notes in files: projects/<id>/nodes/<type>/<id>.md with frontmatter (id, type, title, summary, updated, sources, typed outgoing edges depends_on, part_of, touches, supersedes, see_also); outgoing edges only, inverses computed; one generator in the core package writes graph.json, a capped index.generated.md and a lint report; agents read the index, pick up to 5 nodes, follow up to 2 hops and cite ids; missing facts are marked UNVERIFIED and logged",
+    "desc": "Typed, small, generated.",
+    "short": "Lite typed graph",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Impact analysis and \"what touches X\" are possible",
+     "Nothing duplicated by hand: inverses, indexes and lint are generated",
+     "Plain markdown, so Obsidian shows it natively",
+     "Agents load about 5 nodes instead of the project"
+    ],
+    "cons": [
+     "Someone or an agent must write the nodes and keep sources linked",
+     "A small generator to build"
+    ],
+    "pick_if": "projects have structure worth querying (systems, data, flows).",
+    "facts": {
+     "Node format": "Markdown with YAML frontmatter",
+     "Edges": "Typed, outgoing only, inverses computed",
+     "Generated": "graph.json, index, lint report",
+     "Upkeep": "Nodes by agents and people; everything else generated",
+     "Agent cost": "Index (about 150 rows) plus up to 5 nodes"
+    },
+    "must": "Decided rule: typed markdown nodes, outgoing edges only, generated inverses, index and lint."
+   },
+   {
+    "id": "links",
+    "label": "Links only: the graph is the markdown wikilinks between notes (control-center and Obsidian style), no typed edges",
+    "desc": "Zero upkeep.",
+    "short": "Links only",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No schema, nothing to maintain",
+     "Obsidian already draws it"
+    ],
+    "cons": [
+     "No typed queries or impact analysis",
+     "Agents cannot navigate by relationship"
+    ],
+    "pick_if": "notes are mostly prose and you only want browsing.",
+    "facts": {
+     "Node format": "Any markdown note",
+     "Edges": "Wikilinks only",
+     "Generated": "Nothing",
+     "Upkeep": "None",
+     "Agent cost": "Search and read"
+    }
+   },
+   {
+    "id": "full",
+    "label": "The lc-wms style data graph: LLM- and hand-maintained nodes with catalogs, stored inverse edges, confidence scores, ticket nodes, Dataview dashboards",
+    "desc": "Most powerful.",
+    "short": "lc-wms full graph",
+    "cost": "L",
+    "lock": "high",
+    "pros": [
+     "Detailed blast-radius reports for database work"
+    ],
+    "cons": [
+     "It drifted: README claims 458 tables against 310 indexed, inverse edges on 43 of 91 tables, a \"generated\" index edited by hand with zero edge counts",
+     "Heavy upkeep and an Obsidian CLI dependency",
+     "No measurement that it saves tokens"
+    ],
+    "pick_if": "you maintain a very large database estate and fund the upkeep.",
+    "facts": {
+     "Node format": "Markdown with many frontmatter keys",
+     "Edges": "Typed, both directions stored",
+     "Generated": "Some, partly by hand",
+     "Upkeep": "High, LLM driven",
+     "Agent cost": "Index of about 4k tokens plus nodes"
+    }
+   },
+   {
+    "id": "rag",
+    "label": "Add embeddings and graph retrieval on top (Graph RAG)",
+    "desc": "Semantic search.",
+    "short": "Graph RAG",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Finds related material without exact links"
+    ],
+    "cons": [
+     "A vector index is a database in disguise, against your files-only rule",
+     "Heavy, and needs a model",
+     "Later, if search becomes the bottleneck"
+    ],
+    "pick_if": "the corpus is too large for index and grep.",
+    "facts": {
+     "Node format": "Plus an embedding store",
+     "Edges": "Plus similarity",
+     "Generated": "Embeddings",
+     "Upkeep": "Re-embed on change",
+     "Agent cost": "Retrieval call"
+    }
+   }
+  ],
+  "decided": {
+   "options": [
+    "lite"
+   ],
+   "note": "Closed types: component, concept, decision, data, flow, integration. Edges: depends_on, part_of, touches, supersedes, see_also. Database objects link to the source path and do not mirror columns. Later (after v1, B25): the project graph.",
+   "date": "2026-10-07"
+  }
+ }
+]

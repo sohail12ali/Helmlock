@@ -1,0 +1,21 @@
+# Telegram bot
+@from control-center, paperclip
+> 1 Quick capture and status from the phone: /todo, /log, /ticket, /status. Replies come from the same verbs as the CLI (F13, F4b).
+> 2 Approval buttons answer permission cards; unknown users get nothing (fail-closed allowlist, F4c). Input from here runs in low-trust mode (F66).
+> One DM is one open chat; /new starts another. The working message is edited into the final answer.
+phone
+  top
+    brand "Acme bot"
+    sp
+    muted "online"
+  main
+    chat
+      msg me "/status"
+      msg bot "5 in progress, 2 blocked, 3 approvals waiting. Needs you: T-014 move to build."
+      msg me "/todo buy domain for the console"
+      msg bot "Added todo TD-031."
+      msg bot "Approval: builder wants to run hl ticket move T-014 build" n=2
+      btns "Allow once" "Deny" "Open in console"
+  row
+    input "Message"
+    btn "Send" kind=primary

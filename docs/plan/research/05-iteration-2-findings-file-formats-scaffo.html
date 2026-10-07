@@ -1,0 +1,19 @@
+<!-- title: Iteration 2 findings: file formats, scaffolding, ticket pages -->
+<div class="cols">
+        <div><b>File formats (evidence)</b><ul>
+          <li><b>Neither public repo stores machine state in TOML or YAML.</b> paperclip keeps tickets in Postgres jsonb and config in JSON; deepseek-harness keeps sessions in JSONL and config in YAML (inherited from its framework, never argued against TOML).</li>
+          <li>Both use <b>markdown + YAML frontmatter</b> for human-authored things (agents, skills, company packages). paperclip's reason: markdown is canonical, human readable, git-native.</li>
+          <li><b>YAML has no stdlib parser in Python.</b> paperclip hand-rolled a subset parser (its own plan admits it is ad hoc); deepseek-harness depends on js-yaml and yaml.</li>
+          <li><b>TOML:</b> read-only stdlib parser (<code>tomllib</code>, Python 3.11+, you have 3.14), no writer. parse-then-dump loses comments, so you need closed emitters per record kind. lc-wms does this (<code>ticket_toml.py</code>, <code>dumps_*</code> in <code>trackers.py</code>). control-center hand-rolled a parser (<code>tomlio.py</code>) with real pain: trailing comments kept inside values, single-quoted strings keep quotes, inline tables returned as raw strings, nested dicts silently stringified, comments lost on rewrite, stale lock after a crash blocks for 5 s.</li>
+          <li><b>Versioning:</b> deepseek-harness uses one integer version, adjacent upgraders, and refuses files newer than the reader. paperclip uses zod schemas, unknown keys pass through, and a malformed config is copied aside before repair.</li>
+          <li><b>Validation:</b> lc-wms has the best pattern for this project: a data file (<code>ticket-layout.toml</code>) describing required files and patterns, a validator, and hooks (PostToolUse exit 2, pre-commit, CI).</li>
+        </ul></div>
+        <div><b>Scaffolding and ticket pages (evidence)</b><ul>
+          <li><b>No repo has a workspace generator.</b> control-center kickoff creates a ticket from 13 templates but shells out to PowerShell 5.1; lc-wms <code>kanban new</code> is pure Python. paperclip company-creator is an LLM procedure, not code.</li>
+          <li><b>Best scaffold pattern found:</b> paperclip llm-wiki ships a static template tree plus a validator listing required dirs and files; deepseek-harness claims the target directory exclusively and fails if it exists; paperclip onboarding assets fill a few named <code>{{vars}}</code> by plain string replace.</li>
+          <li><b>Workspace file:</b> lc-wms commits a template catalog (<code>shoplc.code-workspace.template.json</code>, 20 folders) and gitignores the per-machine copy; paths differ per machine. control-center has a one-folder workspace file that no code reads, and its README names a different file (drift).</li>
+          <li><b>Per-ticket HTML already exists in lc-wms:</b> <code>kanban brief {T}</code> (<code>.kanban/core/brief.py</code> + <code>brief.html</code> shell) writes <code>architecture/{T}-brief.html</code>, and <code>kanban serve</code> serves <code>/ticket/{T}</code> live with a 3 s stamp poll. Sections: header chips, Frame, Current state, Rules and AC, Plan, Workflow (Mermaid), Hand-offs, Decisions, Risks, Bugs, Todos, Tests, Open items. Markdown is rendered by a stdlib subset <code>md_to_html</code>.</li>
+          <li><b>control-center has no per-ticket page</b>, only a drawer (fields, trackers, artifact names and sizes, no decisions section) and a static export of the whole SPA board.</li>
+          <li>Caveats to avoid: lc-wms writes are not atomic and only guarded by an in-process lock; its Mermaid loads from a CDN so pages break offline; the two repos name their artifacts differently (spec/plan/tasks vs requirements/analysis/decision-log), so our schema must be chosen, not inherited.</li>
+        </ul></div>
+      </div>

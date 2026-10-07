@@ -1,0 +1,174 @@
+{
+ "plan": "Helmlock plan",
+ "iteration": 29,
+ "saved": "2026-10-07T06:30:42.156Z",
+ "picks": {
+  "F40": {
+   "options": [
+    "container"
+   ],
+   "note": ""
+  },
+  "F41": {
+   "options": [
+    "workflow",
+    "tickets",
+    "artifacts",
+    "cli",
+    "agentpack",
+    "runtime",
+    "provider",
+    "assistant",
+    "voice",
+    "channels",
+    "views",
+    "worklog",
+    "sync",
+    "scheduler",
+    "mcp"
+   ],
+   "note": ""
+  },
+  "F42": {
+   "options": [
+    "two"
+   ],
+   "note": ""
+  },
+  "F44": {
+   "options": [
+    "schema"
+   ],
+   "note": ""
+  },
+  "F45": {
+   "options": [
+    "one"
+   ],
+   "note": ""
+  },
+  "F46": {
+   "options": [
+    "pack"
+   ],
+   "note": ""
+  },
+  "F47": {
+   "options": [
+    "range"
+   ],
+   "note": ""
+  },
+  "F48": {
+   "options": [
+    "trusted"
+   ],
+   "note": ""
+  },
+  "F71": {
+   "options": [
+    "git"
+   ],
+   "note": ""
+  },
+  "F101": {
+   "options": [
+    "form"
+   ],
+   "note": ""
+  },
+  "F102": {
+   "options": [
+    "pipelines"
+   ],
+   "note": ""
+  },
+  "F103": {
+   "options": [
+    "rows"
+   ],
+   "note": ""
+  },
+  "F104": {
+   "options": [
+    "priority"
+   ],
+   "note": ""
+  },
+  "F105": {
+   "options": [
+    "loud"
+   ],
+   "note": ""
+  },
+  "F106": {
+   "options": [
+    "scoped"
+   ],
+   "note": ""
+  },
+  "F107": {
+   "options": [
+    "config"
+   ],
+   "note": ""
+  },
+  "F108": {
+   "options": [
+    "loadertest",
+    "catalog",
+    "readme"
+   ],
+   "note": ""
+  },
+  "F150": {
+   "options": [
+    "proc"
+   ],
+   "note": ""
+  },
+  "F43": {
+   "options": [
+    "kb"
+   ],
+   "note": ""
+  },
+  "F2b": {
+   "options": [
+    "logs",
+    "tpl",
+    "wiki",
+    "decisions",
+    "tests",
+    "questions",
+    "spec",
+    "plan"
+   ],
+   "note": ""
+  },
+  "F2e": {
+   "options": [
+    "grep"
+   ],
+   "note": ""
+  },
+  "F28": {
+   "options": [
+    "both"
+   ],
+   "note": ""
+  },
+  "F19": {
+   "options": [
+    "console-ro"
+   ],
+   "note": ""
+  },
+  "F151": {
+   "options": [
+    "react"
+   ],
+   "note": ""
+  }
+ }
+}

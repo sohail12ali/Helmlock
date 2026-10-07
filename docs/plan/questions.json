@@ -1,0 +1,491 @@
+[
+ {
+  "text": "Second review (Blueprint 25): accept changes A to J and the v1 against later cut?",
+  "rec": "Accept all ten changes and the cut. None reverses a direction you chose; they narrow scope and remove friction.",
+  "why": "A and B prevent real problems in product repos and in the shared git history; the rest makes v1 smaller.",
+  "cards": [
+   "F59",
+   "F11e",
+   "F9b",
+   "F1a",
+   "F6b",
+   "F96",
+   "F113",
+   "F46",
+   "F62",
+   "F42"
+  ],
+  "status": "closed",
+  "answer": "Accepted all on 2026-10-07."
+ },
+ {
+  "text": "Contradiction: hl 'never rewrites' the .code-workspace, but setup writes it and registering a product adds a folder. Which rule wins?",
+  "rec": "hl never rewrites the file silently. Only hl init (create once) and hl project add (one folder, dry run, confirm) write it.",
+  "why": "Keeps the workspace file hand-owned while still letting onboarding register a product.",
+  "cards": [
+   "F21",
+   "F22",
+   "F1a",
+   "F1b"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Contradiction: 'workspace.toml holds no repo paths', yet the layer registry and hl skill find take paths from workspace.toml.",
+  "rec": "Paths come only from the .code-workspace folders. workspace.toml maps folder names to layers.",
+  "why": "One source for paths. CLAUDE.md wording gets updated to match.",
+  "cards": [
+   "F86",
+   "F88",
+   "F22"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Contradiction: Telegram /log (F4b) vs 'no separate Telegram log command' (F6b).",
+  "rec": "Drop /log from Telegram.",
+  "why": "Work logs already come from people, runs and stage moves. A fourth path adds duplicates.",
+  "cards": [
+   "F4b",
+   "F6b"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Contradiction: voice uses the browser Web Speech API (F12) vs a local whisper-style engine first (F120), while F123 says no install.",
+  "rec": "v1 is browser only. A local engine is an optional plugin later.",
+  "why": "Keeps v1 install-free and matches the plugin rule.",
+  "cards": [
+   "F12",
+   "F120",
+   "F123"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Contradiction: 'no build' (F146) vs a React + Vite UI that needs a build (F34, F10d), and 'zero install' (F60) vs dependencies (F147).",
+  "rec": "No build for core, cli and server. The UI is built once by hl setup into a gitignored folder. One pnpm install.",
+  "why": "Honest about what Vite needs, and the CLI still runs straight from source.",
+  "cards": [
+   "F146",
+   "F60",
+   "F34",
+   "F147"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Contradiction: markdown-it or marked (F32) vs react-markdown (F149). The ticket page file and the live page must match (F28).",
+  "rec": "One unified/remark pipeline shared by the static page and the React UI.",
+  "why": "Same output in both places, one set of plugins.",
+  "cards": [
+   "F32",
+   "F149",
+   "F28"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Tensions 7 to 15 in Blueprint 24 (Obsidian notes not in git, archived digests, Cursor imports, the activity JSONL in git, the token cap, project vs repo, Telegram needing a server, the id format, F40 still open): accept the recommended fixes as a batch?",
+  "rec": "Accept all nine as written in Blueprint 24, then decide F40 next.",
+  "why": "None of them changes a decision's intent. They only add the missing sentence.",
+  "cards": [
+   "F129",
+   "F125",
+   "F90",
+   "F70",
+   "F134",
+   "F143",
+   "F110",
+   "F61",
+   "F40"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "**\"Program with agents style\":** I read this as how agents do the programming (roles, stages, runtime, gates). Right, or did you mean something else, such as pair-programming with an agent in the console? (assumed; see F5a to F5g)",
+  "rec": "Treat it as how agents do the programming (roles, stages, runtime, gates), as I assumed. Pair-programming in the console is already covered by the assistant and by Claude Code or Cursor sessions, so do not add a separate mode.",
+  "why": "Keeps the scope on the delivery pipeline. If you meant something else, one sentence from you is enough.",
+  "cards": [
+   "F5a",
+   "F5c",
+   "F5d"
+  ],
+  "status": "closed",
+  "answer": "F5a to F5g decided as assumed."
+ },
+ {
+  "text": "Names for the project and the two repos (for example `helmlock` and `helmlock-knowledge`)?",
+  "rec": "Call the system `helmlock`, name each knowledge repo `<product>-knowledge` (first one `helmlock-knowledge`), and let each knowledge center choose its console name; the CLI default is `hl`.",
+  "why": "Matches the placeholders already in the plan, short to type, and the console name stays per workspace.",
+  "cards": [
+   "F23",
+   "F60"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Call the system `helmlock`, name each knowledge repo `<product>-knowledge` (first one `helmlock-knowledge`), and let each knowledge center choose its console name; the CLI default is `hl`."
+ },
+ {
+  "text": "Just you, or a small team later? This changes claims, identity and auth.",
+  "rec": "Design for a small team now, build single-user features first, and add no login. Per-person files, unique ids and a roster cost little and avoid a painful migration later.",
+  "why": "Files in git already handle sharing. Auth is only needed if you host a shared server, which is not planned.",
+  "cards": [
+   "F61",
+   "F62",
+   "F93"
+  ],
+  "status": "closed",
+  "answer": "Team-ready design decided (F61, F62, F93, Blueprint 24); no login."
+ },
+ {
+  "text": "Remote access: Telegram only, or also Tailscale to the console as control-center did?",
+  "rec": "Telegram only for v1. Document Tailscale as the way to reach the console remotely (bind it to 127.0.0.1 and reach it over your private network); build no login.",
+  "why": "Telegram covers capture and approvals. Exposing the console needs auth; a private network gives access without code.",
+  "cards": [
+   "F4a",
+   "F4c"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Telegram only for v1. Document Tailscale as the way to reach the console remotely (bind it to 127.0.0.1 and reach it over your private network); build no login."
+ },
+ {
+  "text": "Windows only, or also macOS and Linux? (this machine is Windows 11; assumed primary)",
+  "rec": "Windows first, and keep macOS and Linux working by using the Node path module and avoiding Windows-only code, including PowerShell, in the core. Test on a second OS before sharing.",
+  "why": "You are on Windows; avoiding platform-specific code now is cheap, retrofitting is not.",
+  "cards": [
+   "F0a",
+   "F60"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Windows first, and keep macOS and Linux working by using the Node path module and avoiding Windows-only code, including PowerShell, in the core. Test on a second OS before sharing."
+ },
+ {
+  "text": "Telegram: do you already have a bot token from BotFather?",
+  "rec": "Create the bot with BotFather when you reach the Telegram milestone (it takes a few minutes). Do not block earlier work on it, and keep the token in an environment variable, never in a file in git.",
+  "why": "Nothing before Telegram depends on it, and tokens are secrets.",
+  "cards": [
+   "F4a",
+   "F4c"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Create the bot with BotFather when you reach the Telegram milestone (it takes a few minutes). Do not block earlier work on it, and keep the token in an environment variable, never in a file in git."
+ },
+ {
+  "text": "You wrote \"SEO suggestions\". I read that as \"your recommendation\". If you meant discoverability (agents finding the right artifact fast), that is the artifact map and stable ids in F38.",
+  "rec": "Treat it as \"your recommendation\" (as I assumed) and, separately, as findability: a generated index and stable ids so agents find the right file quickly. No web SEO is needed.",
+  "why": "This is a local, files-only system with no public pages.",
+  "cards": [
+   "F38",
+   "F116"
+  ],
+  "status": "closed",
+  "answer": "Findability decided in F38 and F116."
+ },
+ {
+  "text": "To verify before milestone 1: does Claude Code load CLAUDE.md from an added directory? F90 already assumes it does not and imports the rulebook with @path; the test only confirms it.",
+  "rec": "Run a ten-minute test before relying on it, and design as if it fails: the knowledge CLAUDE.md imports the delivery rulebook with an @ path, and the registry tells agents to read a project CLAUDE.md first.",
+  "why": "The test is cheap, and the fail-safe design works either way.",
+  "cards": [
+   "F86",
+   "F90"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Run a ten-minute test before relying on it, and design as if it fails: the knowledge CLAUDE.md imports the delivery rulebook with an @ path, and the registry tells agents to read a project CLAUDE.md first."
+ },
+ {
+  "text": "Teams: will several people edit the same knowledge repo on branches at the same time, or one at a time? This decides how hard F61 (ids) and F62 (one file per record) matter.",
+  "rec": "Assume yes (several people on branches) and adopt unique ids (F61) and one file per record (F62) from the start.",
+  "why": "Changing id and record layout later means migrating every file; the cost now is small.",
+  "cards": [
+   "F61",
+   "F62"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Obsidian: which version do you and your team use, and are community plugins (Dataview) acceptable, or only core features (Properties, Bases)? (F52, F53)",
+  "rec": "Core features only: Properties, Bases, graph, backlinks and templates. Do not ship Dataview or other community plugins in the vault; individuals may add their own.",
+  "why": "Nobody on the team has to install or trust plugins, and generated notes already carry the properties.",
+  "cards": [
+   "F52",
+   "F53"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Which local servers and models do you actually run (Ollama, LM Studio, vLLM, llama.cpp), and do you need tool calling on them? This sets the presets and the F77 fallback.",
+  "rec": "Start with Ollama and LM Studio presets (keyless, most common) plus one hosted gateway such as OpenRouter. Require tool calling only for agents and the L3 assistant; chat and search should work without it. Use the connection test to check each model.",
+  "why": "Covers local and hosted with the fewest presets, and the capability probe tells you what each model can do.",
+  "cards": [
+   "F72",
+   "F73",
+   "F77"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Light or dark by default? (Editable themes were dropped; only a light and a dark palette remain.)",
+  "rec": "Follow the system setting, with a toggle in the console. Keep the plan page light by default.",
+  "why": "A fixed pair costs almost nothing and covers the need; a theme editor was judged not worth it.",
+  "cards": [
+   "F10d",
+   "F83"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Layout: is the resizable shell (F81) enough, or do you want a full dock where any pane can split and carry tabs?",
+  "rec": "The resizable shell (F81) now. Add a full dock only if, after using it, you actually want to split any pane.",
+  "why": "A dock is a subsystem of its own; the shell meets the need you described.",
+  "cards": [
+   "F81"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Do your projects already have their own CLAUDE.md and .claude/skills, and are some owned by other teams who would not want extra files? (F87)",
+  "rec": "Use each project own CLAUDE.md and skills when present, and put anything the workspace adds in the overlay folder in the knowledge repo. Never add files to a project another team owns.",
+  "why": "Respects ownership and keeps projects unaware of us.",
+  "cards": [
+   "F87",
+   "F86"
+  ],
+  "status": "closed",
+  "answer": "Rule decided in F87: use project files, overlay in the knowledge repo, never add files to another team repo."
+ },
+ {
+  "text": "Non-goals, so scope stays lite (assumed from Paperclip \"what it is not\"): Helmlock is a delivery system around agents, not an agent framework, not just a chatbot, not a prompt manager, not a multi-tenant platform. Confirm or correct.",
+  "rec": "Confirm the non-goals as written and add one: not a hosted service. Helmlock is a delivery system around agents, not an agent framework, not just a chatbot, not a prompt manager, not multi-tenant.",
+  "why": "Clear non-goals are what keeps a lite system lite.",
+  "cards": [
+   "F40"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Confirm the non-goals as written and add one: not a hosted service. Helmlock is a delivery system around agents, not an agent framework, not just a chatbot, not a prompt manager, not multi-tenant."
+ },
+ {
+  "text": "Should agents ever run unattended (assigned work starts a run on its own, F97), or is that out of scope for now?",
+  "rec": "Out of scope for v1: start runs manually or through the do dispatcher. Keep the runner as a plugin slot and build the guards first (supervision, the no-op guard, token caps).",
+  "why": "A real Paperclip instance burned about 84M tokens in no-op wake-ups; guards must exist before autonomy.",
+  "cards": [
+   "F97",
+   "F134",
+   "F65"
+  ],
+  "status": "closed",
+  "answer": "F97 decided: manual start only."
+ },
+ {
+  "text": "Plugin kernel: are you comfortable owning a small kernel (about 500 lines in TypeScript) so that even the file layer, verb registry and approval gate are plugins? (F40, F101)",
+  "rec": "Yes, with limits: build the container kernel with one plugin form, loud startup diagnostics and a few required built-ins. Review it if it grows past about 800 lines.",
+  "why": "deepseek-harness shows the kernel is small; the risk is silent failures, which diagnostics and tests address.",
+  "cards": [
+   "F40",
+   "F101",
+   "F105"
+  ],
+  "status": "closed",
+  "answer": "F40 and F101 decided."
+ },
+ {
+  "text": "Will teammates install Node 24 LTS, or do you need a single downloadable executable? (F146)",
+  "rec": "Everyone installs Node 24 LTS and runs one pnpm install; hl setup builds the UI and hl doctor checks it. Add a single-executable build later only if non-developers join.",
+  "why": "Matches Blueprint 24 (no prebuilt release, UI built locally) and keeps one install path.",
+  "cards": [
+   "F0a",
+   "F146",
+   "F110"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Everyone installs Node 24 LTS and runs one pnpm install; hl setup builds the UI and hl doctor checks it. Add a single-executable build later only if non-developers join."
+ },
+ {
+  "text": "How important is a fancy animated UI on day one compared with simplicity and reuse? Use the weighing panel on F0a and tell me what you land on.",
+  "rec": "Medium importance: React with shadcn/ui gives good motion for little code. Keep within the F109 budget and check it in the front-end spike (F151).",
+  "why": "The UI is a swappable plugin, so starting simple does not close the door.",
+  "cards": [
+   "F0a",
+   "F109",
+   "F131"
+  ],
+  "status": "closed",
+  "answer": "F109 and F131 decided; checked in the spike (F151)."
+ },
+ {
+  "text": "Release packaging (run-all.sql, rollback-all.sql, DEPLOY.md, package.toml per environment) is ShopLC specific. Keep it as a workspace or project skill outside the system layer? (assumed yes; see Blueprint 16)",
+  "rec": "Yes: keep release packaging as a workspace or project skill. It is ShopLC specific and does not belong in the system layer.",
+  "why": "Keeps the system generic and reusable by other workspaces.",
+  "cards": [
+   "F113"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Do you want to keep the lc-wms spellings and folders for existing tickets and migrate only new ones, or migrate old tickets to the proposed layout? (F112)",
+  "rec": "Keep the lc-wms layout for existing tickets and use the proposed layout for new ones; make the validator read the layout version from ticket.toml and add an optional migrate verb later.",
+  "why": "Avoids a risky mass migration; the layout rules are data, so both can coexist.",
+  "cards": [
+   "F112"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Do you want a global push-to-talk hotkey that works anywhere (needs a small desktop helper, F123), or is a mic button inside the console enough to start?",
+  "rec": "A mic button inside the console to start. Add the optional desktop helper only if you miss a global hotkey.",
+  "why": "The browser covers most jobs; the helper adds a process, permissions and Windows quirks.",
+  "cards": [
+   "F123",
+   "F12"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Which vision model will read screenshots: a local one (for example through Ollama or LM Studio) or a hosted one? That sets the privacy notice in F122.",
+  "rec": "Use a local vision model first if it can read text in screenshots (check with the connection test). Otherwise use a hosted one with Ask first every time and a visible notice. Never send screenshots to a hosted model silently.",
+  "why": "Screens often show secrets, so privacy beats convenience.",
+  "cards": [
+   "F122",
+   "F73"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Use a local vision model first if it can read text in screenshots (check with the connection test). Otherwise use a hosted one with Ask first every time and a visible notice. Never send screenshots to a hosted model silently."
+ },
+ {
+  "text": "Retention numbers (F127): archive 30 days after close and allow purge after 180 days, as a starting point? And should an archived ticket auto-restore when a new ticket links to it?",
+  "rec": "Yes: archive 30 days after close, purge-eligible after 180 days, and never purge automatically. When a new ticket links to an archived one, restore only its digest, not the whole folder.",
+  "why": "Gives suggestion by age and confirmation by a person; restoring the digest is cheap and safe.",
+  "cards": [
+   "F127",
+   "F128"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Is the hidden _work/ folder for drafts, iteration logs and critiques acceptable, or do you want those deleted at close? (F124)",
+  "rec": "Keep `_work/` hidden, not deleted, until the ticket is archived, then archive it with the ticket. Delete only through the guarded purge.",
+  "why": "Drafts and critiques sometimes explain a decision; hidden costs nothing in context.",
+  "cards": [
+   "F124",
+   "F126"
+  ],
+  "status": "closed",
+  "answer": "F124 decided: hidden _work/."
+ },
+ {
+  "text": "Front-end spike: are you willing to spend half a day on the React slice (board, ticket, sandboxed plan page, back, light and dark) before the console milestone? (F151)",
+  "rec": "Yes. Run the React slice first; build the Svelte 5 slice only if React shows trouble with agents, state or size.",
+  "why": "Both independent reviews left agent quality and real bundle size unverified.",
+  "cards": [
+   "F151",
+   "F131"
+  ],
+  "status": "closed",
+  "answer": "F151 decided: React spike first."
+ },
+ {
+  "text": "Paperclip is already running on your machine. Is it a tool to replace, or a runner we could call (Helmlock tickets and knowledge as the source of truth, Paperclip or Claude Code or Cursor doing the runs)? This decides whether we need an adapter for it.",
+  "rec": "Treat Paperclip as an optional runner, not a replacement and not a dependency: Helmlock files stay the source of truth. Build no Paperclip adapter in v1 and revisit after the runner decision (F97).",
+  "why": "They do different jobs (agent management versus delivery and knowledge), and Paperclip needs a database, which conflicts with files only.",
+  "cards": [
+   "F97",
+   "F5c"
+  ],
+  "status": "closed",
+  "answer": "Answered by F97 and F5c: no Paperclip adapter in v1."
+ },
+ {
+  "text": "Do you want agent questions as cards with options on the ticket (F133), with Telegram buttons for the same questions?",
+  "rec": "Yes: questions are ticket records with options, shown as a card in the console first and as Telegram buttons when Telegram is built.",
+  "why": "Structured questions keep long chat threads short and let the agent resume cleanly.",
+  "cards": [
+   "F133",
+   "F4b"
+  ],
+  "status": "closed",
+  "answer": "F133 decided."
+ },
+ {
+  "text": "Cursor: is the setting that lets the CLI read .claude/skills and .claude/agents turned on for you, and does `agent` or `cursor-agent` start it on your machine? (Blueprint 21 lists what to verify)",
+  "rec": "Verify now, it takes five minutes: run `agent --version` and `cursor-agent --version`, and check that Cursor reads `.claude/skills` and `.claude/agents` (the third-party setting). Record the result and let the adapter detect the binary name.",
+  "why": "It decides whether the generated config can rely on `.claude/` for Cursor.",
+  "cards": [
+   "F135",
+   "F136"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Verify now, it takes five minutes: run `agent --version` and `cursor-agent --version`, and check that Cursor reads `.claude/skills` and `.claude/agents` (the third-party setting). Record the result and let the adapter detect the binary name."
+ },
+ {
+  "text": "Should the console serve one knowledge center at a time (with a switcher) or several at once?",
+  "rec": "One at a time, started by the launcher, with a small switcher fed by a per-user list. Add a read-only portfolio page later if you lead several knowledge centers.",
+  "why": "Strong isolation, a simple server, and it keeps the delivery repo free of workspace data.",
+  "cards": [
+   "F138",
+   "F39"
+  ],
+  "status": "closed",
+  "answer": "F138 decided: one workspace file per center; switch by opening another."
+ },
+ {
+  "text": "How should a template improvement found in one knowledge center reach the others?",
+  "rec": "Promote it explicitly: a verb produces a reviewable patch for the delivery base template or a shared pack, a person approves, and other workspaces take it through a dry-run upgrade. Never sync automatically.",
+  "why": "Keeps workspaces independent while letting good ideas spread.",
+  "cards": [
+   "F142",
+   "F139"
+  ],
+  "status": "closed",
+  "answer": "F142 decided: hl template promote."
+ },
+ {
+  "text": "Is a project a code repository or a product area?",
+  "rec": "A project is a unit of work with one or more code repositories and its own knowledge folder. One project may span several repos, and one repo belongs to one project.",
+  "why": "It gives each project one home for knowledge and a clear owner without tying it to a single repo.",
+  "cards": [
+   "F143",
+   "F3c"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "How strict should graph nodes be: a closed set of about six types and five edge kinds, or free-form?",
+  "rec": "A closed set (component, concept, decision, data, flow, integration; depends_on, part_of, touches, supersedes, see_also). Add new ones only through the template growth verb, with a reason.",
+  "why": "Free-form types are how lc-wms drifted (three spellings of one subgraph, node types the validator did not know).",
+  "cards": [
+   "F140",
+   "F139"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Should project graphs also cover database objects (tables, procedures) the way lc-wms does?",
+  "rec": "Yes for projects with a database, but as nodes that link to the source file path and never mirror columns; generate nodes from the schema later when possible.",
+  "why": "Mirroring columns by hand is what went stale in lc-wms; links to source stay true.",
+  "cards": [
+   "F140",
+   "F113"
+  ],
+  "status": "closed"
+ },
+ {
+  "text": "Should the built UI be committed to the repo or shipped only in releases?",
+  "rec": "Ship it only in releases; do not commit it to main.",
+  "why": "Built bundles create large merge diffs on every UI change; CI can build them on release and the package contains them.",
+  "cards": [
+   "F146"
+  ],
+  "status": "closed",
+  "answer": "Blueprint 24: the UI is built locally by hl setup into a gitignored folder, never committed."
+ },
+ {
+  "text": "Which kanban library: dnd-kit or pragmatic-drag-and-drop?",
+  "rec": "Decide in the spike. My lean is pragmatic-drag-and-drop because dnd-kit core has not been released since December 2024, but it is wrapped either way.",
+  "why": "This is the riskiest widget dependency; a wrapper makes the choice reversible.",
+  "cards": [
+   "F149",
+   "F151"
+  ],
+  "status": "closed",
+  "answer": "Accepted as recommended (2026-10-07): Decide in the spike. My lean is pragmatic-drag-and-drop because dnd-kit core has not been released since December 2024, but it is wrapped either way."
+ }
+]

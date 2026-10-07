@@ -1,0 +1,15 @@
+<!-- title: deepseek-harness (public): model routing, sessions, permissions -->
+<div class="cols">
+        <div><b>Take (ideas)</b><ul>
+          <li><code>providers</code> map: <code>{api, baseURL, apiKeyEnv, models[], compat}</code>; three protocols (openai-completions, openai-responses, anthropic-messages); "Fetch models" via <code>GET /models</code>; keys in a separate write-only credentials file referenced by env name.</li>
+          <li><code>compat</code> switches matter for gateways (<code>supportsDeveloperRole:false</code>, <code>maxTokensField:max_tokens</code>).</li>
+          <li>Append-only per-session JSONL event log; history derived from it; resume by replay.</li>
+          <li>Two permission knobs (sandbox mode x ask/never) bundled into presets, fail-closed approval.</li>
+          <li>Skills as <code>SKILL.md</code> with a name+description catalog and body loaded on demand; <code>AGENTS.md</code> chain loading.</li>
+          <li>Snapshot-then-follow event stream for live UI; onboarding modal with "Add custom model API".</li>
+        </ul></div>
+        <div><b>Skip</b><ul>
+          <li>Cordis plugin/DI framework, YAML profile layering, ~60 packages, session format migration, OTel, Electron, native sandboxes, PTC/workflow engines.</li>
+          <li>No Telegram bridge exists there; voice is dictation only.</li>
+        </ul></div>
+      </div>

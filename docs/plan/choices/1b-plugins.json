@@ -1,0 +1,1174 @@
+[
+ {
+  "id": "F40",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F0a"
+  ],
+  "title": "Core boundary: how far \"everything is a plugin\" goes",
+  "ask": "deepseek-harness says everything is a plugin. How much of that do we adopt: which parts are fixed core and which are plugins?",
+  "why": "Decides how much of the system you can swap without touching core code. Hard to change once plugins exist.",
+  "learn": "deepseek-harness (Cordis kernel about 2.7k lines plus loader about 1k; about 94 to 200 mounted rows; 328 packages); control-center plugins.toml; paperclip adapters. See Blueprint 8 and the research note on everything-is-a-plugin",
+  "rec_reason": "Their kernel is small. Their weight is the packaging ceremony (one package per plugin, 209 empty companion files deleted, doc gates, a vendored kernel with 23 local changes). Copy the mechanism and leave the ceremony: a TypeScript kernel of about 500 lines, one repo of built-in plugins, config-only reload. Mark a few built-ins required, such as the file layer and the approval gate.",
+  "options": [
+   {
+    "id": "container",
+    "label": "Plugin container kernel (the deepseek-harness idea, in TypeScript): about 500 lines of context tree, service registry with requires, scoped effects with dispose, and events. Everything else, including the verb registry, file layer, approval gate and workflow, is a built-in plugin that provides a service; a few are marked required",
+    "desc": "Everything swappable through one mechanism.",
+    "cost": "M",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "One way to extend and to replace anything, including the file layer or the approval gate",
+     "The kernel stays tiny and stable; their Cordis core is about 2.7k lines in TypeScript",
+     "Each part is testable on its own"
+    ],
+    "cons": [
+     "More indirection to read and debug",
+     "A plugin waiting for a missing service stays pending silently unless startup lists it (their postmortems)",
+     "Required built-ins need protection so a swap cannot corrupt state"
+    ],
+    "pick_if": "you want to be able to replace any aspect, as you said."
+   },
+   {
+    "id": "tiny",
+    "label": "Fixed core parts plus slots: loader, config merge, event bus, verb registry, file layer and approval gate are core; everything else plugs into named slots",
+    "desc": "The earlier recommendation.",
+    "cost": "M",
+    "lock": "high",
+    "pros": [
+     "Simple mental model",
+     "Core invariants (file layer, approval gate) stay fixed and safe"
+    ],
+    "cons": [
+     "Those core parts cannot be swapped without editing core",
+     "Two mechanisms: core parts and plugins"
+    ],
+    "pick_if": "safety matters more than total replaceability."
+   },
+   {
+    "id": "fat",
+    "label": "Fat core: tickets, UI and agents built in; plugins only for integrations",
+    "desc": "Fastest to v1.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Quickest path to a first version"
+    ],
+    "cons": [
+     "Replacing tickets or the workflow means editing core",
+     "The thing you said you want to avoid"
+    ],
+    "pick_if": "speed beats flexibility."
+   },
+   {
+    "id": "all",
+    "label": "The full deepseek-harness approach: a Cordis-style framework, one package per plugin, bundles, module hot reload, per-package README gates, bilingual docs",
+    "desc": "As they do it.",
+    "cost": "L",
+    "lock": "high",
+    "pros": [
+     "Maximum flexibility, proven at scale"
+    ],
+    "cons": [
+     "328 packages and heavy ceremony",
+     "Silent failures documented in their own postmortems",
+     "A vendored kernel to maintain"
+    ],
+    "pick_if": "you are building a platform for other people."
+   }
+  ],
+  "decided": {
+   "options": [
+    "container"
+   ],
+   "note": "Your message, 2026-10-07: go with the plugin container. A few built-ins (file layer, approval gate, verb registry) are marked required.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F41",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F40"
+  ],
+  "multi": true,
+  "title": "Extension points: which parts are swappable slots",
+  "ask": "Which parts of the system get a named slot that a plugin can fill?",
+  "why": "Each slot is a contract you must design, document and keep stable.",
+  "learn": "control-center features/*.py; paperclip adapters; lc-wms config/*.toml vocabulary",
+  "options": [
+   {
+    "id": "workflow",
+    "label": "Workflow: ticket stages, transitions, gates",
+    "desc": "Statuses as configuration.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "tickets",
+    "label": "Tickets: ticket model and storage",
+    "desc": "Fields, ids, trackers.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "artifacts",
+    "label": "Artifact kinds and templates",
+    "desc": "Decisions, bugs, gaps, specs and their templates.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "cli",
+    "label": "CLI front-end",
+    "desc": "Command names and shell UX over the same verbs.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "agentpack",
+    "label": "Agent pack: roles and skills",
+    "desc": "Which agents and skills exist.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "runtime",
+    "label": "Agent runtime adapter",
+    "desc": "Claude Code, OpenAI-compatible loop, others.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "provider",
+    "label": "Model provider adapter",
+    "desc": "Gateways and protocols.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "assistant",
+    "label": "Assistant (chat engine)",
+    "desc": "Persona, tools, history.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "voice",
+    "label": "Voice (speech to text, text to speech)",
+    "desc": "Web Speech, whisper, Piper.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "channels",
+    "label": "Channels",
+    "desc": "Telegram now, Slack later.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "views",
+    "label": "Views: tabs, dashboard widgets, ticket page sections",
+    "desc": "UI parts.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "worklog",
+    "label": "Work log format",
+    "desc": "TOML entries, markdown lines, or your own.",
+    "cost": "S"
+   },
+   {
+    "id": "scheduler",
+    "label": "Scheduler",
+    "desc": "Reminders and routines.",
+    "cost": "M"
+   },
+   {
+    "id": "sync",
+    "label": "Importers and exporters",
+    "desc": "Jira, GitHub, Projexa.",
+    "cost": "L"
+   },
+   {
+    "id": "mcp",
+    "label": "External tools through an MCP client",
+    "desc": "Agents and the assistant call MCP servers.",
+    "cost": "M"
+   }
+  ],
+  "decided": {
+   "options": [
+    "workflow",
+    "tickets",
+    "artifacts",
+    "cli",
+    "agentpack",
+    "runtime",
+    "provider",
+    "assistant",
+    "voice",
+    "channels",
+    "views",
+    "worklog",
+    "sync",
+    "scheduler",
+    "mcp"
+   ],
+   "note": "Your saved picks (plan-picks.json). worklog, sync, scheduler and mcp are slots with no v1 plugin (F18, F7e).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F42",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F40"
+  ],
+  "title": "Plugin contract and packaging",
+  "ask": "What is a plugin: a folder of configuration, a code module, or a separate process?",
+  "why": "Decides who can make a plugin and how safe swapping is. Our declarative pack is deepseek-harness bundle: data only, mounts nothing itself.",
+  "learn": "paperclip company packages (markdown + manifest); control-center feature modules; paperclip external adapters",
+  "rec_reason": "Most swaps (statuses, roles, templates) are configuration, so they should need no code. Adapters (voice, channels) need code.",
+  "options": [
+   {
+    "id": "two",
+    "label": "Two tiers: declarative packs (TOML + markdown + templates, no code) and code plugins (a TypeScript module exporting name, requires, a config schema and apply(ctx, config), F101)",
+    "desc": "Both described by a plugin.toml manifest.",
+    "cost": "M",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "Workflow, agent, template and theme swaps need no code",
+     "Packs are shareable as plain folders",
+     "Code only where it is really needed"
+    ],
+    "cons": [
+     "Two shapes to document and test"
+    ],
+    "pick_if": "most changes are configuration."
+   },
+   {
+    "id": "code",
+    "label": "Code plugins only",
+    "desc": "One shape.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Simplest model"
+    ],
+    "cons": [
+     "Changing statuses needs a developer"
+    ],
+    "pick_if": "plugins are always written by programmers."
+   },
+   {
+    "id": "proc",
+    "label": "Out-of-process plugins over JSON-RPC or MCP",
+    "desc": "Each plugin is its own process.",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Strong isolation",
+     "Any language"
+    ],
+    "cons": [
+     "Process management and latency",
+     "Much more plumbing"
+    ],
+    "pick_if": "plugins come from people you do not trust."
+   }
+  ],
+  "decided": {
+   "options": [
+    "two"
+   ],
+   "note": "Your message, 2026-10-07: accept both. Packs are TOML, markdown and templates; code plugins are TypeScript modules.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F44",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F42"
+  ],
+  "title": "Plugin settings and the settings screen",
+  "ask": "How does a plugin declare its settings so the console can show a form?",
+  "why": "Without this, every swap needs hand-built settings UI.",
+  "learn": "paperclip getConfigSchema",
+  "options": [
+   {
+    "id": "schema",
+    "label": "Manifest declares settings (type, default, label, secret flag); the Settings screen is generated; values live in workspace.toml; secrets by env-var name",
+    "desc": "Declarative. A settings reference page is generated from the manifests, and each plugin states its known limitations (deepseek-harness practice).",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "New plugins get a settings form for free",
+     "Secrets never reach git"
+    ],
+    "cons": [
+     "A small schema to define and validate"
+    ],
+    "pick_if": "you expect many plugins."
+   },
+   {
+    "id": "hand",
+    "label": "Hand-built settings panel per plugin",
+    "desc": "Custom UI.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Full control per plugin"
+    ],
+    "cons": [
+     "Work for every plugin",
+     "Inconsistent screens"
+    ],
+    "pick_if": "only a few plugins."
+   },
+   {
+    "id": "free",
+    "label": "Free-form [plugins.<id>] section in workspace.toml, edited by hand",
+    "desc": "No UI.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "No validation, no form"
+    ],
+    "pick_if": "the only user is you."
+   }
+  ],
+  "mockups": [
+   "07-settings"
+  ],
+  "decided": {
+   "options": [
+    "schema"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F45",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F40",
+   "F41"
+  ],
+  "title": "Slot model: one active provider or many",
+  "ask": "When a slot has several plugins, which one answers?",
+  "why": "Decides whether swapping is a clear replacement or an ordering puzzle.",
+  "rec_reason": "Declare cardinality per slot: one for workflow, tickets, assistant and voice; many for channels, views and adapters. Use the event bus for additive listeners. deepseek-harness evidence: one provider per service name, enforced loudly (a second registration fails the load); a singular name means one engine, a plural name means a registry; replacing means disable the old row and enable the new one.",
+  "options": [
+   {
+    "id": "one",
+    "label": "Each slot declares its cardinality. One-active slots (workflow, tickets, assistant, voice) are swapped; many-active slots (channels, views, adapters) add up. Events cover extra listeners",
+    "desc": "Clear replacement semantics.",
+    "cost": "M",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "Swapping is unambiguous",
+     "Contracts stay small"
+    ],
+    "cons": [
+     "You must decide cardinality for every slot"
+    ],
+    "pick_if": "you want predictable replacement."
+   },
+   {
+    "id": "many",
+    "label": "Every slot allows many providers, all active",
+    "desc": "Flexible.",
+    "cost": "M",
+    "lock": "high",
+    "pros": [
+     "Maximum flexibility"
+    ],
+    "cons": [
+     "Which assistant answers? Which workflow applies? Ordering rules grow"
+    ],
+    "pick_if": "every slot is purely additive."
+   },
+   {
+    "id": "events",
+    "label": "Only an event bus, no slots",
+    "desc": "Pure pub/sub.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Smallest core"
+    ],
+    "cons": [
+     "No guarantee a capability exists",
+     "Hard to swap and test"
+    ],
+    "pick_if": "you want maximal looseness."
+   }
+  ],
+  "decided": {
+   "options": [
+    "one"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F46",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F40",
+   "F42"
+  ],
+  "title": "Workflow plugin: configurable ticket statuses",
+  "ask": "Where do stages, transitions and gates live so you can change them without touching code?",
+  "why": "This is your direct example: tickets changing status. The board, validator, agents and ticket page must all read the same definition.",
+  "learn": "lc-wms config/board-ticket.toml, stages.toml; paperclip status transitions",
+  "rec_reason": "Statuses are data. A declarative pack lets the board, agents and pages follow whatever workflow is active.",
+  "options": [
+   {
+    "id": "pack",
+    "label": "Declarative pack: workflow.toml lists stages, allowed transitions, gates and WIP limits. v1 ships lite (6 lanes); an lc-wms style pack (7 lanes) comes later; switch by swapping the pack",
+    "desc": "Config, not code.",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Change statuses by editing one file",
+     "Board, agents, validator and ticket pages all follow it",
+     "Packs are shareable"
+    ],
+    "cons": [
+     "No stage name may be hard-coded anywhere",
+     "Switching packs needs a stage map for existing tickets"
+    ],
+    "pick_if": "you will adjust the lifecycle as you learn."
+   },
+   {
+    "id": "hard",
+    "label": "Stages hard-coded in core",
+    "desc": "Simplest.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Quick"
+    ],
+    "cons": [
+     "Fails your stated need",
+     "Every change is a code change"
+    ],
+    "pick_if": "the workflow will never change."
+   },
+   {
+    "id": "code",
+    "label": "Workflow as code: a TypeScript state-machine plugin",
+    "desc": "Any rule.",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Can express any rule"
+    ],
+    "cons": [
+     "Hard to validate, share and draw",
+     "Needs a developer"
+    ],
+    "pick_if": "transitions need real logic (side effects, approvals)."
+   }
+  ],
+  "decided": {
+   "options": [
+    "pack"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F47",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F42"
+  ],
+  "title": "Compatibility and versions",
+  "ask": "How do you keep a plugin from breaking when the core changes?",
+  "why": "A swappable system fails quietly if versions drift.",
+  "learn": "deepseek-harness refuses files newer than the reader",
+  "options": [
+   {
+    "id": "range",
+    "label": "Core API version; manifest declares requires_core and the slots it fills; incompatible plugins refuse to load with a clear message",
+    "desc": "Semver range check.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Clear failure instead of odd behaviour"
+    ],
+    "cons": [
+     "Core must keep a stable API number"
+    ],
+    "pick_if": "you plan to evolve the core."
+   },
+   {
+    "id": "none",
+    "label": "No checks",
+    "desc": "Trust.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "Silent breakage"
+    ],
+    "pick_if": "only first-party plugins."
+   },
+   {
+    "id": "lock",
+    "label": "Lockfile pinning exact plugin versions",
+    "desc": "Reproducible.",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Reproducible workspaces"
+    ],
+    "cons": [
+     "More ceremony"
+    ],
+    "pick_if": "many people share workspaces."
+   }
+  ],
+  "decided": {
+   "options": [
+    "range"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F48",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F42"
+  ],
+  "title": "Trust and isolation",
+  "ask": "How much do you trust plugins?",
+  "why": "Plugins can run code and touch files; the approval gate must still apply.",
+  "options": [
+   {
+    "id": "trusted",
+    "label": "Trusted in-process (your own plugins); risky actions still pass the core approval gate",
+    "desc": "Pragmatic.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Simple and fast"
+    ],
+    "cons": [
+     "A bad plugin can do harm"
+    ],
+    "pick_if": "you write or review every plugin."
+   },
+   {
+    "id": "sandbox",
+    "label": "Out-of-process with a restricted workspace",
+    "desc": "Isolated.",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "Contains mistakes"
+    ],
+    "cons": [
+     "Heavy plumbing, esp. on Windows"
+    ],
+    "pick_if": "you will install third-party plugins."
+   },
+   {
+    "id": "signed",
+    "label": "Signed plugins",
+    "desc": "Provenance.",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Know where code came from"
+    ],
+    "cons": [
+     "Needs key handling"
+    ],
+    "pick_if": "you distribute plugins to others."
+   },
+   {
+    "id": "caps",
+    "label": "Capability declarations: a plugin lists what it needs (files, network, shell) and the core gate enforces it (paperclip style)",
+    "desc": "Least privilege. Can be added on top of the trusted model.",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "A plugin cannot quietly do more than it declared",
+     "Users see what a plugin wants before enabling it"
+    ],
+    "cons": [
+     "Capabilities must be designed and enforced in the core"
+    ],
+    "pick_if": "you will install plugins you did not write."
+   }
+  ],
+  "decided": {
+   "options": [
+    "trusted"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F71",
+  "phase": "plugins",
+  "impact": 1,
+  "needs": [
+   "F42"
+  ],
+  "title": "Sharing packs between workspaces",
+  "ask": "How do you move a workflow, agent pack or template set from one workspace to another?",
+  "why": "Paperclip exports a company as a markdown package with a fidelity report, secret scrubbing and collision handling. Our packs are folders already.",
+  "learn": "paperclip agentcompanies/v1",
+  "options": [
+   {
+    "id": "git",
+    "label": "Packs are folders; share them through git (copy, subtree or submodule)",
+    "desc": "Zero tooling.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "cmd",
+    "label": "`hl pack export` and `hl pack install` with a report of what was not included, secrets scrubbed, collisions handled",
+    "desc": "Smoother sharing.",
+    "cost": "M"
+   },
+   {
+    "id": "registry",
+    "label": "A pack registry",
+    "desc": "Heavy.",
+    "cost": "L"
+   },
+   {
+    "id": "starter",
+    "label": "Ship a few starter packs (delivery team, research team) installable at onboarding",
+    "desc": "Ready-made teams, Paperclip style.",
+    "cost": "M"
+   }
+  ],
+  "decided": {
+   "options": [
+    "git"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F101",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F40"
+  ],
+  "title": "Plugin form and kernel primitives",
+  "ask": "What exactly is a plugin, and what does the kernel provide to it?",
+  "why": "This is the contract every plugin author learns. Cordis shows a minimal set; a second plugin form caused a documented silent bug.",
+  "learn": "deepseek-harness: module with name, inject, Config and apply(ctx, config); services, requires, effects, events; postmortem 0001 (a second form dropped inject)",
+  "rec_reason": "One form only, validated at load. Four primitives are enough: a context tree with a service registry, requires that hold a plugin pending until its services exist (restarting dependents when a provider changes), effects that undo themselves on dispose, and events.",
+  "options": [
+   {
+    "id": "form",
+    "label": "One plugin form: a module with name, requires (service keys), a config schema and apply(ctx, config); every registration returns a disposer so unloading undoes it; four kernel primitives: context tree with service registry, requires with dependent restart, scoped effects with dispose, events",
+    "desc": "Mini Cordis in TypeScript: the same mechanism, small and typed.",
+    "cost": "M",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "One way to extend",
+     "Dependency order comes from services, not hand-ordered lists",
+     "Clean unload and reload of any plugin"
+    ],
+    "cons": [
+     "The pending and restart logic is the subtle part and needs thorough tests",
+     "Authors must learn services and requires"
+    ],
+    "pick_if": "you accept a small kernel for total flexibility."
+   },
+   {
+    "id": "verbs",
+    "label": "Plugins only register verbs and listen to events: no services, no requires",
+    "desc": "Simplest.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Very easy to write plugins"
+    ],
+    "cons": [
+     "A plugin cannot say it needs another capability",
+     "Swapping a provider is invisible to dependents",
+     "Order is by hand"
+    ],
+    "pick_if": "plugins stay few and independent."
+   },
+   {
+    "id": "classes",
+    "label": "Class-based plugins with init, start and stop methods and a manager",
+    "desc": "Familiar.",
+    "cost": "M",
+    "lock": "high",
+    "pros": [
+     "Familiar to most developers"
+    ],
+    "cons": [
+     "Lifecycle bugs",
+     "Unwinding registrations by hand"
+    ],
+    "pick_if": "you prefer conventional frameworks."
+   }
+  ],
+  "decided": {
+   "options": [
+    "form"
+   ],
+   "note": "Your message, 2026-10-07: accept both.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F102",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F101"
+  ],
+  "title": "How plugins talk: services, events and hook pipelines",
+  "ask": "How does one plugin extend or intercept another?",
+  "why": "Permissions, retries, logging and approvals are all interceptors. The mechanism decides how clean they are.",
+  "learn": "deepseek-harness: 89 events (59 emit, 17 waterfall, 3 parallel, 2 serial); hooks like tools/pre-execute, tools/post-execute, agent/pre-step, approval/request; guard registry that can only deny",
+  "rec_reason": "Capabilities are services. Behaviour hooks are named pipelines (domain/stage) with a declared mode. A separate guard registry can only deny, so no plugin order can undo a denial. Generate an event matrix so the vocabulary is documented.",
+  "options": [
+   {
+    "id": "pipelines",
+    "label": "Services for capabilities (ctx.tickets, ctx.llm). Hook pipelines named domain/stage with a declared mode: waterfall with next() for before and around, observe-only emit for results, parallel for flushes. A separate guard registry that can only deny. A generated event matrix",
+    "desc": "Precise extension points.",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "Permissions, retries and logging become plugins",
+     "Denial cannot be undone by ordering",
+     "Every extension point is documented"
+    ],
+    "cons": [
+     "Forgetting next() silently short-circuits (a bug class they call out)",
+     "The event vocabulary becomes semi-privileged and must stay documented"
+    ],
+    "pick_if": "plugins will intercept actions."
+   },
+   {
+    "id": "events",
+    "label": "Plain events only: emit and listen, no ordering, no veto",
+    "desc": "Smallest.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Easy to understand"
+    ],
+    "cons": [
+     "Plugins cannot modify or block an action",
+     "No ordering"
+    ],
+    "pick_if": "plugins only observe."
+   },
+   {
+    "id": "middleware",
+    "label": "A middleware chain per domain (koa style)",
+    "desc": "Familiar.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Familiar shape"
+    ],
+    "cons": [
+     "deepseek-harness considered middleware and a phase state machine and chose events",
+     "One chain per domain is rigid"
+    ],
+    "pick_if": "there is one linear flow per domain."
+   }
+  ],
+  "decided": {
+   "options": [
+    "pipelines"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F103",
+  "phase": "plugins",
+  "impact": 3,
+  "needs": [
+   "F101"
+  ],
+  "title": "Config as composition: rows, bundles and layers",
+  "ask": "How is the set of plugins and their settings described, layered and changed?",
+  "why": "This is where \"replace any aspect\" becomes a configuration edit. deepseek-harness composes everything from layered patches over a tree of rows.",
+  "learn": "deepseek-harness profiles, bundles, cordis.patch.yml layers, --dump-config; its pain: silent no-op on an unmatched id, whole-config replacement pins values",
+  "rec_reason": "Keep their model and fix their two pain points: an unmatched id is an error, and merge rules are explicit. Bundles are data-only presets (our declarative packs). `hl config show` explains every row and which layer supplied it.",
+  "options": [
+   {
+    "id": "rows",
+    "label": "The workspace mounts a tree of plugin rows (id, plugin, config, disabled) in workspace.toml; bundles are data-only presets of rows; ordered layers patch rows by id (bundle defaults, workspace.toml, workspace.local.toml, launch flags); an unmatched id is an error; explicit merge rules; `hl config show` prints the result with each row source layer",
+    "desc": "Swap by editing one row.",
+    "cost": "M",
+    "rec": true,
+    "lock": "med",
+    "pros": [
+     "A plugin swap is a one-row config edit",
+     "Presets are shareable",
+     "Fully explainable, and their silent failures are designed out"
+    ],
+    "cons": [
+     "More machinery than a flat list",
+     "Row ids must be kept stable"
+    ],
+    "pick_if": "you want swapping to be configuration."
+   },
+   {
+    "id": "flat",
+    "label": "A flat list of enabled plugin ids with settings (the earlier sketch)",
+    "desc": "Simplest.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Very easy to read"
+    ],
+    "cons": [
+     "No layering, presets or per-row patching",
+     "Harder to explain where a value came from"
+    ],
+    "pick_if": "a handful of plugins."
+   },
+   {
+    "id": "dsh",
+    "label": "deepseek-harness as is: YAML patch layers, a patch replaces a row whole config, unmatched ids ignored",
+    "desc": "Proven.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Proven at scale"
+    ],
+    "cons": [
+     "A typo in an id silently does nothing",
+     "Whole-config replacement pins values against later bundle updates"
+    ],
+    "pick_if": "never; copy the idea, not the sharp edges."
+   }
+  ],
+  "decided": {
+   "options": [
+    "rows"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F104",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F102"
+  ],
+  "title": "Ordering and priority",
+  "ask": "When several plugins hook the same event, who runs first?",
+  "why": "deepseek-harness had real bugs when order followed activation: tool order differed in CI, and equal prompt sections varied by platform.",
+  "options": [
+   {
+    "id": "priority",
+    "label": "An explicit integer priority on every hook and ordered list, with a deterministic tie-break (name); never rely on load order",
+    "desc": "No surprises.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "activation",
+    "label": "Order follows activation order",
+    "desc": "Zero config.",
+    "cost": "S"
+   },
+   {
+    "id": "alpha",
+    "label": "Alphabetical by plugin name",
+    "desc": "Deterministic but arbitrary.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "priority"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F105",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F101"
+  ],
+  "title": "Loud startup and diagnostics",
+  "ask": "What happens when a plugin cannot start?",
+  "why": "Their documented silent failures: a plugin pending forever with no error, a second export dropping requires, a config expression that never ran, patch ids that matched nothing.",
+  "rec_reason": "Fail loudly and early. This is also the base for the doctor command (F63).",
+  "options": [
+   {
+    "id": "loud",
+    "label": "Startup lists every pending plugin with the service it waits for; a required-versus-optional audit; config validated at load with unknown keys refused; a second provider for one service name is a load error",
+    "desc": "Nothing fails quietly.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "quiet",
+    "label": "Log and continue",
+    "desc": "Smaller.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "loud"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F106",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F101"
+  ],
+  "title": "Scoped contexts per agent and session",
+  "ask": "Can one agent run with different tools and permissions from another?",
+  "why": "deepseek-harness gives each agent and session its own child context and declarative presets, so a read-only reviewer and a builder differ cleanly.",
+  "options": [
+   {
+    "id": "scoped",
+    "label": "Child contexts per agent or run (ctx.child(scope)) with their own tool list and guards; agent presets are small declarative trees",
+    "desc": "Different agents, different powers.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "global",
+    "label": "One global set for every agent",
+    "desc": "Simpler.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "scoped"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F107",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F103"
+  ],
+  "title": "Reload and dormant plugins",
+  "ask": "Do changes apply without a restart, and can a plugin sit idle until configured?",
+  "why": "deepseek-harness reloads config live, keeps some plugins dormant until settings supply routes, and is proposing to drop code hot reload (about 400 lines plus 372 of tests).",
+  "options": [
+   {
+    "id": "config",
+    "label": "Config reload only (no code reload); plugins can be mounted dormant until configured; provider settings re-read per request; restart for code changes",
+    "desc": "Most of the value, little code.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "full",
+    "label": "Full hot reload of plugin code",
+    "desc": "Fast development loop.",
+    "cost": "L"
+   },
+   {
+    "id": "restart",
+    "label": "Restart on any change",
+    "desc": "Simplest.",
+    "cost": "S"
+   }
+  ],
+  "decided": {
+   "options": [
+    "config"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F108",
+  "phase": "plugins",
+  "impact": 1,
+  "needs": [
+   "F101"
+  ],
+  "multi": true,
+  "title": "Plugin conventions and generated docs",
+  "ask": "Which of deepseek-harness plugin habits do we keep, in lite form?",
+  "learn": "deepseek-harness: package README gates, generated config catalog and event matrix, real-loader composition tests, dispose tests",
+  "options": [
+   {
+    "id": "readme",
+    "label": "A short README per plugin: purpose, config, extension points, Known limitations",
+    "desc": "Honest docs.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "catalog",
+    "label": "A generated config reference and event matrix from manifests and declarations",
+    "desc": "Never stale.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "loadertest",
+    "label": "Each plugin has a test that mounts it through the real loader, and a dispose test",
+    "desc": "Catches the bugs that matter.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "adr",
+    "label": "Decisions recorded as short notes: problem, decision, alternatives, consequences (their Agent Notes)",
+    "desc": "Memory.",
+    "cost": "S"
+   },
+   {
+    "id": "gates",
+    "label": "Heavy gates: bilingual docs, 100% coverage, 68 verify scripts",
+    "desc": "Their level.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "readme",
+    "catalog",
+    "loadertest"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F150",
+  "phase": "plugins",
+  "impact": 2,
+  "needs": [
+   "F0a",
+   "F42"
+  ],
+  "title": "Plugin languages: TypeScript, and other languages?",
+  "ask": "The stack is TypeScript everywhere. May a plugin be written in another language, for example Python for local speech or vision?",
+  "why": "Some adapters (local speech, vision) have their best libraries outside JavaScript. A clear rule keeps the core simple and the door open.",
+  "learn": "control-center desktop sidecar (Python with whisper and piper); deepseek-harness plugins; F42",
+  "rec_reason": "Plugins are TypeScript modules in the same workspace. Another language runs as a separate process that talks to the core through the CLI or a small JSON contract, so the kernel never embeds a second runtime.",
+  "options": [
+   {
+    "id": "proc",
+    "label": "Plugins are TypeScript modules; any other language runs as a separate process that uses the CLI or a small JSON contract (for example local speech in Python)",
+    "desc": "One kernel, open door.",
+    "short": "TypeScript plus processes",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "The kernel stays small and single-language",
+     "Python speech and vision libraries stay usable",
+     "The control-center sidecar idea carries over"
+    ],
+    "cons": [
+     "Two runtimes on a machine that uses such a plugin"
+    ],
+    "pick_if": "some adapters need non-JavaScript libraries."
+   },
+   {
+    "id": "tsonly",
+    "label": "TypeScript plugins only",
+    "desc": "Strictest.",
+    "short": "TypeScript only",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "One runtime"
+    ],
+    "cons": [
+     "No local speech or vision libraries"
+    ],
+    "pick_if": "you never need them."
+   },
+   {
+    "id": "embed",
+    "label": "Embed a Python runtime inside the kernel",
+    "desc": "Both languages in one process.",
+    "short": "Embed Python",
+    "cost": "L",
+    "lock": "high",
+    "pros": [
+     "In-process calls"
+    ],
+    "cons": [
+     "Heavy, fragile on Windows, two dependency worlds"
+    ],
+    "pick_if": "never recommended."
+   }
+  ],
+  "decided": {
+   "options": [
+    "proc"
+   ],
+   "note": "Your message, 2026-10-07: accept all (recommended).",
+   "date": "2026-10-07"
+  }
+ }
+]

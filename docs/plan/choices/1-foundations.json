@@ -1,0 +1,1101 @@
+[
+ {
+  "id": "F0a",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [],
+  "title": "Runtime and language stack",
+  "ask": "What are the CLI, console server, plugin kernel and UI written in? Compare the facts below, then weigh them yourself.",
+  "why": "Parser, UI, Telegram bot, agent runtime and the plugin kernel all follow from this, and it is hard to change once code exists. Measured numbers from this machine are in Blueprint 15.",
+  "learn": "your control-center and lc-wms (Python, standard library); paperclip (TypeScript on Node); deepseek-harness (TypeScript on Cordis); control-center desktop (Rust and Tauri); measurements on this Windows machine",
+  "rec_reason": "Decided: TypeScript everywhere. The deciding points: one language and one set of schemas from CLI to UI (no code generation), the strongest AI-agent skill and widget ecosystem, a faster CLI start than Python, and both reference repos (paperclip, deepseek-harness) use it. Two constraints were dropped on 2026-10-07: reuse of the existing Python and the no-dependencies rule. Python remains welcome as a plugin language for local speech or vision (F150). The independent front-end reviews are summarised in Blueprint 23.",
+  "options": [
+   {
+    "id": "py",
+    "short": "Python + plain JS/CSS",
+    "label": "Python for everything: CLI, server, plugin kernel and plugins (standard library only); the UI is plain JavaScript and CSS served as static files, optionally Preact with htm as one vendored file; no build step",
+    "desc": "Fastest path, simplest install.",
+    "cost": "M",
+    "lock": "high",
+    "facts": {
+     "CLI call": "80 to 140 ms measured (bare Python 43 ms; the py launcher adds about 120 ms)",
+     "Server request": "1 to 2 ms measured (standard library threading server)",
+     "UI ceiling": "CSS transitions, Web Animations, View Transitions, canvas; components by hand or Preact with htm",
+     "Teammate needs": "Python 3.11 or newer (you have 3.14); no pip packages",
+     "Your code": "Direct reuse: control-center console, tomlio, verbs, lc-wms kanban CLI",
+     "Plugins": "importlib: load, unload and reload in a few lines",
+     "Build steps": "None",
+     "Windows": "Works; call python directly, never through the py launcher"
+    },
+    "pros": [
+     "You already know it and own working code in it",
+     "No install beyond Python and no dependencies to update",
+     "Telegram polling, OpenAI-style HTTP, TOML and local speech tools are all easy",
+     "The plugin kernel is natural (modules, importlib)",
+     "No build step: edit and refresh"
+    ],
+    "cons": [
+     "A CLI call is 80 to 140 ms, about 5 to 8 times a native binary (measured)",
+     "Complex UI components cost more effort by hand than with a framework",
+     "Dynamic typing: discipline and type checks are on you",
+     "Every machine needs Python 3.11 or newer"
+    ],
+    "pick_if": "you want the fastest path, reuse and the simplest install, and a plain-JS UI is fine to start.",
+    "scores": {
+     "cli": 3,
+     "install": 4,
+     "ui": 3,
+     "resp": 4,
+     "reuse": 5,
+     "eco": 5,
+     "maint": 3,
+     "simple": 5,
+     "plug": 5
+    },
+    "rec": false
+   },
+   {
+    "id": "mix",
+    "short": "Python + built UI (Svelte or React)",
+    "label": "Python core and server as above, plus a UI built with a framework (Svelte or React) by Vite; the built files are committed so users never need Node",
+    "desc": "Best UI ceiling with a Python core.",
+    "cost": "L",
+    "lock": "high",
+    "facts": {
+     "CLI call": "Same as plain Python: 80 to 140 ms",
+     "Server request": "1 to 2 ms measured",
+     "UI ceiling": "Full framework: rich components, charts, drag and drop, built-in transitions (Svelte) or animation libraries (React)",
+     "Teammate needs": "Python only; Node only for people who change the UI",
+     "Your code": "Python reused; the UI is new",
+     "Plugins": "Python plugins as before; UI plugins must be built and bundled",
+     "Build steps": "One Vite build for the UI; commit the output",
+     "Windows": "Node for UI contributors only"
+    },
+    "pros": [
+     "Best UI ceiling and animation tooling",
+     "Svelte compiles away its runtime, so bundles stay small",
+     "The core stays Python",
+     "You can start with the plain option and move here later by swapping the views plugin"
+    ],
+    "cons": [
+     "Two toolchains: Python and Node",
+     "UI plugins need a build or a shared design-system bundle",
+     "Committed build output makes noisy diffs unless handled"
+    ],
+    "pick_if": "a rich animated UI matters from day one and a build step for the UI only is fine.",
+    "scores": {
+     "cli": 3,
+     "install": 4,
+     "ui": 5,
+     "resp": 4,
+     "reuse": 4,
+     "eco": 5,
+     "maint": 4,
+     "simple": 3,
+     "plug": 4
+    },
+    "rec": false
+   },
+   {
+    "id": "ts",
+    "short": "TypeScript everywhere",
+    "label": "TypeScript on Node 24 end to end: one pnpm workspace (core, cli, server, ui), shared Zod schemas, a Hono server, a React 19 + Vite + Tailwind 4 + shadcn/ui front end; Python stays possible as an optional plugin language",
+    "desc": "One language everywhere.",
+    "cost": "L",
+    "lock": "high",
+    "facts": {
+     "CLI call": "60 to 100 ms for a bundled Node CLI (56 ms bare; measured earlier); Node 24 also runs .ts directly for tools",
+     "Server request": "1 to 2 ms measured",
+     "UI ceiling": "Highest: one language from server to UI, shared types",
+     "Teammate needs": "Node 22 or newer and npm install (many dependencies)",
+     "Your code": "Rewritten on purpose: a better tool is worth a one-time rewrite (your call, 2026-10-07)",
+     "Plugins": "dynamic import; npm packages as plugins",
+     "Build steps": "A bundler for the CLI and UI; none for typed server code during development",
+     "Windows": "Long paths and node_modules size can bite"
+    },
+    "pros": [
+     "One language end to end with shared types",
+     "Largest UI and library ecosystem",
+     "Strong refactoring safety",
+     "paperclip and deepseek-harness prove the pattern"
+    ],
+    "cons": [
+     "A rewrite of everything you have in Python",
+     "npm dependency upkeep and a build toolchain",
+     "Node and npm install on every machine",
+     "Local speech and some AI tooling is stronger in Python"
+    ],
+    "pick_if": "a large team-built UI is planned and you are happy to rewrite.",
+    "scores": {
+     "cli": 3,
+     "install": 3,
+     "ui": 5,
+     "resp": 4,
+     "reuse": 1,
+     "eco": 4,
+     "maint": 5,
+     "simple": 3,
+     "plug": 4
+    },
+    "rec": true,
+    "must": "Decided on 2026-10-07: one language for the CLI, server, plugin kernel and UI, so one set of schemas and one toolchain."
+   },
+   {
+    "id": "bun",
+    "short": "TypeScript on Bun",
+    "label": "TypeScript on Bun: fast start, built-in bundler and test runner, can compile to one executable",
+    "desc": "Node-style with faster tooling.",
+    "cost": "L",
+    "lock": "high",
+    "facts": {
+     "CLI call": "Not installed here, so not measured; Bun is advertised as starting faster than Node",
+     "Server request": "Not measured; at least comparable to Node",
+     "UI ceiling": "Same as TypeScript on Node",
+     "Teammate needs": "Bun, or a compiled single executable (size to verify)",
+     "Your code": "None reused",
+     "Plugins": "dynamic import works; some Node packages behave differently",
+     "Build steps": "Built in",
+     "Windows": "Windows support is younger (to verify)"
+    },
+    "pros": [
+     "Faster start and tooling than Node",
+     "One tool to run, bundle and test",
+     "Can ship a single executable"
+    ],
+    "cons": [
+     "Younger runtime with compatibility gaps",
+     "Not installed on your machine, so not evaluated here",
+     "Same rewrite cost as the Node option"
+    ],
+    "pick_if": "you choose TypeScript and want speed and a single executable.",
+    "scores": {
+     "cli": 4,
+     "install": 3,
+     "ui": 5,
+     "resp": 5,
+     "reuse": 1,
+     "eco": 3,
+     "maint": 4,
+     "simple": 4,
+     "plug": 4
+    },
+    "rec": false
+   },
+   {
+    "id": "go",
+    "short": "Go single binary + built UI",
+    "label": "Go core with the UI built by Vite and embedded: one static binary for the CLI and the server",
+    "desc": "Fastest and easiest to hand out.",
+    "cost": "L",
+    "lock": "high",
+    "facts": {
+     "CLI call": "Native start: a native binary measured 16 ms here (Rust hello); Go is similar (Go is not installed here)",
+     "Server request": "Under 1 ms typical (not measured here)",
+     "UI ceiling": "Same as the built-UI option, embedded in the binary",
+     "Teammate needs": "Nothing: download one executable",
+     "Your code": "None reused",
+     "Plugins": "No dynamic loading on Windows: plugins would be separate processes or an embedded script engine",
+     "Build steps": "go build plus the UI build",
+     "Windows": "A single exe; unsigned exes may trigger SmartScreen warnings"
+    },
+    "pros": [
+     "Fastest CLI and server",
+     "Nothing to install for teammates",
+     "Simple concurrency and strong typing"
+    ],
+    "cons": [
+     "Plugins are the weak point: no dynamic code loading",
+     "A rewrite in a language that is new to you",
+     "Two build chains: Go and the UI"
+    ],
+    "pick_if": "handing a binary to non-developers and CLI speed beat flexibility.",
+    "scores": {
+     "cli": 5,
+     "install": 5,
+     "ui": 4,
+     "resp": 5,
+     "reuse": 1,
+     "eco": 3,
+     "maint": 5,
+     "simple": 2,
+     "plug": 2
+    },
+    "rec": false
+   },
+   {
+    "id": "rust",
+    "short": "Rust + Tauri app",
+    "label": "Rust core with a Tauri desktop shell and a web UI; the CLI is the same binary",
+    "desc": "A native desktop product.",
+    "cost": "L",
+    "lock": "high",
+    "facts": {
+     "CLI call": "Native binary measured 16 ms here",
+     "Server request": "Under 1 ms typical (not measured)",
+     "UI ceiling": "Web UI in a native window, plus tray, global hotkey and microphone",
+     "Teammate needs": "An installer per OS, signing for distribution (Rust 1.98 is installed on this machine)",
+     "Your code": "control-center already has a Tauri 2 desktop shell in Rust (hotkey, mic, tray)",
+     "Plugins": "No dynamic plugins in practice: separate processes or WASM",
+     "Build steps": "Cargo, Tauri and the UI build; slow compiles",
+     "Windows": "Needs WebView2 (present on Windows 11)"
+    },
+    "pros": [
+     "Fastest and smallest runtime",
+     "Native desktop features for voice",
+     "You already have a Tauri shell to learn from"
+    ],
+    "cons": [
+     "Highest effort and the slowest iteration",
+     "The plugin model is hard in Rust",
+     "A desktop app is a different product from a CLI plus a local web console"
+    ],
+    "pick_if": "a native desktop product is the goal.",
+    "scores": {
+     "cli": 5,
+     "install": 3,
+     "ui": 5,
+     "resp": 5,
+     "reuse": 2,
+     "eco": 3,
+     "maint": 4,
+     "simple": 1,
+     "plug": 2
+    },
+    "rec": false
+   }
+  ],
+  "criteria": [
+   {
+    "id": "cli",
+    "label": "CLI call speed",
+    "hint": "agents call it dozens of times a session"
+   },
+   {
+    "id": "install",
+    "label": "Easy install for teammates",
+    "hint": "Windows, no admin, fewest prerequisites"
+   },
+   {
+    "id": "ui",
+    "label": "UI richness and animation ceiling",
+    "hint": "components, motion, charts, drag and drop"
+   },
+   {
+    "id": "resp",
+    "label": "Server response and live updates",
+    "hint": "how snappy the local console feels"
+   },
+   {
+    "id": "reuse",
+    "label": "Reuse of your code and know-how",
+    "hint": "control-center and lc-wms are Python"
+   },
+   {
+    "id": "eco",
+    "label": "Ecosystem",
+    "hint": "Telegram, LLM clients, voice, markdown"
+   },
+   {
+    "id": "maint",
+    "label": "Maintainability",
+    "hint": "types, refactoring, tests"
+   },
+   {
+    "id": "simple",
+    "label": "Fewest moving parts",
+    "hint": "build steps, toolchains, dependencies"
+   },
+   {
+    "id": "plug",
+    "label": "Fit for the plugin kernel",
+    "hint": "dynamic loading, config reload, outside plugins"
+   }
+  ],
+  "decided": {
+   "options": [
+    "ts"
+   ],
+   "note": "TypeScript everywhere; rewrite accepted; dependencies allowed if maintained; editable themes dropped.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F24",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [
+   "F0a"
+  ],
+  "title": "Artifact data format (TOML vs YAML)",
+  "ask": "What format do tickets, decisions, questions, bugs and gaps use so the console can read and write them?",
+  "why": "Every ticket, decision and tracker is written in this format. Changing later means migrating every file. Obsidian only graphs markdown, so see F52 for how records show up there.",
+  "learn": "see Iteration 2 findings: neither public repo uses TOML or YAML for machine state",
+  "rec_reason": "Both of your repos already use TOML; a small TOML library reads it, and a closed writer per record kind avoids the lossy-rewrite problems you hit in control-center. YAML works too but adds nothing for this use.",
+  "options": [
+   {
+    "id": "toml-jsonl",
+    "label": "TOML for records people review; JSONL for append-only logs, chats and activity; markdown for prose",
+    "cost": "M",
+    "rec": true,
+    "desc": "A small TOML library (smol-toml) reads it; closed emitter per record kind writes it. Matches lc-wms and control-center. Git diffs stay readable.",
+    "lock": "high",
+    "pros": [
+     "Readable, reviewable diffs; supports comments in hand-written files",
+     "Standard-library reader",
+     "Matches your existing repos"
+    ],
+    "cons": [
+     "No standard-library writer: you write a small emitter per record kind",
+     "Rewriting loses comments, so generated files carry none",
+     "Invisible to Obsidian's graph unless notes are generated from it (F52)"
+    ],
+    "pick_if": "humans review these files in git and TypeScript tooling parses them.",
+    "must": "Decided format rule: TOML for structure, written only by verbs; JSONL for history."
+   },
+   {
+    "id": "yaml",
+    "label": "YAML for records",
+    "cost": "L",
+    "desc": "Needs a parser library. paperclip hand-rolled one and calls it ad hoc; deepseek-harness imports libraries. Gotchas: anchors, tags, implicit types.",
+    "lock": "high",
+    "pros": [
+     "Familiar, compact for nested data",
+     "Common in the ecosystem"
+    ],
+    "cons": [
+     "Needs a YAML parser dependency",
+     "Implicit typing, anchors and tags cause surprises",
+     "paperclip hand-rolled a parser and calls it ad hoc"
+    ],
+    "pick_if": "the stack is Node and a YAML library is already there."
+   },
+   {
+    "id": "json",
+    "label": "JSON for records (JSONL for logs)",
+    "cost": "S",
+    "desc": "What paperclip and deepseek-harness use for machine state. Built into JavaScript both ways and atomic writes are easy, but no comments and harder to review.",
+    "lock": "med",
+    "pros": [
+     "Built into JavaScript both ways, atomic writes are easy",
+     "What paperclip and deepseek-harness use for machine state"
+    ],
+    "cons": [
+     "No comments, noisy diffs",
+     "Hard for a person to review"
+    ],
+    "pick_if": "files are machine-only and humans never read them."
+   },
+   {
+    "id": "md-fm",
+    "label": "Markdown with YAML frontmatter",
+    "cost": "M",
+    "desc": "Paperclip's human-authored format. Good for agents and skills, weak for record lists like many decisions.",
+    "lock": "med",
+    "pros": [
+     "Great for agent and skill files",
+     "One file holds prose and metadata"
+    ],
+    "cons": [
+     "Awkward for lists of many records (decisions, bugs)",
+     "Frontmatter YAML needs a parser"
+    ],
+    "pick_if": "each artifact is mostly prose."
+   }
+  ],
+  "decided": {
+   "options": [
+    "toml-jsonl"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F33",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [],
+  "title": "Source vs view",
+  "ask": "What do agents read and write, and what is only for humans?",
+  "why": "Sets what agents read. Keeps HTML and CSS out of context, which is the main token lever.",
+  "learn": "measured: this plan page is ~24k tokens; lc-wms brief.py builds pages by program",
+  "rec_reason": "HTML and CSS are the most expensive thing to keep in agent context and the cheapest to generate by program. This is the main token lever you asked about.",
+  "options": [
+   {
+    "id": "split",
+    "label": "Agents use compact source (TOML, markdown, JSONL). HTML is generated for humans and never read by agents",
+    "cost": "M",
+    "rec": true,
+    "desc": "Pages cost agents nothing. Output folder is deny-listed for Read.",
+    "lock": "low",
+    "pros": [
+     "Agents never pay for markup or styling",
+     "Pages are consistent because a program draws them",
+     "Source stays small and diffable"
+    ],
+    "cons": [
+     "You build a viewer and a generator once",
+     "Generated output must be kept out of Read access"
+    ],
+    "pick_if": "you want low token cost and a nice UI."
+   },
+   {
+    "id": "html",
+    "label": "HTML is the source (hand-written by agents)",
+    "cost": "S",
+    "desc": "Looks good immediately; every edit costs markup tokens and drifts.",
+    "lock": "low",
+    "pros": [
+     "Looks good immediately",
+     "No generator to build"
+    ],
+    "cons": [
+     "Every edit costs markup tokens",
+     "Pages drift and become inconsistent",
+     "Agents re-read heavy files"
+    ],
+    "pick_if": "a one-off page, never a system."
+   },
+   {
+    "id": "md",
+    "label": "Markdown only, no generated HTML",
+    "cost": "S",
+    "desc": "Cheapest; no visual canvases, no per-ticket page.",
+    "lock": "low",
+    "pros": [
+     "Cheapest in tokens",
+     "Works everywhere"
+    ],
+    "cons": [
+     "No canvases, no per-ticket page, no board"
+    ],
+    "pick_if": "visuals do not matter."
+   }
+  ],
+  "decided": {
+   "options": [
+    "split"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F25",
+  "phase": "foundations",
+  "impact": 2,
+  "needs": [
+   "F24"
+  ],
+  "title": "Rules for writing artifact files",
+  "ask": "Which safety rules apply to every record file?",
+  "why": "Prevents corrupt or lossy files when several tools write the same records.",
+  "learn": "control-center atomic_write; deepseek-harness versioning; lc-wms layout validator",
+  "multi": true,
+  "options": [
+   {
+    "id": "emit",
+    "label": "Closed emitter per record kind (no generic dumper)",
+    "rec": true,
+    "desc": "Output is always well-formed and predictable."
+   },
+   {
+    "id": "atomic",
+    "label": "Atomic write: lock, temp file, rename, with stale-lock expiry",
+    "rec": true,
+    "desc": "control-center's way, plus fixing its 5-second stale-lock hang.",
+    "must": "Concurrent agents and people write the same files; non-atomic writes corrupt state."
+   },
+   {
+    "id": "ver",
+    "label": "Integer schema_version, refuse newer, adjacent migrations",
+    "rec": true,
+    "desc": "deepseek-harness pattern; lets the format evolve."
+   },
+   {
+    "id": "unknown",
+    "label": "Keep unknown keys on rewrite",
+    "rec": true,
+    "desc": "Avoids lc-wms's silent loss of hand-added keys."
+   },
+   {
+    "id": "nocomment",
+    "label": "No comments in generated files; prose goes in markdown",
+    "rec": true,
+    "desc": "Parse-then-write loses comments anyway."
+   },
+   {
+    "id": "layout",
+    "label": "Layout spec data file + validator on edit hook, pre-commit and CI",
+    "rec": true,
+    "desc": "lc-wms ticket-layout.toml pattern."
+   },
+   {
+    "id": "verbonly",
+    "label": "Only console verbs write state",
+    "rec": true,
+    "desc": "Agents and UI never hand-edit TOML.",
+    "must": "Decided rule: TOML is written only by verbs."
+   }
+  ],
+  "decided": {
+   "options": [
+    "emit",
+    "ver",
+    "unknown",
+    "nocomment",
+    "layout",
+    "verbonly"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F26",
+  "phase": "foundations",
+  "impact": 1,
+  "needs": [
+   "F24"
+  ],
+  "title": "File naming inside a ticket",
+  "ask": "Do files inside a ticket carry the ticket id in their names? Obsidian resolves links by file name, so this matters.",
+  "learn": "lc-wms and control-center prefix with the ticket id; Obsidian shortest-unique-name link resolution",
+  "options": [
+   {
+    "id": "plain",
+    "label": "Plain names: spec.md, plan.md, decisions.toml",
+    "cost": "S",
+    "desc": "The folder already says which ticket; fewer rename chores.",
+    "pros": [
+     "Short names",
+     "Folder already says which ticket"
+    ],
+    "cons": [
+     "[[spec]] is ambiguous across tickets; links need the full path",
+     "Graph shows many nodes called spec",
+     "Tabs all say spec.md"
+    ],
+    "pick_if": "you never use Obsidian links.",
+    "lock": "med"
+   },
+   {
+    "id": "prefixed",
+    "label": "Prefixed: T-014-spec.md, T-014-plan.md",
+    "cost": "S",
+    "desc": "Editor tabs stay readable when many tickets are open; linting must enforce it.",
+    "rec": true,
+    "pros": [
+     "Short unique wikilinks and readable graph labels",
+     "Clear editor tabs and search results",
+     "Matches lc-wms and control-center"
+    ],
+    "cons": [
+     "Longer names",
+     "A rename is needed if an id changes (the CLI does it)"
+    ],
+    "pick_if": "you use Obsidian or open many tickets at once.",
+    "lock": "med"
+   }
+  ],
+  "why": "Plain names (spec.md in every folder) make short wikilinks ambiguous and every graph node look the same. Prefixed names are unique.",
+  "rec_reason": "Unique file names make [[T-014-spec]] work, label graph nodes sensibly and keep editor tabs readable. The cost is a rename on ticket id change, which the CLI handles.",
+  "decided": {
+   "options": [
+    "prefixed"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): Example names become T-014-sa-spec.md. ticket.toml and tasks.toml keep fixed names.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F0c",
+  "phase": "foundations",
+  "impact": 2,
+  "needs": [],
+  "title": "Ways to reach the system",
+  "ask": "Which front doors exist in v1?",
+  "why": "Which front doors you build first; Telegram and MCP each add work.",
+  "learn": "control-center, deepseek-harness",
+  "multi": true,
+  "options": [
+   {
+    "id": "web",
+    "label": "Local web console (127.0.0.1)",
+    "cost": "M",
+    "rec": true,
+    "desc": "The main UI: dashboard, tickets, todos, chat, settings."
+   },
+   {
+    "id": "cli",
+    "label": "CLI verbs",
+    "cost": "S",
+    "rec": true,
+    "desc": "Deterministic commands that agents and humans both call."
+   },
+   {
+    "id": "tg",
+    "label": "Telegram",
+    "cost": "M",
+    "rec": true,
+    "desc": "Capture and approvals from your phone."
+   },
+   {
+    "id": "mcp",
+    "label": "MCP server for editors",
+    "cost": "S",
+    "desc": "Expose the same verbs to Claude Code/Cursor."
+   },
+   {
+    "id": "desk",
+    "label": "Desktop shell (Tauri) later",
+    "cost": "L",
+    "desc": "Tray, hotkey, push-to-talk. Defer."
+   }
+  ],
+  "decided": {
+   "options": [
+    "web",
+    "cli",
+    "tg"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F49",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [
+   "F24",
+   "F33"
+  ],
+  "title": "Format map: which format for which job",
+  "ask": "Markdown, TOML, YAML, JSON, HTML, CSS: where does each belong, across both repos?",
+  "why": "One rule per job keeps parsers few, diffs readable and agents cheap. Mixing formats freely is how repos rot.",
+  "learn": "lc-wms and control-center (TOML + markdown); paperclip (markdown + YAML frontmatter, JSON config); deepseek-harness (YAML config, JSONL sessions); measured sizes in Blueprint 9",
+  "rec_reason": "Measured: TOML, YAML and compact JSON differ by under 5% in size, so tokens do not decide this. Safety, parser support and host requirements do. Details in Blueprint 9.",
+  "options": [
+   {
+    "id": "split",
+    "label": "Three jobs, three formats: author in Markdown (prose) and TOML (structure), append in JSONL (history), generate HTML for humans. JSON and YAML only where a host or API requires them",
+    "desc": "Each format sits where it is strongest.",
+    "cost": "S",
+    "rec": true,
+    "lock": "high",
+    "pros": [
+     "Few parsers: one small library for TOML, JSON built in",
+     "Readable diffs with comments where humans edit",
+     "Agents never touch markup or styling"
+    ],
+    "cons": [
+     "Contributors must learn which format is for which job"
+    ],
+    "pick_if": "you want a small, predictable system.",
+    "must": "Decided formats: Markdown for prose, TOML for structure, JSONL for history, generated HTML for humans."
+   },
+   {
+    "id": "toml",
+    "label": "TOML for every structured file including logs and indexes",
+    "desc": "One structured format.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "One format to learn"
+    ],
+    "cons": [
+     "Appending to a TOML log is unsafe",
+     "Large logs get slow to parse"
+    ],
+    "pick_if": "there are no logs or event streams."
+   },
+   {
+    "id": "yaml",
+    "label": "YAML for config and records (ecosystem standard)",
+    "desc": "Familiar.",
+    "cost": "L",
+    "lock": "high",
+    "pros": [
+     "Common in CI and cloud tooling"
+    ],
+    "cons": [
+     "Needs a parser dependency",
+     "Implicit typing, anchors and tags cause surprises"
+    ],
+    "pick_if": "the stack is Node."
+   },
+   {
+    "id": "json",
+    "label": "JSON for everything structured",
+    "desc": "Machine friendly.",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "Built into JavaScript both ways"
+    ],
+    "cons": [
+     "No comments",
+     "Noisy diffs",
+     "Hard for people to review"
+    ],
+    "pick_if": "humans never read the files."
+   }
+  ],
+  "decided": {
+   "options": [
+    "split"
+   ],
+   "note": "Consistency fix (B24, 2026-10-07): JSON is also allowed for generated machine files (graph.json) and per-machine prefs. Second review (B25, 2026-10-07): Per-machine settings use workspace.local.toml, so no per-machine JSON.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F144",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [
+   "F0a"
+  ],
+  "title": "Monorepo and package layout",
+  "ask": "With one language everywhere, how is the delivery repo split into packages?",
+  "why": "Layout decides who may import what. A clear core package keeps the CLI, server and UI from each re-implementing file handling.",
+  "learn": "deepseek-harness (many small packages on a plugin kernel); paperclip (server, ui, cli, shared packages); Blueprint 23",
+  "rec_reason": "One pnpm workspace with a core package that is the only code touching workspace files. The CLI and the server depend on core; the UI depends only on the contract. Plugins are packages under packages/plugins.",
+  "options": [
+   {
+    "id": "mono",
+    "label": "One pnpm workspace in the delivery repo: packages/core (file layer, Zod schemas, plugin kernel), packages/cli, packages/server, packages/ui, packages/plugins/*; the knowledge repo stays separate",
+    "desc": "Clear boundaries.",
+    "short": "pnpm workspace",
+    "cost": "M",
+    "rec": true,
+    "must": "One core package is the only code that reads or writes workspace files, so both the CLI and the server follow the same rules.",
+    "lock": "med",
+    "pros": [
+     "One toolchain and one lockfile",
+     "core is the single file layer used by the CLI and the server",
+     "The UI can be replaced without touching core"
+    ],
+    "cons": [
+     "pnpm workspaces to learn",
+     "More package.json files"
+    ],
+    "pick_if": "you want boundaries enforced by imports.",
+    "facts": {
+     "Packages": "core, cli, server, ui, plugins",
+     "Shared code": "core only",
+     "Replace the UI": "Swap packages/ui"
+    }
+   },
+   {
+    "id": "single",
+    "label": "One package with folders: src/core, src/cli, src/server, src/ui",
+    "desc": "Simplest.",
+    "short": "One package",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Fewest files"
+    ],
+    "cons": [
+     "Boundaries are by convention only",
+     "The UI bundle can import server code by accident"
+    ],
+    "pick_if": "the project stays small."
+   },
+   {
+    "id": "poly",
+    "label": "Separate repos for the UI, the server and the CLI",
+    "desc": "Fully independent.",
+    "short": "Many repos",
+    "cost": "L",
+    "lock": "low",
+    "pros": [
+     "Independent releases"
+    ],
+    "cons": [
+     "Version skew between repos",
+     "More ceremony than a lite tool needs"
+    ],
+    "pick_if": "different teams own each part."
+   }
+  ],
+  "decided": {
+   "options": [
+    "mono"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F145",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [
+   "F0a",
+   "F144"
+  ],
+  "title": "The API and schema contract",
+  "ask": "How do the CLI, the HTTP API, the UI and the settings forms share one definition of every record and verb?",
+  "why": "This is the biggest payoff of one language: a record or verb is described once and every surface derives from it.",
+  "learn": "Independent front-end reviews 2026-10-07 (Blueprint 23); control-center verb registry; deepseek-harness schemas",
+  "rec_reason": "Declare records and verbs once as Zod schemas in the core package. Types for the CLI, server and UI are inferred, settings forms and an OpenAPI file are generated, so nothing needs a code-generation step or can drift.",
+  "options": [
+   {
+    "id": "zod",
+    "label": "Hono server with Zod schemas in core as the single source: inferred types for CLI, server and UI, generated forms and an exported OpenAPI file for non-TypeScript plugins; JSON over HTTP plus SSE under /api/v1",
+    "desc": "One source of truth.",
+    "short": "Zod + Hono",
+    "cost": "M",
+    "rec": true,
+    "must": "One schema source for the CLI, API, UI and forms; without it the surfaces drift.",
+    "lock": "med",
+    "pros": [
+     "No code generation and no drift",
+     "Forms and the OpenAPI file come from the same schemas",
+     "A non-TypeScript plugin can use the OpenAPI file"
+    ],
+    "cons": [
+     "Zod and Hono become load-bearing dependencies"
+    ],
+    "pick_if": "you want one definition of every record and verb.",
+    "facts": {
+     "Source of truth": "Zod schemas in core",
+     "Transport": "JSON plus SSE",
+     "Non-TypeScript": "OpenAPI export"
+    }
+   },
+   {
+    "id": "openapi",
+    "label": "OpenAPI first: write the spec, generate the server stubs and a typed client",
+    "desc": "Spec-led.",
+    "short": "OpenAPI first",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Language-neutral spec"
+    ],
+    "cons": [
+     "A generation step and a spec to keep in sync"
+    ],
+    "pick_if": "several non-TypeScript clients matter most."
+   },
+   {
+    "id": "trpc",
+    "label": "tRPC: typed procedures shared between server and client with no schema file",
+    "desc": "Least ceremony.",
+    "short": "tRPC",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Very little code"
+    ],
+    "cons": [
+     "TypeScript clients only; harder for agents, scripts and plugins in other languages to call"
+    ],
+    "pick_if": "only TypeScript will ever talk to the server."
+   },
+   {
+    "id": "hand",
+    "label": "Hand-written types on each side",
+    "desc": "Nothing to learn.",
+    "short": "Hand-written",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No new library"
+    ],
+    "cons": [
+     "They drift, and nothing checks them"
+    ],
+    "pick_if": "never."
+   }
+  ],
+  "decided": {
+   "options": [
+    "zod"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F146",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [
+   "F0a",
+   "F144"
+  ],
+  "title": "Building and shipping the CLI and console",
+  "ask": "How does a teammate get the CLI and the built UI without setting up a JavaScript toolchain?",
+  "why": "Agents call the CLI dozens of times a session, so its start time matters, and people who only use the console should not need to build anything.",
+  "learn": "deepseek-harness (npx @deepseek-ai/dsh web); measured Node start 56 ms bare, 60 to 100 ms bundled; independent review 2026-10-07",
+  "rec_reason": "Bundle the CLI into one file with esbuild so it starts fast, and publish the delivery repo as a package whose release already contains the built UI. Do not commit the built UI to main (merge noise); CI builds it on release. Add a single-executable build later only if non-developers join.",
+  "options": [
+   {
+    "id": "npm",
+    "label": "Bundle with esbuild into one file; publish the package (or run it from a checkout) with the prebuilt UI inside; CI builds on release; the build output is not committed to main",
+    "desc": "Fast start, no toolchain for users.",
+    "short": "Bundle + release",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "The CLI starts in about 60 to 100 ms",
+     "Teammates need only Node to run it",
+     "No build noise in git"
+    ],
+    "cons": [
+     "A release pipeline to set up",
+     "Contributors need pnpm and Node to change the UI"
+    ],
+    "pick_if": "the team already has Node.",
+    "facts": {
+     "CLI start": "60 to 100 ms (measured earlier)",
+     "UI": "Prebuilt inside the release",
+     "Teammates need": "Node 24 LTS"
+    }
+   },
+   {
+    "id": "sea",
+    "label": "A Node single-executable build per operating system",
+    "desc": "No Node needed.",
+    "short": "Single executable",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "One file to download"
+    ],
+    "cons": [
+     "Size and Windows behaviour not yet verified",
+     "Signing and one build per OS"
+    ],
+    "pick_if": "non-developers will use it.",
+    "facts": {
+     "CLI start": "Not measured",
+     "Teammates need": "Nothing",
+     "Verify": "Size and Windows behaviour"
+    }
+   },
+   {
+    "id": "src",
+    "label": "Core, CLI and server run the TypeScript source directly with Node 24 type stripping, no build; only the UI is built (Vite), once by hl setup or the first hl serve, into a gitignored folder",
+    "desc": "No build for the CLI. One pnpm install.",
+    "short": "Run source",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build for the CLI"
+    ],
+    "cons": [
+     "Slower start with many dependencies",
+     "Type stripping rules out some TypeScript features"
+    ],
+    "pick_if": "during development only."
+   },
+   {
+    "id": "commit",
+    "label": "Commit the built output to main",
+    "desc": "Works from a plain clone.",
+    "short": "Commit builds",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No release pipeline"
+    ],
+    "cons": [
+     "Merge noise and large diffs on every UI change"
+    ],
+    "pick_if": "you refuse any release step."
+   }
+  ],
+  "decided": {
+   "options": [
+    "src"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F147",
+  "phase": "foundations",
+  "impact": 3,
+  "needs": [
+   "F0a"
+  ],
+  "title": "Dependency policy",
+  "ask": "Dependencies are allowed when they are maintained well over time. What rules make that true?",
+  "why": "The earlier no-dependencies rule is gone, so the risk moves from missing features to churn and supply chain. Rules keep the tree small and swappable.",
+  "learn": "paperclip (55 server and 43 UI dependencies); independent review 2026-10-07 (126 packages for a toy React app; dnd-kit core unreleased since Dec 2024)",
+  "rec_reason": "Allow dependencies with a few cheap rules: a committed lockfile, install with scripts disabled, automated update pull requests, a weekly audit, one written reason per dependency, a preference for widely used and recently released packages, and each widget library wrapped in our own component.",
+  "options": [
+   {
+    "id": "policy",
+    "label": "Allowed with rules: committed lockfile; CI installs with --frozen-lockfile --ignore-scripts; automated update PRs; a weekly audit; one line of reasoning per dependency in docs/dependencies.md; prefer widely used, actively released packages; wrap each widget library in one of our own components",
+    "desc": "Cheap guard rails.",
+    "short": "Allowed with rules",
+    "cost": "S",
+    "rec": true,
+    "must": "Without rules the dependency tree grows unchecked, which is the main risk of dropping the no-dependencies constraint.",
+    "lock": "low",
+    "pros": [
+     "Churn and supply-chain risk stay visible",
+     "A library swap touches one file",
+     "New contributors see why each package exists"
+    ],
+    "cons": [
+     "A little discipline on every addition"
+    ],
+    "pick_if": "you want the speed of libraries without surprises.",
+    "facts": {
+     "Lockfile": "Committed",
+     "Install": "Scripts disabled in CI",
+     "Updates": "Automated PRs plus a weekly audit",
+     "Record": "A reason per dependency"
+    }
+   },
+   {
+    "id": "loose",
+    "label": "Add what is convenient with no rules",
+    "desc": "Fastest at first.",
+    "short": "No rules",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "No overhead"
+    ],
+    "cons": [
+     "Churn, abandoned packages and supply-chain exposure grow unnoticed"
+    ],
+    "pick_if": "never for a shared tool."
+   },
+   {
+    "id": "vendor",
+    "label": "Hand-write or vendor everything",
+    "desc": "No dependency risk.",
+    "short": "Vendor all",
+    "cost": "L",
+    "lock": "low",
+    "pros": [
+     "Nothing external to break"
+    ],
+    "cons": [
+     "A large amount of code to own",
+     "Contradicts the decision to allow maintained dependencies"
+    ],
+    "pick_if": "you need zero external code."
+   }
+  ],
+  "decided": {
+   "options": [
+    "policy"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ }
+]

@@ -1,0 +1,8 @@
+<!-- title: Blueprint 7: onboarding scaffold steps (draft; see the canvas) -->
+<ol>
+        <li>Ask: product name, knowledge center name, console name, target path, product repos to register. Non-interactive <code>--yes</code> mode.</li>
+        <li>Refuse if the target exists (exclusive create). Copy <code>templates/knowledge-repo/</code>, replacing a few named <code>{{vars}}</code> and failing on any leftover.</li>
+        <li>Write <code>workspace.toml</code> and <code>workspace.local.toml</code>, then generate the <code>.code-workspace</code> file.</li>
+        <li>Run the validator (required dirs and files), <code>git init</code>, first commit.</li>
+        <li>Register product repos; print the exact "open this folder" instruction. Pure Python, no PowerShell dependency.</li>
+      </ol>

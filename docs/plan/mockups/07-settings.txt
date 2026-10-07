@@ -1,0 +1,41 @@
+# Settings: plugins, models and appearance
+@from control-center, paperclip, deepseek-harness
+> 1 Plugin list with an on/off switch per plugin; the settings form is generated from each plugin manifest (F44).
+> 2 Providers: add a server from a preset, then Test connection and Fetch models (F72, F73). Keys are write-only.
+> 3 Appearance: theme, font, density. See the Theme lab for the editor and the saved theme file format.
+app
+  top
+    brand "Acme Console"
+    sp
+    avatar "SA"
+  body
+    side
+      nav "Overview" "Inbox 3" "Tickets" "Todos" "Work" "Agents" "Knowledge" "Settings*"
+      muted "Settings"
+      nav "Workspace" "Plugins*" "Models" "Appearance" "Telegram" "Permissions"
+    main
+      tabs "Plugins*" "Models" "Appearance"
+      row
+        card "Installed plugins" n=1
+          toggle "workflow-lite  (workflow)" on=1
+          toggle "agents-lite  (agent pack)" on=1
+          toggle "voice-web-speech  (voice)" on=1
+          toggle "telegram  (channel)"
+          toggle "assistant-chat  (assistant)" on=1
+        card "voice-web-speech"
+          form
+            toggle "Read replies aloud" on=1
+            field "Language" "en-US"
+          muted "Known limitations: some browsers send audio to a vendor."
+      row
+        card "Models" n=2
+          table "Provider" "URL" "State"
+            r "ollama" "localhost:11434" "[+ok]"
+            r "lmstudio" "localhost:1234" "[+ok]"
+            r "openrouter" "key from env" "[!no key]"
+          btns "Add provider" "Test connection" "Fetch models"
+        card "Appearance" n=3
+          field "Theme" "Console Dark"
+          field "Interface font" "Segoe UI"
+          field "Density" "Comfortable"
+          btns "Open theme editor"

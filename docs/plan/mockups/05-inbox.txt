@@ -1,0 +1,32 @@
+# Inbox (what needs me)
+@from paperclip
+> 1 Views: Mine, Recent, Unread, All, plus Blocked (paperclip). The list is derived from the files; read and archive state is per user and stays local (F67).
+> Keyboard: j and k move, Enter opens, a archives, / searches, ? shows help. An archived item comes back when it has new activity.
+> Empty state says what to do next, for example "Inbox zero. Pick a ticket from the board."
+app
+  top
+    brand "Acme Console"
+    search "Search  (/)"
+    sp
+    chip "? shortcuts"
+    avatar "SA"
+  body
+    side
+      nav "Overview" "Inbox 3*" "Tickets" "Todos" "Work" "Agents" "Knowledge" "Settings"
+    main
+      tabs "Mine*" "Recent" "Unread" "All" "Blocked 2" n=1
+      table "Item" "Why" "Age"
+        r "Approve: move T-014 to build" "[!approval]" "2 m"
+        r "T-009 waiting on Q-3" "[!blocked]" "1 h"
+        r "Q-5 what is the console called?" "[question]" "3 h"
+        r "Connect Telegram" "[setup]" "1 d"
+      row
+        btn "Archive  a"
+        btn "Open  Enter" kind=primary
+        sp
+        muted "j / k move  ·  r read  ·  U unread"
+    right
+      h "Approve: move T-014 to build"
+      muted "Requested by builder agent, 2 minutes ago"
+      list "Gate: questions-blockers  passed" "Files touched: 0" "Reversible: yes"
+      btns "Approve" "Deny"

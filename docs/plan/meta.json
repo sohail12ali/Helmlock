@@ -1,0 +1,48 @@
+{
+ "title": "Helmlock plan",
+ "iteration": 38,
+ "updated": "2026-10-07",
+ "phase": "Scope",
+ "phases": [
+  {
+   "id": "foundations",
+   "title": "Foundations",
+   "blurb": "Stack, storage and file formats. Everything else inherits these."
+  },
+  {
+   "id": "plugins",
+   "title": "Core and plugins",
+   "blurb": "What stays in the core, what plugs in, and how plugins are found, configured and swapped."
+  },
+  {
+   "id": "repos",
+   "title": "Two repos and workspace",
+   "blurb": "How the knowledge repo, delivery repo and projects connect; how a workspace is created."
+  },
+  {
+   "id": "model",
+   "title": "Delivery model",
+   "blurb": "Tickets, artifacts, todos and work logs."
+  },
+  {
+   "id": "agents",
+   "title": "Agents, skills and CLI",
+   "blurb": "Who does what, how much freedom they have, how they use the CLI and tools."
+  },
+  {
+   "id": "console",
+   "title": "Console and views",
+   "blurb": "Pages, canvases, settings, dashboard and the token economy."
+  },
+  {
+   "id": "channels",
+   "title": "Assistant, models and channels",
+   "blurb": "One provider layer for any model, the assistant, Telegram and voice."
+  },
+  {
+   "id": "sequence",
+   "title": "Sequence",
+   "blurb": "What to build, in what order."
+  }
+ ]
+}

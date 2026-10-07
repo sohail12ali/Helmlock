@@ -1,0 +1,15 @@
+<!-- title: paperclip (public): onboarding, tickets, dashboard, adapters -->
+<div class="cols">
+        <div><b>Take (ideas)</b><ul>
+          <li>Onboarding: quickstart vs advanced, <code>--yes</code>, resumable wizard, Save&amp;exit left / Continue right, <code>doctor</code>.</li>
+          <li>Issue statuses: backlog, todo, in_progress, in_review, done, blocked, cancelled; atomic checkout with 409 and never retry; one append-only activity log.</li>
+          <li>Dashboard: four metric cards, 14-day charts, stale tasks, recent activity; one status vocabulary shared by badge, row, chart and log; IDs and costs in monospace; every screen answers "what is happening, does it need me, what do I do".</li>
+          <li>Adapter contract: <code>execute(ctx)</code>, <code>testEnvironment</code>, <code>listModels</code>, a config schema. No native OpenAI-compatible adapter exists there, so a small one that POSTs to <code>{baseUrl}/chat/completions</code> is the lite path.</li>
+          <li>Telegram semantics: one DM = one open task, <code>/new</code>, <code>/close</code>, working message edited into the final answer, allowed-chat list.</li>
+          <li>Knowledge: raw/ + wiki/ markdown folders from its llm-wiki plugin.</li>
+        </ul></div>
+        <div><b>Skip</b><ul>
+          <li>Multi-company, RBAC, SSO, budgets, org chart, approvals queue, embedded Postgres + 292 migrations, execution workspaces, plugin runtime.</li>
+          <li>Telegram via webhook needs a public HTTPS URL, which is awkward for a local app; use long-polling instead.</li>
+        </ul></div>
+      </div>

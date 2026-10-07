@@ -1,0 +1,155 @@
+[
+ {
+  "id": "F19",
+  "phase": "sequence",
+  "impact": 3,
+  "needs": [
+   "F5c",
+   "F13a"
+  ],
+  "title": "Build order after milestone 1",
+  "ask": "Milestone 1 is the agent system without the console (your decision). What comes next?",
+  "why": "Order of delivery. Milestone 1 is decided: the agent system without the console.",
+  "rec_reason": "A read-only console makes the TOML state visible quickly, and verbs already work from the CLI, so nothing blocks on a writable UI.",
+  "options": [
+   {
+    "id": "console-ro",
+    "label": "Read-only console: dashboard, board, generated ticket pages",
+    "cost": "M",
+    "rec": true,
+    "desc": "Makes the TOML state visible; verbs already work from the CLI.",
+    "lock": "low",
+    "pros": [
+     "See tickets, decisions and pages early",
+     "Small and safe"
+    ],
+    "cons": [
+     "You edit through CLI and agents for a while"
+    ],
+    "pick_if": "you want visible progress cheaply."
+   },
+   {
+    "id": "scaffold",
+    "label": "Onboarding scaffold: generate the knowledge repo",
+    "cost": "M",
+    "desc": "Could even move into milestone 1 so the agent system has a home.",
+    "lock": "low",
+    "pros": [
+     "The agent system gets its home from day one",
+     "Tests onboarding early"
+    ],
+    "cons": [
+     "No UI yet"
+    ],
+    "pick_if": "you want a clean start for new workspaces."
+   },
+   {
+    "id": "capture",
+    "label": "Assistant and Telegram",
+    "cost": "M",
+    "desc": "Capture anywhere, then the delivery pipeline.",
+    "lock": "low",
+    "pros": [
+     "Capture ideas anywhere"
+    ],
+    "cons": [
+     "Thin delivery behind it"
+    ],
+    "pick_if": "capture matters more than process."
+   },
+   {
+    "id": "console-rw",
+    "label": "Writable console first: tickets, todos, settings",
+    "cost": "L",
+    "desc": "Everything editable in the UI early.",
+    "lock": "low",
+    "pros": [
+     "Everything editable in the UI"
+    ],
+    "cons": [
+     "Largest early cost",
+     "Needs the verbs and validator first"
+    ],
+    "pick_if": "you will operate mostly from the UI."
+   }
+  ],
+  "decided": {
+   "options": [
+    "console-ro"
+   ],
+   "note": "Your message, 2026-10-07: accept all.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F151",
+  "phase": "sequence",
+  "impact": 2,
+  "needs": [
+   "F0a",
+   "F34",
+   "F148"
+  ],
+  "title": "Front-end spike before the console milestone",
+  "ask": "Before building the console, do we run a small spike to confirm the React and Tailwind choice?",
+  "why": "Both independent reviews flagged agent code quality, state handling and bundle size as unverified. Half a day of evidence is cheaper than a wrong stack.",
+  "learn": "Independent reviews 2026-10-07; Blueprint 23",
+  "rec_reason": "Build one slice in React: board, ticket, sandboxed plan page and back, with light and dark. Count agent tokens and retries for two later changes, check keyboard use and a 400 px width. Build the Svelte 5 slice only if the React run shows trouble.",
+  "options": [
+   {
+    "id": "react",
+    "label": "React first: board, ticket, sandboxed plan page, back, light and dark; two later changes by an agent; Svelte 5 only if React shows trouble",
+    "desc": "Cheapest useful check.",
+    "short": "React spike",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Half a day",
+     "Gives evidence on tokens, retries and state bugs"
+    ],
+    "cons": [
+     "Does not compare against Svelte unless needed"
+    ],
+    "pick_if": "you accept React unless proven wrong."
+   },
+   {
+    "id": "both",
+    "label": "Build the same slice in React and in Svelte 5 and compare",
+    "desc": "Fairest.",
+    "short": "Both",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Direct comparison"
+    ],
+    "cons": [
+     "About twice the time"
+    ],
+    "pick_if": "you are undecided between them."
+   },
+   {
+    "id": "skip",
+    "label": "Skip the spike and build",
+    "desc": "Fastest.",
+    "short": "Skip",
+    "cost": "S",
+    "lock": "high",
+    "pros": [
+     "No delay"
+    ],
+    "cons": [
+     "Unverified assumptions about agent quality and widgets"
+    ],
+    "pick_if": "you are certain."
+   }
+  ],
+  "decided": {
+   "options": [
+    "react"
+   ],
+   "note": "Your message, 2026-10-07: accept all.",
+   "date": "2026-10-07"
+  }
+ }
+]

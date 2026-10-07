@@ -1,0 +1,31 @@
+<!-- title: Blueprint 2: one ticket folder and its records (draft, TOML assumed pending F24) -->
+<p><b>Superseded by Blueprint 16</b> (ticket folder, slicing and database scripts), which uses lc-wms tickets as evidence. Kept for the record shapes.</p>
+<pre>
+artifacts/T-001/
+  ticket.toml      state only: id, title, stage, size, priority, owner, blocked, links, changes[]
+  decisions.toml   [[decision]] id, title, question, chosen, why, rejected[], status, date, source
+  questions.toml   [[question]] id, text, status, blocking, answer, asked, answered
+  bugs.toml        [[bug]] id, title, severity, status, found_in, fixed_in
+  gaps.toml        [[gap]] id, text, category, status
+  tasks.toml       [[task]] id, slice, title, acs[], status, estimate_h, actual_h, depends[], files[]
+  todos.toml       [[todo]] id, text, status, priority, due
+  spec.md          prose: summary, scope, business rules, acceptance criteria (AC-n Given/When/Then)
+  plan.md          prose: design, slices
+  test-cases/      TC-n traced to AC-n
+  brief.html       generated ticket page (never hand-edited)
+</pre>
+      <p class="why">Rules (recommended in F25): state lives only in TOML and changes only through console verbs; markdown is prose; every record has an integer <code>schema_version</code>; unknown keys survive a rewrite; writes are atomic; a layout-spec file plus a validator run on edit, pre-commit and CI. Example record:</p>
+<pre>
+schema_version = 1
+
+[[decision]]
+id = "D-001"
+title = "Artifact format"
+question = "TOML or YAML for tracker files?"
+chosen = "TOML"
+why = "tomllib in stdlib; closed emitter per kind"
+rejected = ["YAML (no stdlib parser)", "JSON (hard to review)"]
+status = "decided"
+date = "2026-10-06"
+source = "plan.html F24"
+</pre>

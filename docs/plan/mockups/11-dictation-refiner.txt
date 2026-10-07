@@ -1,0 +1,29 @@
+# Assistant helper: dictation refiner
+@from control-center (voice, hotkey), deepseek-harness (dictation into the draft)
+> 1 You talk for a long time; the raw transcript is shown exactly as heard, with doubtful words flagged. Nothing is hidden or silently changed.
+> 2 The refined version removes repetition and filler, keeps your meaning and order, and fixes mis-heard terms from the glossary and project names. Changes are highlighted so you can accept or undo.
+> 3 Copy it, or send it straight to an agent. The audio is kept for 24 hours so a bad transcript can be re-run with another engine.
+phone
+  top
+    brand "Assistant"
+    sp
+    chip "mic ready" kind=ok
+    chip "whisper local"
+  main
+    card "You said (raw)" n=1
+      text "so um I want to add a thing where the, the assistant listens and, you know, takes a long thought and and makes it clean, because when I talk for long I repeat things, and sometimes the cloud md is not heard right"
+      muted "[!doubtful] cloud md  could be CLAUDE.md"
+    card "Refined for the agent" n=2
+      text "Add an assistant task that turns a long spoken thought into a clean prompt: remove repetition and filler, keep my meaning and order, and fix mis-heard terms such as CLAUDE.md."
+      row
+        chip "removed 3 repeats" kind=accent
+        chip "fixed 1 term" kind=accent
+    row
+      btn "Copy" kind=primary
+      btn "Send to agent"
+      btn "Re-listen" n=3
+    row
+      btn "Hold to talk" kind=primary
+      btn "Style: prompt"
+    muted "Audio kept 24 h. Glossary and project names bias recognition."
+  nav "Assistant*" "Inbox" "Tickets" "More" bottom=1

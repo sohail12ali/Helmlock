@@ -1,0 +1,35 @@
+# Agents and runs (Paperclip-style)
+@from paperclip (seen running), control-center
+> 1 An agent is a named employee. The left sub-navigation groups its settings: Agent (overview, instructions, skills), Runtime (harness, secrets, tools), Governance (permissions and trust, revisions), Audit (activity, runs, costs, budgets).
+> 2 The runs list shows the trigger, tokens and the first line of each result. A run that did nothing is labelled, so wasted wake-ups are obvious (F134).
+> 3 Skills are enabled per agent and the change applies on the next run. A "Test your agent" check proves the runtime responds.
+app
+  top
+    crumb "Agents" "analyst" "Runs"
+    sp
+    btn "Assign task"
+    btn "Run now" kind=primary
+  body
+    side
+      nav "Overview" "Instructions" "Skills" "Runtime" "Tools" "Permissions" "Revisions" "Runs*" "Costs"
+    main
+      row
+        stat "Runs today" "6" hint="5 succeeded, 1 no-op"
+        stat "Tokens today" "212k" hint="avg 35k per run"
+        stat "Trigger mix" "3 / 2 / 1" hint="assignment / manual / wake"
+      table "Run" "Trigger" "Tokens" "Result" n=2
+        r "r-0142" "[~assignment]" "91k" "Spec drafted, 3 open questions added"
+        r "r-0141" "[manual]" "9k" "Answered a question about the plan"
+        r "r-0140" "[!wake]" "34k" "No-op: woke on its own comment"
+        r "r-0139" "[~assignment]" "76k" "Plan sliced into S1 to S3"
+      card "Skills" n=3
+        toggle "spec" on=1
+        toggle "shape" on=1
+        toggle "challenge"
+        muted "Applies on the next run"
+    right
+      h "Run r-0142"
+      list "+succeeded" "Trigger: assignment" "On behalf of: sa" "Duration: 4 m 12 s" "Tasks touched: T-014"
+      btns "Inspect" "Re-run"
+      muted "Test your agent: runtime responds"
+  nav "Agents*" "Inbox" "Tickets" "More" bottom=1

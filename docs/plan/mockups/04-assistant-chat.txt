@@ -1,0 +1,33 @@
+# Assistant and agent chat
+@from deepseek-harness, control-center
+> 1 Model picker grouped by provider with an Effort menu (deepseek-harness). Local servers are first-class (F72).
+> 2 Approval card appears in the flow, attached to the action that needs it (control-center, deepseek-harness). It fails closed.
+> Right panel: changed files and a diff card at the end of a run (deepseek-harness). Sessions grouped by workspace on the left.
+app
+  top
+    brand "Acme Console"
+    sp
+    chip "ollama / qwen3:14b" kind=accent n=1
+    chip "Effort: medium"
+    chip "Tools: on"
+    avatar "SA"
+  body
+    side
+      nav "Overview" "Inbox 3" "Tickets" "Todos" "Work" "Agents*" "Knowledge" "Settings"
+      muted "Chats"
+      list "New chat" "Spec for T-014" "Telegram: sa" "Plugin contract"
+    main
+      chat
+        msg me "Move T-014 to plan and log the work."
+        msg ai "I can do that. The gate for spec to plan is open questions; Q-3 is still open."
+        ask "Run: hl ticket move T-014 plan  (blocked by Q-3)" "Allow once" "Allow for this chat" "Deny" n=2
+        msg ai "Waiting for your answer."
+      row
+        input "Message, or / for commands"
+        btn "Send" kind=primary
+    right
+      h "Changed files"
+      diff "T-014-spec.md" "+12 −3"
+      diff "decisions/D-001.toml" "+9"
+      muted "Last run 14 s, 1.2k tokens, 41 tok/s"
+  nav "Chat*" "Inbox" "Tickets" "More" bottom=1

@@ -1,0 +1,38 @@
+# Assistant tools: files, clipboard and screenshots
+@from control-center (permission card, voice and capture), deepseek-harness (model picker)
+> 1 Sensitive tools ask first, every time or once per chat, and never from Telegram. The card says which model and endpoint will see the content.
+> 2 The tool list shows each tool as Allow, Ask first or Off (paperclip), so you can see and change what the helper may do.
+> Find a file, describe a screenshot, copy a result back to the clipboard: small jobs, done fast.
+app
+  top
+    brand "Acme Console"
+    sp
+    chip "ollama / llava (vision)" kind=accent
+    chip "Tools: 5"
+    avatar "SA"
+  body
+    side
+      nav "Overview" "Inbox 3" "Tickets" "Todos" "Work" "Agents" "Assistant*" "Settings"
+    main
+      chat
+        msg me "Where is the spec for the format decision?"
+        msg ai "T-014-spec.md in artifacts/T-014. Opened. It links to D-001."
+        msg me "What is this error? (screenshot attached)"
+        ask "Capture the screen? The image goes to ollama / llava on this machine." "Allow once" "Deny" n=1
+        msg ai "It is a 403 from the tracker: the token has expired. Renew it in Settings, Telegram and tokens."
+        msg me "Copy that as a todo."
+        msg ai "Added TD-032 and copied the text to the clipboard."
+      row
+        input "Ask, find, or paste an image"
+        btn "Send" kind=primary
+    right
+      h "Tools" n=2
+      table "Tool" "Policy"
+        r "file.find" "[+Allow]"
+        r "knowledge.search" "[+Allow]"
+        r "clipboard.read" "[!Ask first]"
+        r "clipboard.write" "[+Allow]"
+        r "screen.capture" "[!Ask first]"
+        r "verb.run" "[!Ask first]"
+      muted "Telegram can never use clipboard or screen tools."
+  nav "Chat*" "Inbox" "Tickets" "More" bottom=1

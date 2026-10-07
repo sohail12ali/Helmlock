@@ -1,0 +1,1101 @@
+[
+ {
+  "title": "End-to-end flow (assumed)",
+  "nodes": [
+   {
+    "id": "a",
+    "label": "Onboarding",
+    "type": "start"
+   },
+   {
+    "id": "b",
+    "label": "Create system + knowledge repos"
+   },
+   {
+    "id": "c",
+    "label": "Capture idea: console, Telegram, voice"
+   },
+   {
+    "id": "d",
+    "label": "Triage",
+    "type": "decision"
+   },
+   {
+    "id": "e",
+    "label": "Todo list"
+   },
+   {
+    "id": "f",
+    "label": "Ticket + spec"
+   },
+   {
+    "id": "g",
+    "label": "Plan + tasks"
+   },
+   {
+    "id": "h",
+    "label": "Build (agent)"
+   },
+   {
+    "id": "i",
+    "label": "Verify",
+    "type": "decision"
+   },
+   {
+    "id": "j",
+    "label": "Close + work log"
+   },
+   {
+    "id": "k",
+    "label": "Dashboard",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "from": "a",
+    "to": "b"
+   },
+   {
+    "from": "b",
+    "to": "c"
+   },
+   {
+    "from": "c",
+    "to": "d"
+   },
+   {
+    "from": "d",
+    "to": "e",
+    "label": "small"
+   },
+   {
+    "from": "d",
+    "to": "f",
+    "label": "real work"
+   },
+   {
+    "from": "f",
+    "to": "g"
+   },
+   {
+    "from": "g",
+    "to": "h"
+   },
+   {
+    "from": "h",
+    "to": "i"
+   },
+   {
+    "from": "i",
+    "to": "j",
+    "label": "pass"
+   },
+   {
+    "from": "i",
+    "to": "h",
+    "label": "fix"
+   },
+   {
+    "from": "e",
+    "to": "k"
+   },
+   {
+    "from": "j",
+    "to": "k"
+   }
+  ]
+ },
+ {
+  "title": "Core and plugins",
+  "note": "The core knows no ticket status, agent, model or channel. Each slot is filled by a plugin chosen in the knowledge repo; swap a plugin by changing workspace.toml.",
+  "nodes": [
+   {
+    "id": "ws",
+    "label": "workspace.toml: enabled plugins + settings",
+    "type": "start"
+   },
+   {
+    "id": "core",
+    "label": "Kernel: context, services, effects, events"
+   },
+   {
+    "id": "sw",
+    "label": "Workflow slot"
+   },
+   {
+    "id": "pw",
+    "label": "workflow-lite (6 lanes)"
+   },
+   {
+    "id": "st",
+    "label": "Tickets slot"
+   },
+   {
+    "id": "pt",
+    "label": "tickets-toml"
+   },
+   {
+    "id": "sc",
+    "label": "CLI slot"
+   },
+   {
+    "id": "pc",
+    "label": "cli-default"
+   },
+   {
+    "id": "sa",
+    "label": "Agent runtime slot"
+   },
+   {
+    "id": "pa",
+    "label": "claude-code, openai-compatible"
+   },
+   {
+    "id": "ss",
+    "label": "Assistant slot"
+   },
+   {
+    "id": "ps",
+    "label": "assistant-chat"
+   },
+   {
+    "id": "sv",
+    "label": "Voice slot"
+   },
+   {
+    "id": "pv",
+    "label": "web-speech"
+   },
+   {
+    "id": "sh",
+    "label": "Channels slot"
+   },
+   {
+    "id": "pch",
+    "label": "telegram"
+   },
+   {
+    "id": "sw2",
+    "label": "Views slot"
+   },
+   {
+    "id": "pvw",
+    "label": "dashboard, ticket page"
+   }
+  ],
+  "edges": [
+   {
+    "to": "core",
+    "label": "enables",
+    "from": "ws"
+   },
+   {
+    "to": "sw",
+    "from": "core"
+   },
+   {
+    "to": "pw",
+    "label": "default",
+    "from": "sw"
+   },
+   {
+    "to": "st",
+    "from": "core"
+   },
+   {
+    "to": "pt",
+    "label": "default",
+    "from": "st"
+   },
+   {
+    "to": "sc",
+    "from": "core"
+   },
+   {
+    "to": "pc",
+    "label": "default",
+    "from": "sc"
+   },
+   {
+    "to": "sa",
+    "from": "core"
+   },
+   {
+    "to": "pa",
+    "label": "default",
+    "from": "sa"
+   },
+   {
+    "to": "ss",
+    "from": "core"
+   },
+   {
+    "to": "ps",
+    "label": "default",
+    "from": "ss"
+   },
+   {
+    "to": "sv",
+    "from": "core"
+   },
+   {
+    "to": "pv",
+    "label": "default",
+    "from": "sv"
+   },
+   {
+    "to": "sh",
+    "from": "core"
+   },
+   {
+    "to": "pch",
+    "label": "default",
+    "from": "sh"
+   },
+   {
+    "to": "sw2",
+    "from": "core"
+   },
+   {
+    "to": "pvw",
+    "label": "default",
+    "from": "sw2"
+   }
+  ]
+ },
+ {
+  "title": "Two-repo system",
+  "note": "You open the knowledge repo. It picks the delivery repo and lists your projects. The delivery repo knows nothing about any knowledge repo; the console is told the workspace at launch. Curves under the boxes are write-backs.",
+  "nodes": [
+   {
+    "id": "u",
+    "label": "You open the knowledge repo",
+    "type": "start"
+   },
+   {
+    "id": "n1",
+    "label": "Knowledge repo: per user or per project, any path",
+    "type": "note"
+   },
+   {
+    "id": "n2",
+    "label": "Delivery repo: shared, independent, knows no workspace",
+    "type": "note"
+   },
+   {
+    "id": "ws",
+    "label": "Workspace file (root of the session)"
+   },
+   {
+    "id": "cfg",
+    "label": ".code-workspace folders: delivery repo and projects"
+   },
+   {
+    "id": "kb",
+    "label": "Artifacts, logs, wiki (TOML + markdown)"
+   },
+   {
+    "id": "sys",
+    "label": "Delivery repo (system)"
+   },
+   {
+    "id": "prod",
+    "label": "Your product repos"
+   },
+   {
+    "id": "ag",
+    "label": "Agents"
+   },
+   {
+    "id": "sk",
+    "label": "Skills"
+   },
+   {
+    "id": "con",
+    "label": "Delivery console + CLI"
+   },
+   {
+    "id": "tp",
+    "label": "Generic templates"
+   }
+  ],
+  "edges": [
+   {
+    "to": "ws",
+    "from": "u"
+   },
+   {
+    "to": "cfg",
+    "from": "ws"
+   },
+   {
+    "to": "kb",
+    "from": "ws"
+   },
+   {
+    "to": "sys",
+    "label": "picks",
+    "from": "cfg"
+   },
+   {
+    "to": "prod",
+    "label": "lists",
+    "from": "cfg"
+   },
+   {
+    "to": "ag",
+    "from": "sys"
+   },
+   {
+    "to": "sk",
+    "from": "sys"
+   },
+   {
+    "to": "con",
+    "from": "sys"
+   },
+   {
+    "to": "tp",
+    "from": "sys"
+   },
+   {
+    "to": "kb",
+    "label": "told at launch, then reads and writes",
+    "from": "con"
+   },
+   {
+    "to": "prod",
+    "label": "edit code",
+    "from": "ag"
+   }
+  ]
+ },
+ {
+  "title": "Onboarding scaffold: create a knowledge repo",
+  "note": "The console generates the whole knowledge repo, so a user starting a product from scratch never builds the folder by hand.",
+  "nodes": [
+   {
+    "id": "a",
+    "label": "Run console: new workspace",
+    "type": "start"
+   },
+   {
+    "id": "b",
+    "label": "Ask: product, knowledge center name, console name, path"
+   },
+   {
+    "id": "c",
+    "label": "Generate repo from delivery templates"
+   },
+   {
+    "id": "d",
+    "label": "Write workspace file + config (delivery path, console name)"
+   },
+   {
+    "id": "e",
+    "label": "git init + first commit"
+   },
+   {
+    "id": "f",
+    "label": "Register product repos"
+   },
+   {
+    "id": "g",
+    "label": "Open knowledge repo, ready to work",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "from": "a",
+    "to": "b"
+   },
+   {
+    "from": "b",
+    "to": "c"
+   },
+   {
+    "from": "c",
+    "to": "d"
+   },
+   {
+    "from": "d",
+    "to": "e"
+   },
+   {
+    "from": "e",
+    "to": "f"
+   },
+   {
+    "from": "f",
+    "to": "g"
+   }
+  ]
+ },
+ {
+  "title": "Ticket page: generated by the program",
+  "note": "Agents and humans change state only through verbs. The console turns that state into one navigable page per ticket.",
+  "nodes": [
+   {
+    "id": "a",
+    "label": "Plan or any artifact created",
+    "type": "start"
+   },
+   {
+    "id": "b",
+    "label": "Verb writes TOML + markdown"
+   },
+   {
+    "id": "c",
+    "label": "Program generates the ticket HTML"
+   },
+   {
+    "id": "d",
+    "label": "Header, title, details"
+   },
+   {
+    "id": "e",
+    "label": "Decisions"
+   },
+   {
+    "id": "f",
+    "label": "Open questions, bugs, gaps"
+   },
+   {
+    "id": "g",
+    "label": "Files, plan HTML, tasks"
+   },
+   {
+    "id": "h",
+    "label": "You navigate from the board",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "from": "a",
+    "to": "b"
+   },
+   {
+    "from": "b",
+    "to": "c"
+   },
+   {
+    "from": "c",
+    "to": "d"
+   },
+   {
+    "from": "c",
+    "to": "e"
+   },
+   {
+    "from": "c",
+    "to": "f"
+   },
+   {
+    "from": "c",
+    "to": "g"
+   },
+   {
+    "from": "d",
+    "to": "h"
+   },
+   {
+    "from": "e",
+    "to": "h"
+   },
+   {
+    "from": "f",
+    "to": "h"
+   },
+   {
+    "from": "g",
+    "to": "h"
+   }
+  ]
+ },
+ {
+  "title": "Agent and CLI integration",
+  "note": "Agents read digests and edit prose directly; every state change goes through the CLI, which validates, writes atomically and announces events. A hook validates anything an agent edited by hand.",
+  "nodes": [
+   {
+    "id": "ag",
+    "label": "Agent (Claude Code)",
+    "type": "start"
+   },
+   {
+    "id": "ctx",
+    "label": "hl context: digest as JSON"
+   },
+   {
+    "id": "prose",
+    "label": "Edit markdown directly: spec, plan, notes"
+   },
+   {
+    "id": "verb",
+    "label": "hl verb: ticket move, decision add, log-work"
+   },
+   {
+    "id": "hook",
+    "label": "PostToolUse hook: hl validate"
+   },
+   {
+    "id": "gate",
+    "label": "Validate and gate",
+    "type": "decision"
+   },
+   {
+    "id": "write",
+    "label": "Write TOML and JSONL atomically"
+   },
+   {
+    "id": "evt",
+    "label": "Announce event"
+   },
+   {
+    "id": "sync",
+    "label": "Refresh Obsidian notes and HTML pages",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "ctx",
+    "from": "ag"
+   },
+   {
+    "to": "prose",
+    "from": "ag"
+   },
+   {
+    "to": "verb",
+    "from": "ag"
+   },
+   {
+    "to": "hook",
+    "label": "after edit",
+    "from": "prose"
+   },
+   {
+    "to": "gate",
+    "from": "verb"
+   },
+   {
+    "to": "write",
+    "label": "ok",
+    "from": "gate"
+   },
+   {
+    "to": "ag",
+    "label": "blocked: exit 2",
+    "from": "gate"
+   },
+   {
+    "to": "evt",
+    "from": "write"
+   },
+   {
+    "to": "sync",
+    "from": "evt"
+   },
+   {
+    "to": "ag",
+    "label": "errors",
+    "from": "hook"
+   }
+  ]
+ },
+ {
+  "title": "Obsidian and the files",
+  "note": "Obsidian only graphs markdown notes. TOML and JSONL are the source of truth; a verb generates markdown notes from them. Authored markdown goes to Obsidian directly.",
+  "nodes": [
+   {
+    "id": "toml",
+    "label": "TOML records and JSONL history (source)",
+    "type": "start"
+   },
+   {
+    "id": "md",
+    "label": "Authored markdown: spec, plan, wiki"
+   },
+   {
+    "id": "sync",
+    "label": "hl notes sync (on events and git hooks)"
+   },
+   {
+    "id": "hub",
+    "label": "Generated notes: wikilinks + properties"
+   },
+   {
+    "id": "obs",
+    "label": "Obsidian: graph, backlinks, search",
+    "type": "end"
+   },
+   {
+    "id": "site",
+    "label": "Console: generated HTML pages",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "sync",
+    "from": "toml"
+   },
+   {
+    "to": "hub",
+    "from": "sync"
+   },
+   {
+    "to": "obs",
+    "from": "hub"
+   },
+   {
+    "to": "obs",
+    "label": "directly",
+    "from": "md"
+   },
+   {
+    "to": "site",
+    "from": "toml"
+   }
+  ]
+ },
+ {
+  "title": "Skills across three layers",
+  "note": "The dispatcher asks the skill index, which scans the system, workspace and project layers using the .code-workspace folders and the layer map in workspace.toml. If several skills match, or a name exists in more than one layer, all are shown with their layer and description and the user chooses. The owning layer CLAUDE.md is read first; the work runs from that layer root and is logged for the person.",
+  "nodes": [
+   {
+    "id": "req",
+    "label": "Request: /do ...",
+    "type": "start"
+   },
+   {
+    "id": "reg",
+    "label": "workspace.toml: layers and projects registry"
+   },
+   {
+    "id": "find",
+    "label": "hl skill find: scan the layers"
+   },
+   {
+    "id": "sys",
+    "label": "System layer: skills, agents, CLAUDE.md (delivery repo)"
+   },
+   {
+    "id": "ws",
+    "label": "Workspace layer: team skills and rules (knowledge repo)"
+   },
+   {
+    "id": "proj",
+    "label": "Project layer: build, test, publish (project repo or overlay)"
+   },
+   {
+    "id": "pick",
+    "label": "Several matches or same name? Show all with descriptions",
+    "type": "decision"
+   },
+   {
+    "id": "read",
+    "label": "Read that layer's CLAUDE.md first"
+   },
+   {
+    "id": "run",
+    "label": "Run from the layer root, one agent per project"
+   },
+   {
+    "id": "log",
+    "label": "log-work: one line for the person",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "find",
+    "from": "req"
+   },
+   {
+    "to": "find",
+    "label": "paths",
+    "from": "reg"
+   },
+   {
+    "to": "sys",
+    "from": "find"
+   },
+   {
+    "to": "ws",
+    "from": "find"
+   },
+   {
+    "to": "proj",
+    "from": "find"
+   },
+   {
+    "to": "pick",
+    "from": "sys"
+   },
+   {
+    "to": "pick",
+    "from": "ws"
+   },
+   {
+    "to": "pick",
+    "from": "proj"
+   },
+   {
+    "to": "read",
+    "from": "pick"
+   },
+   {
+    "to": "run",
+    "from": "read"
+   },
+   {
+    "to": "log",
+    "from": "run"
+   }
+  ]
+ },
+ {
+  "title": "Plugin kernel (deepseek-harness idea, in Python)",
+  "note": "A small kernel mounts a tree of plugin rows. A plugin waits until the services it requires exist, then applies. Everything it registers is an effect that is undone on dispose. Startup lists anything still pending.",
+  "nodes": [
+   {
+    "id": "cfg",
+    "label": "workspace.toml: rows (id, plugin, config, disabled)",
+    "type": "start"
+   },
+   {
+    "id": "load",
+    "label": "Loader: compose layers, validate config"
+   },
+   {
+    "id": "need",
+    "label": "requires: all services present?",
+    "type": "decision"
+   },
+   {
+    "id": "diag",
+    "label": "Pending list: plugin and missing service",
+    "type": "end"
+   },
+   {
+    "id": "mount",
+    "label": "apply(ctx, config)"
+   },
+   {
+    "id": "svc",
+    "label": "Service registry: one provider per name"
+   },
+   {
+    "id": "hook",
+    "label": "Hook pipelines: domain/stage, waterfall with next()"
+   },
+   {
+    "id": "guard",
+    "label": "Guard: can only deny"
+   },
+   {
+    "id": "eff",
+    "label": "Effects undone on dispose",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "load",
+    "from": "cfg"
+   },
+   {
+    "to": "need",
+    "from": "load"
+   },
+   {
+    "to": "mount",
+    "label": "ready",
+    "from": "need"
+   },
+   {
+    "to": "diag",
+    "label": "missing",
+    "from": "need"
+   },
+   {
+    "to": "svc",
+    "label": "provides",
+    "from": "mount"
+   },
+   {
+    "to": "hook",
+    "label": "listens",
+    "from": "mount"
+   },
+   {
+    "to": "guard",
+    "from": "hook"
+   },
+   {
+    "to": "eff",
+    "from": "mount"
+   }
+  ]
+ },
+ {
+  "title": "A vertical slice",
+  "note": "A slice cuts through every layer it needs and delivers at least one acceptance criterion end to end. Tasks belong to one layer each. Database tasks produce a forward script and its rollback with the same number.",
+  "nodes": [
+   {
+    "id": "t",
+    "label": "Ticket T-014 (size M)",
+    "type": "start"
+   },
+   {
+    "id": "s1",
+    "label": "Slice S1: riskiest, shippable alone"
+   },
+   {
+    "id": "db",
+    "label": "S1-T1 db: forward and rollback SQL"
+   },
+   {
+    "id": "api",
+    "label": "S1-T2 api"
+   },
+   {
+    "id": "ui",
+    "label": "S1-T3 ui"
+   },
+   {
+    "id": "ts",
+    "label": "S1-T4 test: cases and tests/"
+   },
+   {
+    "id": "ac",
+    "label": "AC-1 verified end to end?",
+    "type": "decision"
+   },
+   {
+    "id": "s2",
+    "label": "Slice S2"
+   },
+   {
+    "id": "done",
+    "label": "Close",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "s1",
+    "from": "t"
+   },
+   {
+    "to": "db",
+    "from": "s1"
+   },
+   {
+    "to": "api",
+    "from": "s1"
+   },
+   {
+    "to": "ui",
+    "from": "s1"
+   },
+   {
+    "to": "ts",
+    "from": "s1"
+   },
+   {
+    "to": "ac",
+    "from": "db"
+   },
+   {
+    "to": "ac",
+    "from": "api"
+   },
+   {
+    "to": "ac",
+    "from": "ui"
+   },
+   {
+    "to": "ac",
+    "from": "ts"
+   },
+   {
+    "to": "s2",
+    "label": "pass",
+    "from": "ac"
+   },
+   {
+    "to": "s1",
+    "label": "fix",
+    "from": "ac"
+   },
+   {
+    "to": "done",
+    "from": "s2"
+   }
+  ]
+ },
+ {
+  "title": "Ticket lifecycle: compact, archive, delete",
+  "note": "Closing writes a short digest and hides drafts. After a window the ticket is archived with a hash manifest and can be restored. Deleting is allowed only for archived tickets, after a dry run, a typed confirmation and a value check, and leaves a tombstone.",
+  "nodes": [
+   {
+    "id": "act",
+    "label": "Active ticket (small, capped)",
+    "type": "start"
+   },
+   {
+    "id": "close",
+    "label": "Close: write the digest, move drafts to _work/"
+   },
+   {
+    "id": "closed",
+    "label": "Closed: digest visible, drafts hidden"
+   },
+   {
+    "id": "arch",
+    "label": "Archive after about 30 days: dry run, manifest"
+   },
+   {
+    "id": "archived",
+    "label": "Archived: archive/YYYY-MM/T-xxx, restorable"
+   },
+   {
+    "id": "value",
+    "label": "Purge after about 180 days: dry run, typed confirm, value check",
+    "type": "decision"
+   },
+   {
+    "id": "gone",
+    "label": "Deleted: tombstone kept",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "close",
+    "from": "act"
+   },
+   {
+    "to": "closed",
+    "from": "close"
+   },
+   {
+    "to": "arch",
+    "from": "closed"
+   },
+   {
+    "to": "archived",
+    "from": "arch"
+   },
+   {
+    "to": "value",
+    "from": "archived"
+   },
+   {
+    "to": "gone",
+    "label": "confirmed",
+    "from": "value"
+   },
+   {
+    "to": "act",
+    "label": "restore: hashes verified",
+    "from": "archived"
+   }
+  ]
+ },
+ {
+  "title": "Delivery center, knowledge centers and projects",
+  "note": "Like Paperclip companies, each knowledge center is a unit with its own projects, history and access, but each is its own repo. They all pick the same delivery center, which ships the agents, skills, console and a versioned base template. Each knowledge center grows its template over time.",
+  "nodes": [
+   {
+    "id": "kca",
+    "label": "Knowledge center A (own repo, team, history)",
+    "type": "start"
+   },
+   {
+    "id": "kcb",
+    "label": "Knowledge center B (own repo, team, history)",
+    "type": "start"
+   },
+   {
+    "id": "dc",
+    "label": "Delivery center (one): agents, skills, console, plugins"
+   },
+   {
+    "id": "tpl",
+    "label": "Base template + packs, versioned"
+   },
+   {
+    "id": "a1",
+    "label": "Project A1: knowledge, graph, tickets"
+   },
+   {
+    "id": "a2",
+    "label": "Project A2: knowledge, graph, tickets"
+   },
+   {
+    "id": "b1",
+    "label": "Project B1: knowledge, graph, tickets"
+   },
+   {
+    "id": "grow",
+    "label": "Template growth tracked in each workspace",
+    "type": "note"
+   },
+   {
+    "id": "repo",
+    "label": "Product code repos",
+    "type": "end"
+   }
+  ],
+  "edges": [
+   {
+    "to": "dc",
+    "label": "picks",
+    "from": "kca"
+   },
+   {
+    "to": "dc",
+    "label": "picks",
+    "from": "kcb"
+   },
+   {
+    "to": "tpl",
+    "label": "ships",
+    "from": "dc"
+   },
+   {
+    "to": "a1",
+    "from": "kca"
+   },
+   {
+    "to": "a2",
+    "from": "kca"
+   },
+   {
+    "to": "b1",
+    "from": "kcb"
+   },
+   {
+    "to": "repo",
+    "label": "code",
+    "from": "a1"
+   },
+   {
+    "to": "repo",
+    "label": "code",
+    "from": "a2"
+   },
+   {
+    "to": "repo",
+    "label": "code",
+    "from": "b1"
+   }
+  ]
+ }
+]

@@ -1,0 +1,17 @@
+<!-- title: Blueprint 6: artifact formats, visuals and token cost (recommendation) -->
+<p><b>Measured on this plan page</b> (about 4 characters per token): <code>docs/plan.html</code> is 98 KB, roughly 24k tokens. CSS plus the renderer script are only 14% of it. The option-card data is 59% and the prose body 27%. So markup is not the main cost here. Re-reading a whole page that is mostly content is. The fix is to split by section and read only what changes, and to keep generated pages out of agent context.</p>
+      <table>
+        <thead><tr><th>Layer</th><th>Read by</th><th>Best format</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Rules and skills</td><td>agent</td><td>Markdown: CLAUDE.md, SKILL.md</td><td>Short. Skill list shows name and description only; bodies load on demand.</td></tr>
+          <tr><td>State records (decisions, questions, bugs, gaps, tasks)</td><td>agent and console</td><td>TOML; JSONL for append-only logs</td><td>Compact, validated, written only by verbs. Agents get a digest from one <code>context</code> call instead of reading files.</td></tr>
+          <tr><td>Prose (spec, plan, notes)</td><td>agent and human</td><td>Markdown</td><td>Almost no markup cost; readable in any editor and diff.</td></tr>
+          <tr><td>Human view of a ticket or plan</td><td>human only</td><td>Generated HTML: one shared shell + viewer script + CSS, page body is data</td><td>Built by program. Never read by agents (deny rule on the output folder). Cost to agents: zero.</td></tr>
+          <tr><td>Flow canvases</td><td>agent writes data, human views</td><td>Tiny node/edge data with automatic layout</td><td>A flow is roughly 150 to 300 tokens to write, against thousands for hand-written SVG or HTML.</td></tr>
+          <tr><td>Sequence, ER, state diagrams</td><td>agent writes text, human views</td><td>Mermaid text, vendored file, loaded only when a page needs it</td><td>About 100 tokens per diagram; works offline.</td></tr>
+          <tr><td>Interactive pages (board, dashboard)</td><td>human</td><td>Vanilla JS, or Preact + htm as one vendored file; no build step</td><td>React with a build is not needed for v1; revisit if the console UI outgrows it (F34).</td></tr>
+        </tbody>
+      </table>
+      <p><b>Sweet spot:</b> source = TOML + markdown + JSONL, view = generated data-only HTML on a shared viewer, diagrams = node/edge data, Mermaid only for the odd types. Agents write data, the program draws.</p>
+      <p><b>Guard rails that save tokens</b> (F38): a <code>context</code> digest verb; deny Read on generated <code>site/</code>; CLAUDE.md and SKILL.md under a size budget with a lint; skills expose name and description only; change files with verbs or small edits, never full rewrites; stable ids plus a generated artifact map so agents find things without reading everything; a terse report shape.</p>
+      <p><b>Applied to this plan page (F37):</b> split it into data files (cards, flows, decisions, questions, log) plus a shared viewer and a small build script. Each iteration then reads and edits only the file that changes instead of the 24k-token whole.</p>

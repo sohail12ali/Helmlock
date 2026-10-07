@@ -1,0 +1,152 @@
+[
+ {
+  "title": "Second review accepted (Blueprint 25).",
+  "text": "Agent edit deny covers knowledge-repo state only. Chats, usage, transcripts and audio stay on the machine. Per-machine settings are workspace.local.toml. v1 onboarding is CLI-only. Ticket moves go to activity, not the work log. Plan and close approval for M and L only. SQL rules live in the software-delivery pack. v1 ships the lite workflow only. Record ids carry the author suffix. Later than v1: refiner, clipboard and screenshots, template upgrade and promote, purge, project graph, OpenAI agent loop, try mode, token cap.",
+  "source": "You, 2026-10-07: accept all"
+ },
+ {
+  "title": "Open questions accepted as recommended.",
+  "text": "Names: the system is helmlock, knowledge repos are <product>-knowledge (first: helmlock-knowledge), the CLI is hl, each center names its console. Windows first, nothing Windows-only in core. Non-goals: not an agent framework, not just a chatbot, not a prompt manager, not multi-tenant, not a hosted service. Remote access is Telegram only; the console binds 127.0.0.1 and is reached over Tailscale, with no login. Everyone installs Node 24 LTS and runs one pnpm install. Screenshots use a local vision model first, else a hosted one with Ask first. The Telegram bot is created at its milestone. The kanban library is chosen in the spike. Before milestone 1, verify CLAUDE.md loading from added directories and the Cursor CLI setup. F43 keeps workspace plugin folders.",
+  "source": "You, 2026-10-07: keep yours for F43 and accept all questions"
+ },
+ {
+  "title": "Consistency fixes accepted (Blueprint 24).",
+  "text": "Only hl init and hl project add write the .code-workspace, with a dry run and confirmation. Paths come only from the workspace file; workspace.toml maps folders to layers. No Telegram /log. Voice v1 is the browser engine; a local engine is a later plugin. Core, CLI and server need no build; the UI is built once locally. One remark pipeline for files and live pages. Activity is one JSONL per person per day. Ticket ids look like T-014-sa. Telegram needs hl serve running.",
+  "source": "You, 2026-10-07: accept all"
+ },
+ {
+  "title": "A ticket is one folder. The default lanes are six. Old files stay out of the model context.",
+  "text": "Records people edit together are one file each, and a verb writes the markdown Obsidian graphs. The work log is one TOML file per person per day, author from the roster. New tickets use the proposed tree; existing lc-wms tickets stay until an optional migrate. SQL forward and rollback scripts share a number. Closing writes a short digest. Archive and delete are verbs with a dry run, never a timer.",
+  "source": "Delivery model section completed from decided rules, iteration 32."
+ },
+ {
+  "title": "The assistant is a small OpenAI-compatible helper. Telegram polls.",
+  "text": "Chat, search, and verbs with confirmation. History is JSONL. Telegram long-polls with an allowlist: notify, chat, commands, approvals, and quick capture. Voice in v1 is a mic button in the console, then a refine step. Clipboard and screenshots ask first and never run from Telegram.",
+  "source": "Assistant section completed from decided rules, iteration 31."
+ },
+ {
+  "title": "The console is a resizable React shell. Ticket pages are files.",
+  "text": "Tailwind 4 and shadcn/ui, light and dark following the system. Pages are written on every change and also served live. No scheduler in v1. Comments on a document stay in git review.",
+  "source": "Console section completed from decided rules, iteration 30."
+ },
+ {
+  "title": "Agents act inside the workspace and ask before they reach outside it.",
+  "text": "Six agents from lc-wms, no separate orchestrator. Skills are thin except spec and challenge. A run starts only when a person or the dispatcher starts it. Agents use the credentials of the person running them. Cursor CLI is a runtime next to Claude Code.",
+  "source": "Section completed from decided rules, iteration 29."
+ },
+ {
+  "title": "Repos are found from the VS Code workspace file.",
+  "text": "A knowledge repo has Name.code-workspace.template (committed) and Name.code-workspace (the file you open). Opening it loads the knowledge repo, the delivery system, and the project folders in VS Code, Cursor, Antigravity, or any editor that reads a .code-workspace. hl reads folders and never rewrites the file. workspace.toml holds settings, not repo paths.",
+  "source": "Your message, iteration 27. Files: Helmlock.code-workspace and Helmlock.code-workspace.template."
+ },
+ {
+  "title": "Stack: TypeScript everywhere, with dependencies allowed.",
+  "text": "One language for the CLI, server, plugin kernel and UI (Node 24, pnpm workspace, shared Zod schemas, Hono, React 19, Vite, Tailwind 4, shadcn/ui). A full rewrite is accepted because a better tool outweighs a one-time cost. Dependencies are allowed if they are maintained over time (F147). Python stays possible as a plugin language. Agents never read the UI code in daily work.",
+  "source": ""
+ },
+ {
+  "title": "One delivery center, many knowledge centers, each holding several projects.",
+  "text": "Like a Paperclip company, a knowledge center is the unit that holds many projects. Each knowledge center has a template that keeps growing as work proceeds, and each project keeps its own knowledge, graphs and nodes. The delivery center stays shared and independent. How: F138 to F143, Blueprint 22.",
+  "source": "Your message, iteration 21."
+ },
+ {
+  "title": "The plugin approach is modelled on deepseek-harness \"everything is a plugin\".",
+  "text": "Adopt the mechanism (a small kernel, one plugin form, services, events, config as composition). Leave the ceremony (a package per plugin, doc gates, vendored framework, module hot reload). How far to go is F40; the mechanics are F101 to F108.",
+  "source": "Your message, iteration 13."
+ },
+ {
+  "title": "Work logging is kept as in lc-wms and control-center.",
+  "text": "One file per person per day in the knowledge repo, author from the people roster, one plain sentence per entry, the tool owns storage and dedupe. Line format (TOML or markdown) is F6a; the rules are F93.",
+  "source": "Your message, iteration 10."
+ },
+ {
+  "title": "Three layers of CLAUDE.md, skills and agents: system, workspace, project.",
+  "text": "System = delivery repo (control center), workspace = knowledge repo, project = each project (its own repo, plus an optional overlay in the knowledge repo). Each has its own CLAUDE.md and skills. The dispatcher (the do skill) finds skills across layers through a registry or scan: F86 to F92, Blueprint 13.",
+  "source": "Your message, iteration 10."
+ },
+ {
+  "title": "UI direction: control-center style, a flexible layout, a light and dark pair.",
+  "text": "The layout is flexible and responsive, with drag to resize, collapse and a phone width. Editable themes were dropped on 2026-10-07; only a light and a dark palette remain.",
+  "source": "Your message, iteration 9."
+ },
+ {
+  "title": "Files only. No database.",
+  "text": "Everything is plain files so the knowledge base can be shared with teams through git. Any index is a generated file, never a database. This settles the old storage card (F0b), which is removed.",
+  "source": "Your message, iteration 6."
+ },
+ {
+  "title": "The knowledge repo works as an Obsidian vault.",
+  "text": "Obsidian only graphs markdown notes, so how structured records appear there is the open card F52.",
+  "source": "Iteration 6."
+ },
+ {
+  "title": "The CLI experience matters and agents are integrated with it through the main CLAUDE.md.",
+  "text": "Whether agents call the CLI or edit files themselves is answered in F57 (recommended: CLI for state, direct edits for prose). Related cards F55, F56, F58 to F60.",
+  "source": "Iteration 6."
+ },
+ {
+  "title": "Design as a core plus plugins.",
+  "text": "A plugin container kernel (F40); the CLI, agent setup, voice, assistant, ticket model, workflow and statuses are plugins that can be replaced and configured. File layer, verb registry and approval gate are required built-ins. Mechanics: F101 to F108.",
+  "source": "Your message, iteration 5."
+ },
+ {
+  "title": "Two independent repos.",
+  "text": "A delivery repo (skills, agents, console, generic templates) and a knowledge repo (the workspace root: artifacts, logs, wiki, workspace config). The delivery repo knows nothing about any knowledge repo. The knowledge repo picks the delivery system and the projects it works on; the console is told the workspace at launch.",
+  "source": "Your message, iteration 4 (and 1, 2)."
+ },
+ {
+  "title": "Knowledge repo can be per user or per project, on any path.",
+  "text": "You open it to develop; it holds the workspace file, the path to the delivery repo and the project registry.",
+  "source": "Iteration 2."
+ },
+ {
+  "title": "Scope of v1 = your 11 features.",
+  "text": "More may be added during drill-down.",
+  "source": "Iteration 1."
+ },
+ {
+  "title": "Sources.",
+  "text": "Agents and skills from lc-wms, voice and tool design from control-center, templates from both. Public repos give ideas only; check each LICENSE before copying code.",
+  "source": "Iteration 1."
+ },
+ {
+  "title": "Artifacts are machine-readable files the console controls.",
+  "text": "Decisions, questions, bugs and gaps. Format is TOML for records people review, JSONL for append-only history, markdown for prose (F24, F49). Only console verbs write state (F25).",
+  "source": "Iteration 2."
+ },
+ {
+  "title": "The console scaffolds the knowledge repo at onboarding.",
+  "text": "The knowledge center names its own delivery console.",
+  "source": "Iteration 2."
+ },
+ {
+  "title": "Plans and tickets produce HTML.",
+  "text": "A dedicated console page per ticket (header, title, details, decisions, files), generated by the program.",
+  "source": "Iteration 2."
+ },
+ {
+  "title": "Every agent and skill gets defined, kept simple, with more control in the console.",
+  "text": "First draft is in Blueprints 3 and 4.",
+  "source": "Iteration 2."
+ },
+ {
+  "title": "First approval point is the agent system without the console.",
+  "text": "Agents and skills work from the editor before any console exists.",
+  "source": "Iteration 2."
+ },
+ {
+  "title": "Claude Code is the host.",
+  "text": "`CLAUDE.md`, `.claude/skills`, `.claude/agents`.",
+  "source": "Iteration 3."
+ },
+ {
+  "title": "Token cost is a design constraint.",
+  "text": "Agents read compact source files; humans get generated visuals; flows are drawn from small data. Details in Blueprint 6.",
+  "source": "Iteration 3."
+ },
+ {
+  "title": "This plan UI.",
+  "text": "Decisions are ordered in phases with dependencies, impact and trade-offs, so you can see what to decide first and what each choice costs.",
+  "source": "Iteration 4."
+ }
+]

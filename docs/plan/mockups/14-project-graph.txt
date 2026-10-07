@@ -1,0 +1,40 @@
+# Project knowledge graph
+@from lc-wms (typed nodes), control-center (Vault graph canvas), paperclip (llm-wiki index and log)
+> 1 The graph is built from small node notes in the project. A node has a type, a one-line summary and typed outgoing edges. The page filters by edge type and depth.
+> 2 A node page shows its edges and the backlinks, which are computed, never stored by hand. A lint panel lists broken links, orphans and missing summaries.
+> Obsidian shows the same notes natively; this view adds typed edges and a project filter.
+app
+  top
+    brand "Acme Console"
+    crumb "Knowledge" "wms" "Graph"
+    sp
+    search "Find a node"
+    chip "Project: wms" kind=accent
+  body
+    side
+      nav "Overview" "Inbox 3" "Tickets" "Todos" "Work" "Agents" "Knowledge*" "Settings"
+      muted "Node types"
+      list "component 12" "data 31" "flow 7" "decision 9" "integration 4" "concept 15"
+    main
+      row
+        card "Graph around show-picking, 2 hops" grow=2 n=1
+          graph "show-picking" "pick-session" "Stock" "SyncStock"
+          muted "edges: depends_on, touches, part_of"
+        card "Filters"
+          toggle "depends_on" on=1
+          toggle "touches" on=1
+          toggle "see_also"
+          field "Depth" "2"
+      card "Node: Stock" n=2
+        muted "type data  |  updated 2026-10-01  |  2 sources"
+        text "One row per stock position. A trigger keeps the sync table current, so writes need the caller context."
+        table "Edge" "Target"
+          r "[~depends_on]" "Location"
+          r "[~touches]" "SyncStock (trigger)"
+          r "[see_also]" "T-014 closure digest"
+    right
+      h "Backlinks (computed)"
+      list "show-picking" "pick-session" "inventory-count"
+      h "Lint"
+      list "!Orphan: old-label-printer" "!Missing summary: Carrier" "+No broken links"
+  nav "Graph*" "Inbox" "Tickets" "More" bottom=1

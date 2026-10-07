@@ -1,0 +1,17 @@
+<!-- title: control-center (yours): voice, tools, console -->
+<div class="cols">
+        <div><b>Take</b><ul>
+          <li>Stdlib-only Python server + vanilla-JS SPA, no build step; features as plugins toggled in <code>plugins.toml</code>.</li>
+          <li>One verb registry (<code>verbs.toml</code>, ~40 no-model verbs) feeding CLI, job queue, MCP tools and API-agent tools.</li>
+          <li>Approval gate: <code>gated_tools</code> + PreToolUse hook, allow once / for this chat / deny, fails closed after 300 s.</li>
+          <li>Voice: browser Web Speech for lite; desktop push-to-talk with whisper.cpp and Piper TTS as the full version; fast commands matched before any model call.</li>
+          <li>Telegram: outbound pushes plus long-polling inbound bot (<code>/chats /use /new /stop /status</code>) with a fail-closed user-ID allowlist.</li>
+          <li>Backends by config: claude, cursor, codex, openrouter, ollama, lm-studio, openai; five-step onboarding wizard; <code>trace-context</code> digest; <code>assistant.md</code> + <code>house-style.md</code>.</li>
+        </ul></div>
+        <div><b>Skip</b><ul>
+          <li>The Rust/Tauri desktop shell: wake word, hands-free, HUD, OCR, screen capture, clipboard, UIA.</li>
+          <li>Voice model manager, job queue, cron schedules, evals, telemetry/pricing, MCP-over-HTTP, claim/reaper machinery.</li>
+          <li>Vault graph and the 9-artifact-per-ticket ceremony.</li>
+        </ul></div>
+      </div>
+      <p class="why">Caveat: its voice handoff says nothing was verified with a real human voice. Also, the wiki says Telegram must not approve screenshot/clipboard tools, but <code>gated_tools</code> includes clipboard-read, so that rule is not confirmed enforced.</p>

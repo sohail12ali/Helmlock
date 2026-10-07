@@ -1,0 +1,962 @@
+[
+ {
+  "id": "F3a",
+  "phase": "repos",
+  "impact": 3,
+  "needs": [],
+  "title": "What goes where",
+  "ask": "Where do the boundaries between the delivery repo and the knowledge repo sit? (Decided: the delivery repo knows nothing about any knowledge repo.)",
+  "why": "Sets the dependency direction: the knowledge repo picks the delivery system, never the reverse. The rest of this phase follows.",
+  "learn": "your rule; lc-wms umbrella as a contrast",
+  "rec_reason": "This follows your rule: the delivery repo is a product with no knowledge of any workspace; the knowledge repo chooses it and the projects. Overrides can come later.",
+  "options": [
+   {
+    "id": "split",
+    "label": "Delivery: agents, skills, console, generic templates. Knowledge: artifacts, logs, wiki, workspace config",
+    "cost": "S",
+    "rec": true,
+    "desc": "Knowledge repo picks the delivery system and projects. Delivery repo has no workspace data.",
+    "lock": "med",
+    "pros": [
+     "Delivery repo is shared and upgradeable like a product",
+     "Knowledge repo is pure data you own",
+     "No cross-contamination between workspaces"
+    ],
+    "cons": [
+     "Two repos to clone and keep compatible",
+     "Need a version handshake between them"
+    ],
+    "pick_if": "you want several workspaces on one system.",
+    "must": "Decided rule: two independent repos; the delivery repo holds nothing about any workspace."
+   },
+   {
+    "id": "overrides",
+    "label": "Same, and the knowledge repo may override templates, agents or skills",
+    "cost": "M",
+    "desc": "Per-workspace customisation without forking the delivery repo.",
+    "lock": "med",
+    "pros": [
+     "A workspace can customise a template, agent or skill without forking the system"
+    ],
+    "cons": [
+     "Override rules to define and test",
+     "More ways for behaviour to drift"
+    ],
+    "pick_if": "different products need different templates."
+   }
+  ],
+  "decided": {
+   "options": [
+    "split"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F22",
+  "phase": "repos",
+  "impact": 3,
+  "needs": [
+   "F3a"
+  ],
+  "title": "How the knowledge repo finds the delivery repo and projects",
+  "ask": "Where does the knowledge repo record the delivery repo path and the project list?",
+  "why": "How a knowledge repo finds its delivery repo and projects without the delivery repo knowing about it.",
+  "learn": "lc-wms projects.toml; deepseek-harness avoids machine paths in user files",
+  "rec_reason": "You already open the session from a VS Code workspace file. Helmlock.code-workspace and Helmlock.code-workspace.template are that pair: the template is the committed start, and the workspace file's folders are the repos. The CLI reads the same file the editor opens, so the two cannot drift.",
+  "options": [
+   {
+    "id": "vscode",
+    "label": "VS Code workspace file: a committed Name.code-workspace.template, and Name.code-workspace (what you open). hl reads folders (name and path) and never rewrites the file silently: only hl init (create once) and hl project add (one folder, dry run, confirm) write it",
+    "cost": "S",
+    "rec": true,
+    "desc": "Same files as Helmlock.code-workspace and Helmlock.code-workspace.template. Relative paths stay in git. The directory that holds the file is the knowledge repo. workspace.toml does not store repo paths.",
+    "lock": "med",
+    "pros": [
+     "The editor and the CLI see the same repos",
+     "Relative paths work across machines, as in the template you already have",
+     "No second path file to keep in sync"
+    ],
+    "cons": [
+     "JSON, because VS Code requires it",
+     "The CLI must not rewrite the file, or comments and editor settings would be lost"
+    ],
+    "pick_if": "you open the session from a .code-workspace.",
+    "must": "Decided: repos are found from the VS Code workspace file, the same file the editor opens."
+   },
+   {
+    "id": "split",
+    "label": "workspace.toml (committed, relative) + workspace.local.toml (gitignored, machine paths)",
+    "cost": "S",
+    "desc": "Shared structure in git, paths per machine. Console warns if a path is missing.",
+    "lock": "low",
+    "pros": [
+     "Shared config in git, machine paths stay private",
+     "Console can warn when a path is missing"
+    ],
+    "cons": [
+     "Two files to explain to new users"
+    ],
+    "pick_if": "more than one machine or person touches the workspace."
+   },
+   {
+    "id": "one",
+    "label": "One committed file with relative paths only",
+    "cost": "S",
+    "desc": "Breaks if repos are not siblings.",
+    "lock": "low",
+    "pros": [
+     "One file, easy to read"
+    ],
+    "cons": [
+     "Breaks when repos are not siblings",
+     "Absolute paths leak machine details into git"
+    ],
+    "pick_if": "single machine, siblings always."
+   },
+   {
+    "id": "env",
+    "label": "Environment variables",
+    "cost": "S",
+    "desc": "Invisible and easy to lose.",
+    "lock": "low",
+    "pros": [
+     "Nothing to commit"
+    ],
+    "cons": [
+     "Invisible and easy to lose",
+     "Hard to onboard or debug"
+    ],
+    "pick_if": "temporary setups only."
+   }
+  ],
+  "decided": {
+   "options": [
+    "vscode"
+   ],
+   "note": "Opening Name.code-workspace loads every folder in VS Code, Cursor, Antigravity, or any editor that reads it. (assumed) The folder that contains the file is the knowledge repo. The folder named system is the delivery repo. Every other folder is a project.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F39",
+  "phase": "repos",
+  "impact": 3,
+  "needs": [
+   "F3a",
+   "F22"
+  ],
+  "title": "How the console learns which workspace and projects to use",
+  "ask": "The delivery repo must not commit anything about a workspace. Machine-specific bindings (which workspace, where the projects are) still have to live somewhere. Where?",
+  "why": "You suggested a .env file in the delivery console, not committed, to plug in projects. That keeps git clean, but a single default per delivery checkout can point at the wrong workspace if nothing shows it.",
+  "learn": "your independence rule; lc-wms agent launcher passes workspace dirs at launch",
+  "rec_reason": "A gitignored .env in the delivery repo (with a committed .env.example) names the default workspace and any extra project paths. Being inside a workspace, or a launch flag, overrides it. `hl where` always prints what was resolved and from which source, so a wrong default is visible.",
+  "options": [
+   {
+    "id": "env",
+    "label": ".env in the delivery repo (gitignored, committed .env.example): the default knowledge workspace when you start from the delivery checkout. Repo and project paths come from that workspace's .code-workspace folders (F22), not from .env. A launch flag or being inside a workspace overrides. `hl where` prints every resolved path and its source",
+    "desc": "Your idea, with a safety net.",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Nothing machine-specific is ever committed",
+     "Works when the CLI is started from the delivery folder",
+     "Easy to point a machine at another workspace",
+     "One place to plug in projects for ad-hoc use"
+    ],
+    "cons": [
+     "A hidden default can point at the wrong workspace (hl where and doctor show it)",
+     "One default per delivery checkout; several workspaces need the launcher or flag"
+    ],
+    "pick_if": "you run the CLI from the delivery folder as well as from workspaces.",
+    "must": "Decided rule: the default knowledge workspace is a gitignored .env in the delivery repo. Repo paths themselves come from the VS Code workspace file (F22)."
+   },
+   {
+    "id": "launch",
+    "label": "Told at launch only: run from the knowledge repo or pass --workspace; the console keeps no state",
+    "desc": "Stateless.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing hidden",
+     "Cannot go stale"
+    ],
+    "cons": [
+     "Must always start inside or point at a workspace"
+    ],
+    "pick_if": "you want strict independence."
+   },
+   {
+    "id": "recent",
+    "label": "A recent-workspaces list in the user config folder (outside both repos)",
+    "desc": "Convenience.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Easy switching"
+    ],
+    "cons": [
+     "A state file outside the repos"
+    ],
+    "pick_if": "you juggle many workspaces."
+   }
+  ],
+  "decided": {
+   "options": [
+    "env"
+   ],
+   "note": "Names the default knowledge workspace only. Folders inside it come from the .code-workspace file.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F20",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F3a"
+  ],
+  "title": "Who a knowledge repo belongs to",
+  "ask": "Is a knowledge repo per user or per project?",
+  "why": "Decides whether one knowledge repo serves you or each product.",
+  "options": [
+   {
+    "id": "either",
+    "label": "Either: same structure, chosen at scaffold time",
+    "cost": "S",
+    "rec": true,
+    "desc": "You can keep one personal knowledge repo for everything, or one per product. Nothing in the system assumes which."
+   },
+   {
+    "id": "user",
+    "label": "Always per user (one repo for all products)",
+    "cost": "S",
+    "desc": "Simple; ticket ids and logs mix products."
+   },
+   {
+    "id": "project",
+    "label": "Always per project",
+    "cost": "S",
+    "desc": "Clean separation; harder to see all work in one dashboard."
+   }
+  ],
+  "decided": {
+   "options": [
+    "either"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F21",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F22"
+  ],
+  "title": "Workspace file",
+  "ask": "What is the 'workspace file' that makes the knowledge repo the root of a session?",
+  "why": "What opens a whole session in the editor with the right folders.",
+  "learn": "Helmlock.code-workspace and Helmlock.code-workspace.template; lc-wms shoplc.code-workspace(.template).json",
+  "rec_reason": "The workspace file is the source, not a generated view. The template is what a new knowledge repo starts from; the .code-workspace is what you and the CLI open.",
+  "options": [
+   {
+    "id": "vscode",
+    "label": "Name.code-workspace.template (committed) is copied to Name.code-workspace. That file is what VS Code opens and what hl reads. It is not generated from workspace.toml",
+    "cost": "S",
+    "rec": true,
+    "desc": "The pair already in this repo. Relative folder paths. Only hl init and hl project add write it, each with a dry run and confirmation.",
+    "lock": "med",
+    "pros": [
+     "One file the editor already understands",
+     "Template gives every new workspace the same start"
+    ],
+    "cons": [
+     "Two files to keep when the folder list changes",
+     "JSON, because the editor requires it"
+    ],
+    "pick_if": "you find repos by opening a VS Code workspace.",
+    "must": "Decided with F22: the VS Code workspace file is how repos are found."
+   },
+   {
+    "id": "both",
+    "label": "workspace.toml is the source; the editor .code-workspace is generated per machine from it",
+    "cost": "M",
+    "desc": "Portable relative paths in git, absolute paths only in a gitignored local file. Console regenerates the editor file when projects change."
+   },
+   {
+    "id": "code",
+    "label": "Only a committed .code-workspace file",
+    "cost": "S",
+    "desc": "Editor-native, but machine paths differ and nothing else can read it reliably (JSONC)."
+   },
+   {
+    "id": "toml",
+    "label": "Only workspace.toml",
+    "cost": "S",
+    "desc": "Console and CLI work; editors need folders added by hand."
+   }
+  ],
+  "decided": {
+   "options": [
+    "vscode"
+   ],
+   "note": "",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F23",
+  "phase": "repos",
+  "impact": 1,
+  "needs": [
+   "F22"
+  ],
+  "title": "Console name chosen by the knowledge center",
+  "ask": "What does the console name control?",
+  "multi": true,
+  "options": [
+   {
+    "id": "ui",
+    "label": "UI header and browser title",
+    "rec": true,
+    "desc": "Every knowledge center shows its own name."
+   },
+   {
+    "id": "cli",
+    "label": "CLI command alias",
+    "rec": true,
+    "desc": "For example 'acme ticket new' instead of the default command."
+   },
+   {
+    "id": "html",
+    "label": "Titles of generated HTML pages",
+    "rec": true,
+    "desc": "Ticket pages and the board carry the name."
+   },
+   {
+    "id": "tg",
+    "label": "Telegram bot display name",
+    "desc": "Set at connection time."
+   },
+   {
+    "id": "skill",
+    "label": "Skill and agent name prefix",
+    "desc": "Usually not worth it; keeps names global."
+   }
+  ],
+  "decided": {
+   "options": [
+    "ui",
+    "cli",
+    "html"
+   ],
+   "note": "The name is the knowledge center. It does not prefix skill names.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F3c",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F3a"
+  ],
+  "title": "Product code repos",
+  "ask": "Do agents also work in your product code repos?",
+  "why": "Decides whether agents work in product code repos or only on knowledge. Each project has its own CLAUDE.md and skills (F86, F87).",
+  "learn": "lc-wms projects.toml routing",
+  "options": [
+   {
+    "id": "registry",
+    "label": "Yes: the .code-workspace folders are the registry. One folder is the system (delivery repo: agents, skills, console). Every other folder except the knowledge repo is a product repo. An agent pins its work to that folder",
+    "cost": "M",
+    "rec": true,
+    "desc": "Opening the workspace file loads the projects and the system. A ticket links to a folder and branch."
+   },
+   {
+    "id": "none",
+    "label": "No: delivery system only manages knowledge",
+    "cost": "S",
+    "desc": "Plans and specs only; code work happens elsewhere."
+   },
+   {
+    "id": "allow",
+    "label": "Allowlist of paths, no registry",
+    "cost": "S",
+    "desc": "Simplest routing, less traceability."
+   }
+  ],
+  "decided": {
+   "options": [
+    "registry"
+   ],
+   "note": "Product repos are folders in the .code-workspace, beside the system folder. Consistency fix (B24, 2026-10-07): A project can own several product folders; project.toml lists them by folder name. Paths live only in the workspace file.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F27",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F3a",
+   "F22",
+   "F24"
+  ],
+  "title": "Knowledge repo scaffold",
+  "ask": "How does the console generate a new knowledge repo at onboarding?",
+  "why": "How a new workspace is born. The scaffold copies the template, writes the .code-workspace, and writes workspace.toml for settings (not repo paths).",
+  "learn": "paperclip llm-wiki templates + required-files check; deepseek-harness exclusive create; control-center kickoff (PowerShell)",
+  "multi": true,
+  "options": [
+   {
+    "id": "tree",
+    "label": "Static template tree in the delivery repo, copied, including Name.code-workspace.template and the first Name.code-workspace",
+    "rec": true,
+    "desc": "No templating engine. The workspace file is part of the tree."
+   },
+   {
+    "id": "vars",
+    "label": "A few named {{vars}} replaced by plain string replace, fail on leftovers",
+    "rec": true,
+    "desc": "Product name, knowledge center name, console name, date."
+   },
+   {
+    "id": "excl",
+    "label": "Refuse if the target folder exists",
+    "rec": true,
+    "desc": "Never overwrites a workspace."
+   },
+   {
+    "id": "valid",
+    "label": "Post-scaffold validator listing required dirs and files",
+    "rec": true,
+    "desc": "Same validator used in CI."
+   },
+   {
+    "id": "ts",
+    "label": "Pure TypeScript (the same CLI), no PowerShell dependency",
+    "rec": true,
+    "desc": "control-center's template step needs PowerShell 5.1."
+   },
+   {
+    "id": "yes",
+    "label": "Non-interactive --yes mode",
+    "rec": true,
+    "desc": "Scriptable; tests use it."
+   },
+   {
+    "id": "git",
+    "label": "git init and first commit",
+    "rec": true,
+    "desc": "Ready to use."
+   },
+   {
+    "id": "upgrade",
+    "label": "Later: 'upgrade' command applying new template files to an existing knowledge repo",
+    "desc": "Needs a template version stamp."
+   }
+  ],
+  "decided": {
+   "options": [
+    "tree",
+    "vars",
+    "excl",
+    "valid",
+    "ts",
+    "yes",
+    "git"
+   ],
+   "note": "The copied tree includes the VS Code workspace template.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F1a",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F27"
+  ],
+  "title": "Where onboarding runs",
+  "ask": "How does a new machine or workspace get set up?",
+  "learn": "paperclip onboard, control-center wizard",
+  "options": [
+   {
+    "id": "both",
+    "label": "CLI bootstrap, then a web wizard",
+    "cost": "M",
+    "rec": true,
+    "desc": "CLI checks the machine and creates repos; the web wizard handles models, Telegram and the first project. Resumable."
+   },
+   {
+    "id": "cli",
+    "label": "CLI only (quickstart vs advanced, --yes)",
+    "cost": "S",
+    "desc": "Fastest to build; no UI polish."
+   },
+   {
+    "id": "web",
+    "label": "Web wizard only",
+    "cost": "M",
+    "desc": "Friendlier, but needs the server running first."
+   },
+   {
+    "id": "agentled",
+    "label": "Agent-led setup: onboarding is the first ticket, led by an agent that asks questions with cards (Paperclip seeds a \"first task\" assigned to its chief of staff); a short instruction file lets the agent run `hl onboard` for you",
+    "desc": "Setup by asking Claude.",
+    "cost": "S"
+   }
+  ],
+  "why": "How a new user or machine gets started; a bad first run loses people.",
+  "mockups": [
+   "08-onboarding"
+  ],
+  "decided": {
+   "options": [
+    "both"
+   ],
+   "note": "Setup writes the .code-workspace. You then open that file in the IDE. Consistency fix (B24, 2026-10-07): Setup creates the .code-workspace once (hl init). Second review (B25, 2026-10-07): v1 onboarding is CLI-only (hl init asks what it needs); the web wizard comes with the writable console (F19).",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F1b",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F1a",
+   "F27"
+  ],
+  "title": "Onboarding steps",
+  "ask": "Which steps does the wizard walk through?",
+  "learn": "control-center 6-step checklist, lc-wms kanban onboard",
+  "multi": true,
+  "options": [
+   {
+    "id": "machine",
+    "label": "Machine check (Node, Git, the agent CLIs)",
+    "rec": true,
+    "desc": "Detects what is missing and shows the fix."
+   },
+   {
+    "id": "identity",
+    "label": "Identity (name, email, author slug)",
+    "rec": true,
+    "desc": "Written to a gitignored author.local and the team roster (people.toml); asked, never guessed. Used for logs, ticket owner and claims."
+   },
+   {
+    "id": "repos",
+    "label": "Create or link the two repos",
+    "rec": true,
+    "desc": "Scaffolds system and knowledge repos, writes the pointer config."
+   },
+   {
+    "id": "model",
+    "label": "Connect a model (OpenAI-compatible)",
+    "rec": true,
+    "desc": "Base URL, key, Fetch models, pick default."
+   },
+   {
+    "id": "tg",
+    "label": "Connect Telegram",
+    "desc": "Optional: token, allowlist, test message."
+   },
+   {
+    "id": "proj",
+    "label": "Register first product repo",
+    "desc": "Adds a project to the registry."
+   },
+   {
+    "id": "mcp",
+    "label": "Editor MCP setup",
+    "desc": "Writes Claude Code/Cursor config for the verbs."
+   },
+   {
+    "id": "tour",
+    "label": "Sample ticket tour",
+    "desc": "A throwaway ticket that walks the pipeline."
+   },
+   {
+    "id": "doctor",
+    "label": "Re-runnable doctor command",
+    "rec": true,
+    "desc": "Same checks any time; shown as a Setup card on the dashboard."
+   },
+   {
+    "id": "try",
+    "label": "Try mode: `hl try` makes a throwaway workspace with sample tickets; nothing touches your real one (Paperclip test-drive)",
+    "desc": "Safe first look.",
+    "cost": "S",
+    "rec": true
+   },
+   {
+    "id": "starter",
+    "label": "Choose a starter pack: roles, skills, workflow and templates",
+    "desc": "Ready-made team (Paperclip Ready-Made Teams).",
+    "cost": "S",
+    "rec": true
+   }
+  ],
+  "why": "Each step is code to build and a place the first run can fail.",
+  "mockups": [
+   "08-onboarding"
+  ],
+  "decided": {
+   "options": [
+    "machine",
+    "identity",
+    "repos",
+    "model",
+    "proj",
+    "doctor",
+    "try",
+    "starter"
+   ],
+   "note": "Registering a product adds a folder to the workspace file. Consistency fix (B24, 2026-10-07): Registering a product runs hl project add: one folder, dry run, confirm. Later (after v1, B25): try mode.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F43",
+  "phase": "repos",
+  "impact": 3,
+  "needs": [
+   "F40",
+   "F3a"
+  ],
+  "title": "Where plugins live and who enables them",
+  "ask": "Built-in plugins ship in the delivery repo. Who decides which are on, and where do their settings live?",
+  "why": "Keeps your independence rule: the delivery repo lists what it ships, never what any workspace uses.",
+  "rec_reason": "Built-ins ship in the delivery repo; the knowledge repo enables them, holds their settings and may declare its own plugin folders, because workspace packs (F139, F141, F46) must live there.",
+  "options": [
+   {
+    "id": "kb",
+    "label": "Built-ins live in the delivery repo (plugins/); the knowledge repo workspace.toml enables them and holds their settings",
+    "desc": "Each workspace has its own setup.",
+    "cost": "S",
+    "rec": false,
+    "lock": "low",
+    "pros": [
+     "Delivery repo stays independent",
+     "Different setup per product or user",
+     "Defaults ship with the plugin"
+    ],
+    "cons": [
+     "workspace.toml grows"
+    ],
+    "pick_if": "you may run several workspaces."
+   },
+   {
+    "id": "kbplus",
+    "label": "Same, plus extra plugin folders declared by the knowledge repo (workspace-specific plugins)",
+    "desc": "A workspace can add its own plugin.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Bespoke plugin without forking the delivery repo"
+    ],
+    "cons": [
+     "Delivery loads code from outside its repo: trust and versioning questions"
+    ],
+    "pick_if": "a workspace needs a custom plugin.",
+    "rec": true
+   },
+   {
+    "id": "global",
+    "label": "A plugins.toml in the delivery repo decides what is enabled (control-center style)",
+    "desc": "One global setup.",
+    "cost": "S",
+    "lock": "med",
+    "pros": [
+     "Simplest"
+    ],
+    "cons": [
+     "All workspaces share the same setup",
+     "Delivery repo quietly becomes the place of configuration"
+    ],
+    "pick_if": "you will only ever have one workspace.",
+    "rec": false
+   }
+  ],
+  "decided": {
+   "options": [
+    "kbplus"
+   ],
+   "note": "Your message, 2026-10-07: accept all. Workspace packs and plugins live in folders the knowledge repo declares; the delivery repo never lists them.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F138",
+  "phase": "repos",
+  "impact": 3,
+  "needs": [
+   "F3a",
+   "F39"
+  ],
+  "title": "Many knowledge centers: how the console handles them",
+  "ask": "You want one delivery center and many knowledge centers, the way Paperclip runs many companies in one deployment. How does the console deal with several knowledge centers?",
+  "why": "Each knowledge center is a company-sized unit: its own repo, team, projects and history. The console must switch between them without mixing them or breaking the rule that the delivery repo holds no workspace data.",
+  "learn": "paperclip multi-organization (one deployment, company-scoped data and access checks, a workspace switcher in the sidebar); your independence rule (F3a, F39)",
+  "rec_reason": "Separate repos already give stronger isolation than Paperclip company-scoped rows: git permissions decide who sees which knowledge center. Run one console per knowledge center, started by the launcher, and give it a small switcher fed by a per-user list outside the repos. A read-only portfolio page can come later.",
+  "options": [
+   {
+    "id": "per",
+    "label": "One .code-workspace per knowledge center. Opening it loads that center: the knowledge repo, the system (delivery repo), and its projects, in VS Code, Cursor, Antigravity, or any editor that reads the file. One console is started for that file. Switching centers means opening the other file",
+    "desc": "The workspace file is the switcher.",
+    "short": "One console each",
+    "cost": "S",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "Strong isolation: one team never sees another",
+     "Fits the rule that the delivery repo holds nothing about workspaces",
+     "A simple server: one workspace at a time",
+     "Git permissions are the access control"
+    ],
+    "cons": [
+     "Switching restarts or reopens the console",
+     "No single dashboard across all knowledge centers (yet)"
+    ],
+    "pick_if": "knowledge centers belong to different teams or clients.",
+    "facts": {
+     "Isolation": "Strongest: separate process and repo",
+     "Switching": "Switcher reopens on another workspace",
+     "Cross-view": "None until a portfolio page",
+     "State kept by the console": "None about workspaces"
+    }
+   },
+   {
+    "id": "multi",
+    "label": "One console process serving several knowledge centers with an in-app switcher (Paperclip multi-organization style)",
+    "desc": "One window.",
+    "short": "One console, many",
+    "cost": "L",
+    "lock": "med",
+    "pros": [
+     "One place to see and switch everything",
+     "Shared agent cache and session"
+    ],
+    "cons": [
+     "The server holds many repos open, so mixing and leaks are possible",
+     "Access control and per-workspace state to design",
+     "More server complexity"
+    ],
+    "pick_if": "one person runs many knowledge centers daily.",
+    "facts": {
+     "Isolation": "Logical, inside one process",
+     "Switching": "Instant",
+     "Cross-view": "Possible",
+     "State kept by the console": "A list of workspaces"
+    }
+   },
+   {
+    "id": "portfolio",
+    "label": "One console each, plus a read-only portfolio page that summarises every knowledge center you can read: needs-you, tickets in flight, usage",
+    "desc": "A bird view.",
+    "short": "Plus portfolio",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Overview across the whole group",
+     "Still read-only and isolated per repo"
+    ],
+    "cons": [
+     "Reads every repo, so it needs per-user paths",
+     "Can go stale; privacy across teams"
+    ],
+    "pick_if": "you lead several knowledge centers.",
+    "facts": {
+     "Isolation": "Strong, with a read-only overview",
+     "Switching": "Reopens, or reads from the portfolio",
+     "Cross-view": "Yes, read-only",
+     "State kept by the console": "A per-user list"
+    }
+   }
+  ],
+  "decided": {
+   "options": [
+    "per"
+   ],
+   "note": "One workspace file per knowledge center.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F139",
+  "phase": "repos",
+  "impact": 3,
+  "needs": [
+   "F27",
+   "F3a"
+  ],
+  "title": "A template that keeps growing",
+  "ask": "Each knowledge center starts from a template and keeps growing it as you work: new folders, note types, checklists, record kinds. How is that growth kept safe and shareable?",
+  "why": "A template copied once drifts and never gets fixes. A template nobody may change cannot grow. You want growth that is tracked and that does not block upgrades.",
+  "learn": "lc-wms papercuts-to-rules loop and the evolve skill; deepseek-harness copies a profile once with no inheritance link; paperclip company packages and team catalog",
+  "rec_reason": "Layer it: the delivery repo ships a versioned base template; the workspace records its version and every addition in a manifest. Upgrades are a dry-run three-way comparison that never overwrites local growth. Additions go through a verb so they are tracked and can be shared.",
+  "options": [
+   {
+    "id": "layered",
+    "label": "A versioned base template from the delivery repo plus workspace growth on top, tracked in a manifest (template.toml: base version, added folders, note types, checklists, record kinds, each with a reason); `hl template upgrade` is a dry-run three-way comparison (old base, new base, your workspace) that never overwrites local changes; `hl template add` records growth",
+    "desc": "Upgradable and growable.",
+    "short": "Base plus growth",
+    "cost": "M",
+    "rec": true,
+    "lock": "low",
+    "pros": [
+     "The base keeps improving without clobbering your growth",
+     "Growth is explicit, reviewable and shareable",
+     "Each workspace can differ on purpose"
+    ],
+    "cons": [
+     "A manifest and a three-way merge to build",
+     "People must add through the verb, not by hand"
+    ],
+    "pick_if": "several knowledge centers will exist and evolve.",
+    "facts": {
+     "Upgrades": "Dry-run three-way, never overwrites",
+     "Growth tracked": "Yes, in template.toml with reasons",
+     "Shareable": "Via promotion (F142)",
+     "Effort": "Medium"
+    }
+   },
+   {
+    "id": "copy",
+    "label": "Copy the template once at scaffold and let the workspace diverge freely",
+    "desc": "Simplest.",
+    "short": "Copy once",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Nothing to build"
+    ],
+    "cons": [
+     "No upgrades: every workspace drifts",
+     "A fix in the base never reaches existing workspaces"
+    ],
+    "pick_if": "you will only ever have one knowledge center.",
+    "facts": {
+     "Upgrades": "None",
+     "Growth tracked": "No",
+     "Shareable": "Manual",
+     "Effort": "Small"
+    }
+   },
+   {
+    "id": "managed",
+    "label": "A fully managed template: workspaces cannot change the structure",
+    "desc": "Consistent.",
+    "short": "Managed",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Every workspace looks the same"
+    ],
+    "cons": [
+     "Contradicts your goal of a growing template"
+    ],
+    "pick_if": "a strict standard matters more than fit.",
+    "facts": {
+     "Upgrades": "Automatic",
+     "Growth tracked": "Not allowed",
+     "Shareable": "n/a",
+     "Effort": "Small"
+    }
+   }
+  ],
+  "decided": {
+   "options": [
+    "layered"
+   ],
+   "note": "The .code-workspace template is part of the base. Local folders you add are growth and are not overwritten. Later (after v1, B25): the three-way upgrade; v1 records template.toml only.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F141",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F139"
+  ],
+  "title": "Template packs: kinds of knowledge center",
+  "ask": "Not every knowledge center is the same kind. A software delivery workspace differs from a research or client-service one. How do we offer starting points?",
+  "learn": "paperclip team catalog (ready-made teams with roles, skills, projects, routines); your declarative packs (F42)",
+  "options": [
+   {
+    "id": "packs",
+    "label": "A base template plus declarative packs (software delivery from your lc-wms layout, research, client service); chosen at scaffold and addable later; each pack is folders, templates, a workflow and skills",
+    "desc": "Pick a kind, grow from there.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "one",
+    "label": "One template for every workspace",
+    "desc": "Simplest.",
+    "cost": "S"
+   },
+   {
+    "id": "none",
+    "label": "No packs; each workspace builds its own structure",
+    "desc": "Freedom.",
+    "cost": "S"
+   }
+  ],
+  "rec_reason": "Packs are plain data (folders, templates, a workflow, skills), so they cost little and give a new knowledge center a head start. Start with one real pack (software delivery, taken from your lc-wms layout) and add research and client service when a workspace needs them.",
+  "why": "Different kinds of knowledge center need different starting structure; packs give a head start without forcing one shape.",
+  "decided": {
+   "options": [
+    "packs"
+   ],
+   "note": "First pack is software delivery: knowledge repo, system, and project folders. Second review (B25, 2026-10-07): The software-delivery pack carries the SQL forward and rollback rules (F113). Later (after v1, B25): the research and client-service packs; v1 ships software delivery.",
+   "date": "2026-10-07"
+  }
+ },
+ {
+  "id": "F142",
+  "phase": "repos",
+  "impact": 2,
+  "needs": [
+   "F139"
+  ],
+  "title": "Sharing what one knowledge center learned",
+  "ask": "A knowledge center adds a useful folder or checklist. How does that reach the base or the other knowledge centers?",
+  "why": "Without a route, good ideas stay in one workspace and the others never improve.",
+  "rec_reason": "Promotion is explicit and reviewed: a verb produces a patch for the delivery base template or a shared pack repository; a person approves it. Nothing flows upstream automatically, which keeps workspaces independent.",
+  "options": [
+   {
+    "id": "promote",
+    "label": "`hl template promote` creates a reviewable patch (a pack or a change to the base) for the delivery repo or a shared pack repository; a person approves; workspaces take it later through `hl template upgrade`",
+    "desc": "Reviewed sharing.",
+    "cost": "M",
+    "rec": true
+   },
+   {
+    "id": "manual",
+    "label": "Copy files by hand",
+    "desc": "No tooling.",
+    "cost": "S"
+   },
+   {
+    "id": "auto",
+    "label": "Automatically sync growth between workspaces",
+    "desc": "Hands-off.",
+    "cost": "L"
+   }
+  ],
+  "decided": {
+   "options": [
+    "promote"
+   ],
+   "note": "A new folder in one center is shared only by an explicit promote. Later (after v1, B25): hl template promote.",
+   "date": "2026-10-07"
+  }
+ }
+]

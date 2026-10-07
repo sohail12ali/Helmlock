@@ -1,0 +1,36 @@
+# Overview (dashboard)
+@from control-center, paperclip, lc-wms
+> 1 The first screen answers: what is happening, does it need me, what do I do. Needs-you comes first.
+> Stat cards and the stage funnel follow paperclip and control-center. Tab names match F10a.
+> Try the Tablet and Phone widths: the sidebar disappears and a bottom bar appears.
+app
+  top
+    brand "Acme Console"
+    search "Search tickets, decisions, notes  (/)"
+    sp
+    chip "Claude Code" kind=accent
+    avatar "SA"
+  body
+    side
+      nav "Overview*" "Inbox 3" "Tickets" "Todos" "Work" "Agents" "Knowledge" "Settings"
+    main
+      row
+        stat "Needs you" "7" hint="3 approvals, 2 blocked, 2 questions" n=1
+        stat "In progress" "5" hint="2 agent runs live"
+        stat "Done this week" "9" hint="+3 vs last week"
+        stat "Model usage" "48k tok" hint="today"
+      row
+        card "Needs you" grow=2
+          list "!Approve: move T-014 to build" "!T-009 blocked: waiting on Q-3" "Answer Q-5: what is the console called?" "Setup: connect Telegram"
+          btns "Open inbox" "Approve all safe"
+        card "Tickets by stage"
+          bars "Backlog 8" "Spec 3" "Plan 2" "Build 5" "Verify 1" "Done 12"
+      row
+        card "Today (work log)"
+          list "10:42  moved T-014 to spec" "10:31  decision D-001 added" "09:58  analyst finished the spec draft"
+        card "Agent runs"
+          table "Run" "Ticket" "State"
+            r "analyst" "T-014" "[+running]"
+            r "builder" "T-009" "[!waiting approval]"
+          spark
+  nav "Home*" "Inbox" "Tickets" "More" bottom=1

@@ -1,0 +1,42 @@
+# Board with ticket drawer
+@from control-center, lc-wms, paperclip
+> 1 Lanes come from the workflow plugin (F46); WIP limits show as 3/3. Change the pack and the lanes change.
+> The drawer follows control-center: fields, trackers and artifact list. The full page (next mockup) is the generated ticket page.
+> Filters and the Blocked chip follow paperclip's views.
+app
+  top
+    brand "Acme Console"
+    search "Filter tickets  (/)"
+    sp
+    chip "Mine" kind=accent
+    chip "Blocked 2"
+    chip "Size M"
+    btn "New ticket" kind=primary
+  body
+    side
+      nav "Overview" "Inbox 3" "Tickets*" "Todos" "Work" "Agents" "Knowledge" "Settings"
+    main
+      kanban
+        lane "Spec" wip=3
+          c "T-014 Artifact format" "[~M] sa"
+          c "T-015 Console name" "[S] sa"
+          c "T-016 Telegram setup" "[M] jo"
+        lane "Plan"
+          c "T-012 Plugin contract" "[!blocked] Q-3"
+        lane "Build" wip=3 n=1
+          c "T-009 CLI grammar" "[~M] builder"
+          c "T-010 Verb registry" "[L] builder"
+          c "T-011 File layer" "[M] builder"
+        lane "Verify"
+          c "T-008 Scaffold" "[+tests ok]"
+    right
+      h "T-014"
+      muted "Artifact format"
+      row
+        chip "Spec" kind=accent
+        chip "M"
+        chip "sa"
+      tabs "Details*" "Questions 2" "Files"
+      list "!Q-3  TOML or YAML?" "Decision D-001 added" "T-014-spec.md  4 KB" "T-014-plan.md  empty"
+      btns "Open page" "Move to plan"
+  nav "Board*" "Inbox" "Tickets" "More" bottom=1
