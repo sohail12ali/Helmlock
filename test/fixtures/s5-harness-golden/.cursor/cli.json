@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(hl)"
+    ],
+    "deny": [
+      "Write(artifacts/**/ticket.toml)",
+      "Write(logs/**)",
+      "Write(workspace.toml)",
+      "Read(.env)",
+      "Read(site/**)",
+      "Shell(rm -rf)"
+    ]
+  }
+}

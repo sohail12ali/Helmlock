@@ -1,0 +1,10 @@
+{
+  "skills": {
+    "vendored-one": {
+      "files": {
+        "SKILL.md": "sha256-6999a8fc2f6164faccece2a107085f9f5e101ebc0ba18fd9b81e72fb4ec0e61b",
+        "extra.md": "sha256-25718360e05d3c2d0963d1381e9dd4dae5fca789244ee4b9f861adcc0cc96218"
+      }
+    }
+  }
+}

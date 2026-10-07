@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","apiKeySource":"login","cwd":"C:\\work\\demo","session_id":"5a3d5eae-6e2c-427b-b0a0-e7e57914d928","model":"Gemini 3.7 Flash High","permissionMode":"default"}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Reply with the word OK"}]},"session_id":"5a3d5eae-6e2c-427b-b0a0-e7e57914d928"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"OK"}]},"session_id":"5a3d5eae-6e2c-427b-b0a0-e7e57914d928"}
+{"type":"result","subtype":"success","duration_ms":5217,"duration_api_ms":5217,"is_error":false,"result":"OK","session_id":"5a3d5eae-6e2c-427b-b0a0-e7e57914d928","request_id":"32d7183a-b5f2-4342-8538-6d544abc9ecb","usage":{"inputTokens":8990,"outputTokens":1,"cacheReadTokens":0,"cacheWriteTokens":0}}

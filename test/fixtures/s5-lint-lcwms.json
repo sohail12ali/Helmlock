@@ -1,0 +1,248 @@
+{
+ "skills": 37,
+ "agents": 6,
+ "errors": [
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/agent-first-estimation.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/migration-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/plain-writing.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/prod-cleanup.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/production-change-email-policy.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/project-skills-registry.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/special-tickets.md"
+  },
+  {
+   "level": "ERROR",
+   "where": "CLAUDE.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/agents/analyst.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/agents/builder.md",
+   "message": "project skill id not in project-skills-registry.md: coder-dotnet-api"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/agents/deployer.md",
+   "message": "path does not exist: knowledge-center/wiki/production-change-email-policy.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/agents/deployer.md",
+   "message": "path does not exist: knowledge-center/wiki/project-skills-registry.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/agents/deployer.md",
+   "message": "project skill id not in project-skills-registry.md: wms-legacy-live-release"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/agents/planner.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/add-workspace-repo/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/project-skills-registry.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/database-operations/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/prod-cleanup.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/do/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/generate-e2e-tests/SKILL.md",
+   "message": "project skill id not in project-skills-registry.md: ams-qa"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/investigate/reference.md",
+   "message": "path does not exist: knowledge-center/wiki/prod-cleanup.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/investigate/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/plain-writing.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/investigate/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/prod-cleanup.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/investigate/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/special-tickets.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/kanban/releases.md",
+   "message": "path does not exist: knowledge-center/published-releases/release-index.yaml"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/kickoff/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/special-tickets.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/kickoff/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/log-work/reference.md",
+   "message": "path does not exist: knowledge-center/logs/author.local"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/log-work/reference.md",
+   "message": "path does not exist: knowledge-center/wiki/special-tickets.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/log-work/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/special-tickets.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/migrate/estimate.md",
+   "message": "path does not exist: knowledge-center/migrations/README.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/migrate/estimate.md",
+   "message": "path does not exist: knowledge-center/migrations/scanner-maui/_plan/scanner-maui-estimation-plan.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/migrate/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/migration-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/migrate/SKILL.md",
+   "message": "project skill id not in project-skills-registry.md: migrate-hybrid-source"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/migrate/SKILL.md",
+   "message": "project skill id not in project-skills-registry.md: migrate-xamarin-source"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/migrate/SKILL.md",
+   "message": "project skill id not in project-skills-registry.md: tester-migration-parity"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/new-carrier-integration/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/project-skills-registry.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/plan/techniques.md",
+   "message": "path does not exist: knowledge-center/wiki/agent-first-estimation.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/prepare-release-email/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/plain-writing.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/prepare-release-email/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/production-change-email-policy.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/prepare-ticket/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/special-tickets.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/project-layout/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/project-skills-registry.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/project-layout/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/projexa/reference.md",
+   "message": "path does not exist: .kanban/.cache/projexa-auth.json"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/projexa/reference.md",
+   "message": "path does not exist: knowledge-center/logs/author.local"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/projexa/SKILL.md",
+   "message": "path does not exist: .kanban/.cache/projexa-auth.json"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/ticket-draft/SKILL.md",
+   "message": "path does not exist: knowledge-center/wiki/ticket-workflow.md"
+  },
+  {
+   "level": "ERROR",
+   "where": ".claude/skills/verify/scopes/e2e.md",
+   "message": "project skill id not in project-skills-registry.md: tester-maui"
+  }
+ ],
+ "warnings": [
+  {
+   "level": "WARN",
+   "where": ".claude/skills/ams-create-order",
+   "message": "nothing references it — reachable by description only"
+  },
+  {
+   "level": "WARN",
+   "where": ".claude/skills/update-shipping-algorithm",
+   "message": "nothing references it — reachable by description only"
+  }
+ ]
+}
