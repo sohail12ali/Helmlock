@@ -134,7 +134,7 @@ export function TodosPage() {
           ))}
         </fieldset>
       </PageHeader>
-      <div className="max-w-4xl">
+      <div className="w-full">
         <QuickAdd />
         {q.isPending ? (
           <Loading />

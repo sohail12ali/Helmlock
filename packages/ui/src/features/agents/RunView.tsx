@@ -250,7 +250,7 @@ export function RunView() {
                   : "Waiting for output…"}
             </p>
           )}
-          <ol className="flex max-w-4xl flex-col gap-2 text-sm">
+          <ol className="flex w-full flex-col gap-2 text-sm">
             {items.map((it) => (
               <li key={`${it.kind}-${it.seq}`}>
                 <Item item={it} />

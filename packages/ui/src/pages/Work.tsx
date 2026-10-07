@@ -197,7 +197,7 @@ export function WorkPage() {
           week from <Mono>{from}</Mono> · <Mono>{fmtH(sum(rows))}</Mono>
         </span>
       </PageHeader>
-      <div className="grid max-w-5xl gap-3">
+      <div className="grid w-full gap-3">
         <LogForm />
         {q.isPending ? (
           <Loading />

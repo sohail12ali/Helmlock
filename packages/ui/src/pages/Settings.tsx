@@ -274,7 +274,7 @@ export function SettingsPage() {
           All actions
         </Link>
       </PageHeader>
-      <div className="grid max-w-3xl gap-3">
+      <div className="grid w-full gap-3">
         {sections.length > 0 && (
           <nav aria-label="Settings sections" className="flex flex-wrap gap-1.5 text-xs">
             {sections.map((s) => (

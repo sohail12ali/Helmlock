@@ -352,7 +352,7 @@ function Wizard({ steps }: { steps: Step[] }) {
   const last = i === steps.length - 1;
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-2">
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {done} of {steps.length} done
