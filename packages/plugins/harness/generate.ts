@@ -113,7 +113,11 @@ function cursorHooks(src: HarnessSource, o: GenerateOptions): unknown {
     hooks[key] = [...(hooks[key] ?? []), { command: hookCommand(src, o, "cursor", h.event, hlArgs(h.command)) }];
   }
   const p = src.toml.permissions;
-  if (p.ask.length || p.deny_shell.length) hooks.beforeShellExecution = [{ command: hookCommand(src, o, "cursor", "pre_shell", []) }];
+  // Opt-in (harness.toml [cursor] shell_hook = true): on Windows the Cursor CLI runs its PowerShell-shaped hook line
+  // through bash when Git Bash is the shell, and a failing beforeShellExecution hook blocks every command (measured,
+  // Cursor 2026.07.23). Helmlock's protected-path check after each run covers the gap.
+  const shellHook = (src.toml as { cursor?: { shell_hook?: boolean } }).cursor?.shell_hook === true;
+  if (shellHook && (p.ask.length || p.deny_shell.length)) hooks.beforeShellExecution = [{ command: hookCommand(src, o, "cursor", "pre_shell", []) }];
   return { version: 1, hooks };
 }
 

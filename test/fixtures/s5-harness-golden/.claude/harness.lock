@@ -5,7 +5,7 @@ source = "5ebf41a073152f4e7f514675f2018d324004f6f8d490efeed7113078e5ca36c6"
 [files]
 ".claude/settings.json" = "fde71f5c61a06e48820e77c3d44249b67a864dcfeb13c42e8901ad5a8e29c403"
 ".mcp.json" = "8c8d1cdaf6dc900906f257c572d2ded2765c3372ff2739fbc27f98cb13d57ffd"
-".cursor/hooks.json" = "bb4fbdda7baf4eb1974b29b68e8f137e1848f4798fca132f181dce4b99c550c5"
+".cursor/hooks.json" = "2006ded9c44ae9c98b6f3eab541d16b5a5b6401ef44c6590405e2079951a6cdc"
 ".cursor/cli.json" = "358256807599a8510b3a4ed5996edf61228529b1caff9049fa5b55f95cb7a465"
 ".cursor/mcp.json" = "65bb0f243fa0f504686c743cee1d35b6572d4f22d991050b4c3e89878b0fd694"
 ".cursor/rules/helmlock.mdc" = "a7b9c755f5c4e21e8c495ba80819f840a62bfce67d90a381b323f58a9f620d46"

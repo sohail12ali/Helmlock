@@ -74,7 +74,7 @@ test("generated files: Claude JSON stamped inline, hooks once per host, AGENTS.m
     );
     const cursor = JSON.parse(readFileSync(join(root, ".cursor/hooks.json"), "utf8"));
     assert.equal(cursor.version, 1);
-    assert.deepEqual(Object.keys(cursor.hooks), ["sessionStart", "afterFileEdit", "stop", "beforeShellExecution"]);
+    assert.deepEqual(Object.keys(cursor.hooks), ["sessionStart", "afterFileEdit", "stop"]);
     for (const list of Object.values(cursor.hooks) as { command: string }[][]) {
       assert.equal(list.length, 1);
       assert.match(list[0]?.command ?? "", /--host cursor/);
@@ -185,10 +185,7 @@ test("knowledge repo: system and workspace layers merge (system first) into both
     ]);
     const cursor = JSON.parse(readFileSync(join(root, ".cursor/hooks.json"), "utf8"));
     assert.equal(cursor.hooks.afterFileEdit[0].command, `node "../helmlock/packages/plugins/harness/hooks/post-edit.ts" --host cursor -- validate --changed`);
-    assert.match(
-      cursor.hooks.beforeShellExecution[0].command,
-      /pretool\.ts" --host cursor --policy \.\.\/helmlock\/harness\/harness\.toml --policy harness\/harness\.toml$/,
-    );
+    assert.equal(cursor.hooks.beforeShellExecution, undefined); // opt-in only, see generate.ts
     // mcp: workspace wins on the same name; ignore: union
     assert.deepEqual(JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8")).mcpServers.helmlock.args, ["other.ts"]);
     assert.match(readFileSync(join(root, ".cursorignore"), "utf8"), /\narchive\/\n_work\/\nruns\/\*\*\n$/);

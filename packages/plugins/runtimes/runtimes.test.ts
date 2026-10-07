@@ -61,13 +61,15 @@ test("protected guard reports a state file written outside hl, but not one expla
   }
 });
 
-test("protectedGlobs reads permissions.deny from harness.toml, else defaults", () => {
+test("protectedGlobs is the defaults plus permissions.deny from every layer", () => {
   const root = mkdtempSync(join(tmpdir(), "hl-pg-"));
   try {
     assert.ok(protectedGlobs([root]).includes("workspace.toml"));
     mkdirSync(join(root, "harness"));
     writeFileSync(join(root, "harness", "harness.toml"), '[permissions]\ndeny = ["state/**", "Edit(x.toml)"]\n');
-    assert.deepEqual(protectedGlobs([root]), ["state/**", "x.toml"]);
+    const globs = protectedGlobs([root]);
+    assert.ok(globs.includes("state/**") && globs.includes("x.toml"));
+    assert.ok(globs.includes("artifacts/**/ticket.toml"), "an empty or partial workspace deny list never removes the defaults");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

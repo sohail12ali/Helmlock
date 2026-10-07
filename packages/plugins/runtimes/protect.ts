@@ -26,19 +26,23 @@ export const DEFAULT_PROTECTED = [
 
 const SKIP = new Set([".git", "node_modules"]);
 
-/** permissions.deny from the first harness/harness.toml found under `roots`, else DEFAULT_PROTECTED. */
+/**
+ * The built-in state paths plus permissions.deny from every harness/harness.toml under `roots` (system and workspace
+ * layers). A union: a workspace layer with an empty deny list must never switch the protection off.
+ */
 export function protectedGlobs(roots: readonly string[]): string[] {
+  const out = new Set<string>(DEFAULT_PROTECTED);
   for (const r of roots) {
     const f = join(r, "harness", "harness.toml");
     if (!existsSync(f)) continue;
     try {
       const deny = (parseToml(readFileSync(f, "utf8")) as { permissions?: { deny?: unknown } }).permissions?.deny;
-      if (Array.isArray(deny)) return deny.filter((d): d is string => typeof d === "string").map((d) => d.replace(/^(?:Edit|Write)\((.*)\)$/, "$1"));
+      if (Array.isArray(deny)) for (const d of deny) if (typeof d === "string") out.add(d.replace(/^(?:Edit|Write)\((.*)\)$/, "$1"));
     } catch {
-      /* fall through to the defaults */
+      /* unreadable layer: the defaults still apply */
     }
   }
-  return [...DEFAULT_PROTECTED];
+  return [...out];
 }
 
 export type Snapshot = Map<string, string>;
