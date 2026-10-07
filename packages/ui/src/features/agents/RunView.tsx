@@ -11,6 +11,7 @@ import { ErrorState, Mono, StatusChip, TicketLink } from "@/components/common";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PendingApprovals } from "@/features/approvals/PendingApprovals";
+import { AttachRun } from "@/features/people/AttachRun";
 import { fmtCost, fmtDateTime, fmtDuration, fmtTime, fmtTokens } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { needsRecovery, previewInput, silentFor, type TranscriptItem, toTranscript } from "./run-flags";
@@ -196,6 +197,7 @@ export function RunView() {
             </Badge>
           )}
           <span className="ml-auto">{running && <CancelButton id={id} />}</span>
+          {view && !running && <AttachRun key={id} runId={id} defaultTicket={view.ticket} />}
         </div>
         {view && (
           <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

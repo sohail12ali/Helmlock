@@ -17,6 +17,7 @@ const WorkPage = lazy(() => import("@/pages/Work").then((m) => ({ default: m.Wor
 const KnowledgePage = lazy(() => import("@/features/knowledge/KnowledgePage").then((m) => ({ default: m.KnowledgePage })));
 const InboxPage = lazy(() => import("@/features/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
 const SetupPage = lazy(() => import("@/features/setup/SetupPage").then((m) => ({ default: m.SetupPage })));
+const PeoplePage = lazy(() => import("@/features/people/PeoplePage").then((m) => ({ default: m.PeoplePage })));
 const SettingsPage = lazy(() => import("@/pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const ActionsPage = lazy(() => import("@/pages/Actions").then((m) => ({ default: m.ActionsPage })));
 const SearchPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.SearchPage })));
@@ -60,6 +61,7 @@ export function AppRoutes() {
         <Route path="todos" element={s(<TodosPage />)} />
         <Route path="work" element={s(<WorkPage />)} />
         <Route path="knowledge" element={s(<KnowledgePage />)} />
+        <Route path="people" element={s(<PeoplePage />)} />
         <Route path="settings" element={s(<SettingsPage />)} />
         <Route path="setup" element={s(<SetupPage />)} />
         <Route path="actions" element={s(<ActionsPage />)} />

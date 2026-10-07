@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, Loading, Mono, StatusChip } from "@/components/
 import { Button } from "@/components/ui/button";
 import { previewInput } from "@/features/agents/run-flags";
 import { ApprovalCard } from "@/features/approvals/ApprovalCard";
+import { ChatScopeBadge, ShareChat } from "@/features/people/ShareChat";
 import { fmtDateTime, fmtTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Composer } from "./Composer";
@@ -189,10 +190,11 @@ export function ChatThread({ chatId, models }: { chatId: string; models: ModelsV
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-1.5">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <span className="min-w-0 flex-1 truncate text-sm font-medium" title={summary?.title}>
           {summary?.title ?? "Chat"}
         </span>
+        <ShareChat chat={summary} />
         <ModelPicker view={models} value={summary?.model} disabled={setModel.isPending || !summary} onChange={(m) => setModel.mutate(m)} />
       </div>
       <div
@@ -329,6 +331,7 @@ export function ChatPanel({ variant = "panel", initialChat }: { variant?: "panel
                 <span className="flex gap-2 text-xs text-muted-foreground">
                   <Mono>{c.model}</Mono>
                   {c.channel === "telegram" && <span>telegram</span>}
+                  <ChatScopeBadge chat={c} />
                   <span>{fmtDateTime(c.updated)}</span>
                 </span>
               </button>

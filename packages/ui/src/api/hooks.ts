@@ -29,6 +29,9 @@ export const keys = {
   knowledgeDoc: (path: string) => ["knowledge", "doc", path] as const,
   inbox: ["inbox"] as const,
   setup: ["setup"] as const,
+  // milestone 6
+  people: ["people"] as const,
+  overrides: ["overrides"] as const,
 };
 
 type Area = ChangeEvent["areas"][number];
@@ -41,8 +44,8 @@ export const AREA_KEYS: Record<Area, string[]> = {
   worklog: ["worklog", "overview"],
   activity: ["activity", "overview"],
   runs: ["runs", "overview", "ticket"],
-  workspace: ["workspace", "overview", "board"],
-  skills: ["skills"],
+  workspace: ["workspace", "overview", "board", "people", "overrides"],
+  skills: ["skills", "overrides"],
   todos: ["todos", "overview"],
   approvals: ["approvals", "overview"],
   chats: ["chats", "chat"],
