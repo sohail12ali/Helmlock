@@ -42,6 +42,7 @@ export interface LintOptions {
   /** Prompt files besides skills and agents, relative to root (missing ones are skipped). */
   promptFiles?: readonly string[];
   /** Folders under .claude/skills that are deliberately not skills. */
+  /** Folders under .claude/skills that are not shipped skills (helpers or repo tools); never linted. */
   notSkills?: readonly string[];
 }
 
@@ -121,6 +122,7 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
     ? readdirSync(skillsDir, { withFileTypes: true })
         .filter((e) => e.isDirectory())
         .map((e) => e.name)
+        .filter((n) => !o.notSkills.includes(n) || !existsSync(join(skillsDir, n, "SKILL.md")))
         .sort()
     : [];
   for (const name of skillDirs) {
@@ -207,7 +209,7 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
   for (const name of skillDirs)
     if (!vendored.has(name)) prompt.push(...mdFiles(join(skillsDir, name), (p) => rel(join(skillsDir, name), p).split("/").includes("evals")));
   const builtins = new Set([...BUILTIN_CMDS, ...o.builtins]);
-  const commandOk = (n: string) => front.has(n) || aliases.has(n) || builtins.has(n);
+  const commandOk = (n: string) => front.has(n) || aliases.has(n) || builtins.has(n) || (o.notSkills.includes(n) && existsSync(join(skillsDir, n, "SKILL.md")));
   for (const f of prompt) {
     const where = rel(root, f);
     const text = read(f);

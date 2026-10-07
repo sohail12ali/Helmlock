@@ -90,3 +90,7 @@ globs = [
 ladder = ["plan", "ask", "auto-review", "force"]
 default = "plan"
 # Host flags per mode are owned by the runtime adapters (hl run), not this file.
+
+[lint]
+# Folders under .claude/skills that are tools for developing this repo, not shipped system skills.
+not_skills = ["plan-board"]

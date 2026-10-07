@@ -48,7 +48,8 @@ export function createVerbRegistry(root: Context): VerbRegistry {
     const code = res.ok ? 0 : res.code;
     const entity = entityOf(res, input);
     // No activity line outside a knowledge repo (e.g. `hl init` run before one exists).
-    const outside = v.ctx.has("workspace") && v.ctx.get("workspace").codeWorkspaceFile === undefined;
+    const w = v.ctx.has("workspace") ? v.ctx.get("workspace") : undefined;
+    const outside = w !== undefined && (w.codeWorkspaceFile === undefined || w.root === w.deliveryRoot);
     if (def.writes && !v.dryRun && !outside && v.ctx.has("activity")) {
       try {
         const line: Parameters<ActivityService["append"]>[0] = {
