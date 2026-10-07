@@ -1,6 +1,7 @@
 import type { NeedsYouItem } from "@helmlock/core/contracts";
 import { AlertTriangle, CircleHelp, Clock, Cog, XCircle } from "lucide-react";
 import { useNavigate } from "react-router";
+import { NeedsYouQuestionCard } from "@/components/actions/RecordActions";
 import { EmptyState, Mono } from "@/components/common";
 import { useListNav } from "@/lib/keys";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,11 @@ export function NeedsYouList({ items, keyboard = true }: { items: NeedsYouItem[]
                 {item.detail && <p className="truncate text-xs text-muted-foreground">{item.detail}</p>}
               </div>
             </div>
+            {item.kind === "question" && item.ticket && item.id && (
+              <div className="pb-2 pl-8">
+                <NeedsYouQuestionCard ticket={item.ticket} id={item.id} text={item.title} />
+              </div>
+            )}
           </li>
         );
       })}

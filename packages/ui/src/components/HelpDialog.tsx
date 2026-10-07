@@ -5,6 +5,7 @@ import { GO_KEYS } from "@/lib/keys";
 const ROWS: [string[], string][] = [
   [["Ctrl", "K"], "Command palette"],
   [["/"], "Search"],
+  [["c"], "New ticket"],
   [["j"], "Next row"],
   [["k"], "Previous row"],
   [["Enter"], "Open the selected row"],
@@ -17,7 +18,7 @@ export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogTitle>Keyboard shortcuts</DialogTitle>
-        <DialogDescription>The console is read-only. Changes go through hl commands, which the console shows for you to copy.</DialogDescription>
+        <DialogDescription>Every change goes through the same verbs as the hl CLI, with the same gates.</DialogDescription>
         <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           {ROWS.map(([keys, label]) => (
             <div key={label} className="contents">

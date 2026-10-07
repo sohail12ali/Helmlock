@@ -51,7 +51,7 @@ describe("board", () => {
     fireEvent.click(screen.getByText("Fix rounding in tax totals"));
     const drawer = await screen.findByTestId("ticket-drawer");
     expect(within(drawer).getByText(/Move to Plan: blocked by ticket is blocked/)).toBeInTheDocument();
-    expect(within(drawer).getByText("hl ticket move T-004-sa plan")).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Move to Plan" })).toBeInTheDocument();
   });
 
   it("toggles to the list view and remembers it", async () => {
@@ -71,7 +71,7 @@ describe("ticket page", () => {
     expect(await screen.findByRole("heading", { level: 1, name: /T-001-sa/ })).toBeInTheDocument();
     expect(screen.getByText("Stage: Spec")).toBeInTheDocument();
     expect(screen.getByTestId("gate-notice")).toHaveTextContent("Move to Plan: blocked by Q-001-sa is open and blocking");
-    expect(screen.getByText("hl ticket move T-001-sa plan")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move to Plan" })).toBeInTheDocument();
     const decisions = screen.getAllByRole("table", { name: "Decisions" })[0]!;
     expect(within(decisions).getByText("D-001-sa")).toBeInTheDocument();
     expect(within(decisions).getByText("Gift card service")).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe("ticket page", () => {
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Thread 1" }), { button: 0 });
     expect(await screen.findByText("Spec draft ready for review")).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Questions 1" }), { button: 0 });
-    expect(await screen.findByText('hl question answer Q-001-sa "<answer>"')).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "Answer Q-001-sa" })).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Files 6" }), { button: 0 });
     expect(await screen.findByRole("link", { name: /comments\.jsonl|Comments/ })).toHaveAttribute("href", "/t/T-001-sa/comments.jsonl");
   });
