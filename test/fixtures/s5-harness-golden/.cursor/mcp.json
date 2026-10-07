@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "helmlock": {
+      "command": "node",
+      "args": [
+        "packages/mcp/server.ts"
+      ],
+      "env": {
+        "HL_WORKSPACE": "."
+      }
+    }
+  }
+}

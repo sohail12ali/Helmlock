@@ -1,0 +1,36 @@
+# Fixture harness source for S5 tests (golden outputs in ../s5-harness-golden).
+schema_version = 1
+
+[permissions]
+allow = ["Bash(hl:*)"]
+deny = ["artifacts/**/ticket.toml", "logs/**", "workspace.toml"]
+ask = ["git push", "Bash(gh pr merge:*)"]
+deny_read = [".env", "site/**"]
+deny_shell = ["rm -rf"]
+
+[[hooks]]
+event = "session_start"
+command = "hl context --session"
+
+[[hooks]]
+event = "post_edit"
+matcher = "Edit|Write"
+command = "hl validate --changed"
+
+[[hooks]]
+event = "stop"
+command = "hl log show"
+text = "If this session shipped work, log it once with /log-work."
+
+[ignore]
+globs = ["archive/", "_work/", "node_modules/"]
+
+[modes]
+default = "plan"
+ladder = ["plan", "ask", "auto-review", "force"]
+
+[[mcp]]
+name = "helmlock"
+command = "node"
+args = ["packages/mcp/server.ts"]
+env = { HL_WORKSPACE = "." }
