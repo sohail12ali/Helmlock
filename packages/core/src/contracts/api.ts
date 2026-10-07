@@ -174,6 +174,7 @@ export const CONSOLE_VERBS = [
   "log-work",
   "validate",
   "config set",
+  "provider add",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 

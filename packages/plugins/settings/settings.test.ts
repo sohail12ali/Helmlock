@@ -104,3 +104,20 @@ test("settings view: sections, defaults and sources", () => {
   v = buildSettingsView({ manifests, workspace, local: setInDoc({ schema_version: 1 }, "work-log", "day_hours", 6) });
   assert.deepEqual(v.sections[0]?.plugins[0]?.values.day_hours, { value: 6, source: "workspace.local.toml" });
 });
+
+test("provider add appends a provider and model row and sets the default model; refuses a key instead of an env name", async () => {
+  const ws = await createTestWorkspace({ catalog, fixture: "ws-demo" });
+  try {
+    const r = await ws.run("provider add", { id: "local", preset: "ollama", model: "llama3.1" });
+    assert.ok(r.ok, JSON.stringify(r));
+    const toml = readFileSync(join(ws.root, "workspace.toml"), "utf8");
+    assert.match(toml, /base_url = "http:\/\/localhost:11434\/v1"/);
+    assert.match(toml, /default_model = "local\/llama3.1"/);
+    const again = await ws.run("provider add", { id: "local", preset: "ollama", model: "x" });
+    assert.equal(again.ok, false);
+    const key = await ws.run("provider add", { id: "oa", preset: "openai", key_env: "sk-abc123", model: "gpt" });
+    assert.equal(key.ok, false);
+  } finally {
+    await ws.cleanup();
+  }
+});
