@@ -9,7 +9,9 @@ import { TicketsPage } from "@/pages/Tickets";
 
 const TicketPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.TicketPage })));
 const ArtifactPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.ArtifactPage })));
-const AgentsPage = lazy(() => import("@/pages/Agents").then((m) => ({ default: m.AgentsPage })));
+const AgentsPage = lazy(() => import("@/features/agents/AgentsPage").then((m) => ({ default: m.AgentsPage })));
+const RunView = lazy(() => import("@/features/agents/RunView").then((m) => ({ default: m.RunView })));
+const ChatPage = lazy(() => import("@/features/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
 const TodosPage = lazy(() => import("@/pages/Todos").then((m) => ({ default: m.TodosPage })));
 const WorkPage = lazy(() => import("@/pages/Work").then((m) => ({ default: m.WorkPage })));
 const KnowledgePage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.KnowledgePage })));
@@ -51,6 +53,8 @@ export function AppRoutes() {
         <Route path="t/:id" element={s(<TicketPage />)} />
         <Route path="t/:id/:artifact" element={s(<ArtifactPage />)} />
         <Route path="agents" element={s(<AgentsPage />)} />
+        <Route path="agents/runs/:id" element={s(<RunView />)} />
+        <Route path="chat" element={s(<ChatPage />)} />
         <Route path="todos" element={s(<TodosPage />)} />
         <Route path="work" element={s(<WorkPage />)} />
         <Route path="knowledge" element={s(<KnowledgePage />)} />

@@ -53,6 +53,8 @@ export function useLiveUpdates(): LiveState {
         const ev = JSON.parse((e as MessageEvent).data) as ChangeEvent;
         lastVersion = ev.version;
         for (const a of ev.areas) pending.add(a);
+        // Milestone 4 views (runs, approvals, chats) follow the same stream without a second connection (src/api/m4.ts).
+        window.dispatchEvent(new CustomEvent("hl:change", { detail: ev }));
         if (!timer) timer = setTimeout(flush, 300);
       } catch {
         /* ignore malformed change */
