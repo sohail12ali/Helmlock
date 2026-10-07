@@ -9,7 +9,7 @@ description: Close a verified ticket. Runs the closure gates in order (blockers,
 /close {T}
 ```
 
-**Reads:** `hl context {T} --json`, `hl ticket show {T} --json`, `hl blockers {T}`, `hl validate {T}`, the spec, plan, test cases and decision records · **Writes:** `{T}-closure.md`, `{T}-release-notes.md` (when it ships to users), the close approval question and the move to `done` through `hl`
+**Reads:** `hl context {T} --json`, `hl ticket show {T} --json`, `hl blockers {T}`, `hl validate {T}`, the spec, plan, test cases and decision records · **Writes:** `{T}-digest.md`, `{T}-release-notes.md` (when it ships to users), the close approval question and the move to `done` through `hl`
 
 ## Steps
 
@@ -35,7 +35,7 @@ On failure, list the open items and suggest `/verify {T} ready`, `/fix {T}` or `
 
 ### Gate 4: Closure digest
 
-Write `{T}-closure.md` from [templates/closure.md](templates/closure.md): about 400 words, a fixed shape, `(none)` for an empty section.
+Write `{T}-digest.md` from [templates/closure.md](templates/closure.md): about 400 words, a fixed shape, `(none)` for an empty section.
 
 - **Outcome:** what shipped and what it does for the user, in two or three sentences.
 - **Decisions:** each decision record that shaped the result, with its reason and what was rejected (`D-003-sa: chose X over Y because Z`).
@@ -51,7 +51,7 @@ Facts only, each traceable to a record or a file; no process narration, no agent
 
 ### Gate 6: Done
 
-`hl ticket move {T} done`. Exit 2: a gate is still open; read the message, report it, stop. Then `hl ticket release {T}`.
+`hl ticket close {T}`: checks the digest (sections, size) and moves to `done`. Exit 1: fix the digest it names. Exit 2: a gate is still open; read the message, report it, stop. Then `hl ticket release {T}`.
 
 ## Rules
 

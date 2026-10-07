@@ -175,6 +175,11 @@ export const CONSOLE_VERBS = [
   "validate",
   "config set",
   "provider add",
+  "ticket close",
+  "ticket archive",
+  "ticket restore",
+  "notes build",
+  "index build",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 

@@ -8,7 +8,8 @@ import { z } from "zod";
 
 export const MAX_PER_FILE = 50;
 export const DEFAULT_LIMIT = 200;
-const ALWAYS_SKIP = ["_work", "node_modules", ".git"];
+// notes/ holds generated Obsidian copies of the TOML (F52): searching it would duplicate every hit.
+const ALWAYS_SKIP = ["_work", "node_modules", ".git", "notes", "site"];
 const MAX_FILE_BYTES = 1_000_000;
 
 const toPosix = (p: string) => p.replace(/\\/g, "/").replace(/^\.\//, "");

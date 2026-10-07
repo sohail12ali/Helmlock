@@ -55,9 +55,13 @@ export function createStore(ctx: Context) {
   async function nextId(prefix: Prefix, initials: string): Promise<string> {
     const f = files();
     let globs: string[];
-    if (prefix === "T") globs = [`${ARTIFACTS}/T-*`];
+    // Archived tickets (archive/YYYY-MM/<T>) keep their ids: never issue one again.
+    if (prefix === "T") globs = [`${ARTIFACTS}/T-*`, "archive/*/T-*"];
     else if (prefix === "TD") globs = ["todos/TD-*", "todos/*/TD-*"];
-    else globs = [`${ARTIFACTS}/*/${RECORD_FOLDERS[KIND_BY_PREFIX[prefix]!]}/${prefix}-*.toml`];
+    else {
+      const folder = RECORD_FOLDERS[KIND_BY_PREFIX[prefix]!];
+      globs = [`${ARTIFACTS}/*/${folder}/${prefix}-*.toml`, `archive/*/*/${folder}/${prefix}-*.toml`];
+    }
     const re = new RegExp(`^${prefix}-(\\d+)-[a-z]{2,3}(\\.toml)?$`);
     let max = 0;
     for (const g of globs) {
