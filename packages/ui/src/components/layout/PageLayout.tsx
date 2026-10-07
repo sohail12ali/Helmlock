@@ -1,5 +1,5 @@
-import { XIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { PanelRightOpenIcon, XIcon } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useShell } from "./shell-context";
@@ -25,14 +25,35 @@ export function PageLayout({
   className?: string;
 }) {
   const { narrow } = useShell();
+  // A page that always has a right panel (no onCloseRight) gets a closed drawer and an open button when narrow.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const selfManaged = !onCloseRight;
   const main = <div className={cn("@container h-full overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-5", className)}>{children}</div>;
 
   if (narrow || !right) {
+    const open = selfManaged ? drawerOpen && !!right : !!right;
     return (
       <>
         {main}
+        {narrow && right && selfManaged && !drawerOpen && (
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="fixed right-3 bottom-20 z-30 inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-2 text-sm shadow-md hover:bg-accent"
+          >
+            <PanelRightOpenIcon className="size-4" />
+            {rightTitle}
+          </button>
+        )}
         {narrow && (
-          <Sheet open={!!right} onOpenChange={(o) => !o && onCloseRight?.()}>
+          <Sheet
+            open={open}
+            onOpenChange={(o) => {
+              if (o) return;
+              if (selfManaged) setDrawerOpen(false);
+              else onCloseRight?.();
+            }}
+          >
             <SheetContent side="right" title={rightTitle} className="w-[min(28rem,92vw)]">
               <div className="h-full overflow-y-auto p-4 pt-10">{right}</div>
             </SheetContent>
