@@ -1,0 +1,8 @@
+schema_version = 1
+
+[[person]]
+id = "{{AUTHOR_SLUG}}"
+name = "{{AUTHOR_NAME}}"
+initials = "{{INITIALS}}"
+email = "{{EMAIL}}"
+role = "owner"
