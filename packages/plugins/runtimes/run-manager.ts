@@ -192,6 +192,7 @@ export function createRunManager(o: RunManagerOptions): RunManager {
       const cancelled = r.cancelledBy !== undefined;
       if (cancelled) done = { ...done, ok: false };
       const record = buildRecord(id, adapter.id, run, r.state.started, done, tally, cancelled ? "cancelled" : undefined);
+      if (r.state.origin) record.origin = r.state.origin;
       try {
         await writeRunRecord(files, record);
       } catch (e) {
@@ -244,6 +245,7 @@ export function createRunManager(o: RunManagerOptions): RunManager {
           started: new Date(now).toISOString(),
           ...(opts.agent ? { agent: opts.agent } : {}),
           ...(opts.ticket ? { ticket: opts.ticket } : {}),
+          ...(opts.origin ? { origin: opts.origin } : {}),
         },
         key,
         startedAt: now,

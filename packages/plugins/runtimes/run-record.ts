@@ -18,6 +18,8 @@ export interface RunRecord {
   usage: { input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_write_tokens: number; cost_usd: number | null };
   failure_class: string | null;
   first_result_line: string;
+  /** Where a server-started run came from ("console", "telegram:<chat id>"); absent for `hl run`. */
+  origin?: string;
 }
 
 /** Folds a run's events into what the record needs. */

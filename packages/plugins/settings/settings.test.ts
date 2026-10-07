@@ -60,6 +60,28 @@ test("config set from the CLI: text values, --local, --dry-run, refusals", async
   }
 });
 
+test("list settings: comma-separated text or an array becomes a TOML array (telegram allowed_user_ids)", async () => {
+  const d: SettingDecl = { key: "ids", type: "list", label: "Ids", scope: "local", section: "telegram" };
+  assert.deepEqual(coerceValue("x", d, " 1, 2 ,,3 "), ["1", "2", "3"]);
+  assert.deepEqual(coerceValue("x", d, [5, "6"]), ["5", "6"]);
+  assert.deepEqual(coerceValue("x", d, ""), []);
+  assert.throws(() => coerceValue("x", d, true), /expected a list/);
+  const ws = await createTestWorkspace({ catalog, fixture: "ws-demo" });
+  try {
+    const r = await ws.run("config set", { plugin: "telegram", key: "allowed_user_ids", value: "4242, 77" });
+    assert.ok(r.ok, JSON.stringify(r));
+    assert.match(r.text ?? "", /telegram\.allowed_user_ids = \["4242","77"\] in workspace\.local\.toml/);
+    const lt = plain(parse(readFileSync(join(ws.root, "workspace.local.toml"), "utf8"))) as { plugin: unknown };
+    assert.deepEqual(lt.plugin, [{ id: "telegram", config: { allowed_user_ids: ["4242", "77"] } }]);
+    const fromConsole = await ws.run("config set", { plugin: "telegram", key: "allowed_user_ids", value: [1, "2"] });
+    assert.ok(fromConsole.ok, JSON.stringify(fromConsole));
+    const cfg = await loadConfig(createFileLayer(ws.root));
+    assert.deepEqual(cfg.pluginConfig("telegram").allowed_user_ids, ["1", "2"]);
+  } finally {
+    await ws.cleanup();
+  }
+});
+
 test("settings declarations and coercion", () => {
   const m = {
     id: "x",

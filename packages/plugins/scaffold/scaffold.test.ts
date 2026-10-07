@@ -76,6 +76,8 @@ test("init with all flags scaffolds a valid, committed knowledge center that `wh
   assert.equal(git(root, "check-ignore", "-q", "Acme.code-workspace").status, 0, "personal workspace file is ignored");
   assert.equal(git(root, "status", "--porcelain").stdout.trim(), "", "nothing left uncommitted");
   assert.match(git(root, "ls-files", "-s", "hl").stdout, /^100755/, "hl launcher is executable");
+  assert.match(git(root, "ls-files", "-s", ".githooks/pre-commit").stdout, /^100755/, "pre-commit hook is executable");
+  assert.equal(git(root, "config", "--get", "core.hooksPath").stdout.trim(), ".githooks", "hooks path set after the first commit");
 
   const people = parse(readFileSync(join(root, "people.toml"), "utf8")) as { person: { id: string; email?: string }[] };
   assert.equal(people.person[0]?.id, "sam-abbott");
@@ -135,6 +137,31 @@ test("init validates name and initials", async () => {
 test("init --no-git leaves no repo", async () => {
   const root = await init(undefined, { no_git: true });
   assert.ok(!existsSync(join(root, ".git")));
+});
+
+test("doctor checks core.hooksPath; --repair sets it again (a fresh clone has none)", async () => {
+  const root = await init();
+  const doctor = async (input: Record<string, unknown>, dryRun = false) => {
+    const rt = await createRuntime({ cwd: root, env: { ...process.env, HL_DELIVERY: DELIVERY_ROOT, HL_WORKSPACE: root }, catalog });
+    try {
+      const r = await rt.run("doctor", input, { dryRun });
+      assert.ok(r.ok, JSON.stringify(r));
+      return r.data as { checks: { name: string; status: string; message: string }[]; repaired: string[] };
+    } finally {
+      await rt.dispose();
+    }
+  };
+  const hooks = (d: { checks: { name: string; status: string; message: string }[] }) => d.checks.find((c) => c.name === "hooks");
+  assert.equal(hooks(await doctor({}))?.status, "pass");
+  git(root, "config", "--unset", "core.hooksPath");
+  const before = hooks(await doctor({}));
+  assert.equal(before?.status, "warn");
+  assert.match(before?.message ?? "", /core\.hooksPath is not set/);
+  await doctor({ repair: true }, true);
+  assert.equal(git(root, "config", "--get", "core.hooksPath").stdout.trim(), "", "dry run changes nothing");
+  const fixed = await doctor({ repair: true });
+  assert.ok(fixed.repaired.includes("hooks"));
+  assert.equal(git(root, "config", "--get", "core.hooksPath").stdout.trim(), ".githooks");
 });
 
 test("a template with an unknown placeholder fails with template-leftover", () => {

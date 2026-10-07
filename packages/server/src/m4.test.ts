@@ -99,6 +99,7 @@ describe("runs", () => {
     const run = dataOf(r);
     assert.equal(run.status, "running");
     assert.equal(run.mode, "ask");
+    assert.equal(run.origin, "console", "a console start records its origin");
     const frames = await sse(`/api/v1/runs/${run.id}/events`);
     const events = frames.filter((f) => f.event === "event").map((f) => f.data as { seq: number; event: { type: string; text?: string } });
     assert.deepEqual(

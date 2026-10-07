@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+# Delivery repo pre-commit hook: Biome over the repo and the harness lint (skills, agents, references, hooks).
+# Typecheck and tests stay in CI (too slow for every commit). Enable once per clone:
+#   git config core.hooksPath .githooks
+# Runs under sh (Git Bash on Windows). Skip once with `git commit --no-verify`.
+set -u
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+
+status=0
+pnpm lint || status=1
+node packages/cli/bin/hl.ts harness lint || status=1
+
+if [ "$status" -ne 0 ]; then
+  echo "pre-commit: fix the findings above (npx biome check --write . fixes formatting)" >&2
+fi
+exit "$status"

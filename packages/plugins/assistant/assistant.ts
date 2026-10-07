@@ -243,6 +243,11 @@ export function createAssistant(ctx: Context, o: AssistantOptions = {}): Assista
           if (fit.dropped && round === 0) {
             await store.append(id, { t: "trim", dropped: fit.dropped, ts: ts() });
             (fit.messages[0] as ChatTurn).content += `\n\n## Note\n${fit.dropped} older turn(s) were left out to fit the model's context window.`;
+            yield {
+              type: "notice",
+              code: "context-near-limit",
+              message: `this chat is near the model's context window: ${fit.dropped} older turn(s) were left out; start a new chat to keep full context`,
+            } satisfies AssistantEvent;
           }
 
           const reply: ChatMessageData = { id: newMessageId(), role: "assistant", text: "", ts: ts() };

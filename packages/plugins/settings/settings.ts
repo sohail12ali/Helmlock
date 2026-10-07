@@ -17,7 +17,7 @@ export const SECTIONS: readonly { id: SectionId; label: string }[] = [
   { id: "telegram", label: "Telegram" },
 ];
 
-const TYPES = ["string", "number", "boolean", "select", "secret-env"] as const;
+const TYPES = ["string", "number", "boolean", "select", "secret-env", "list"] as const;
 /** An environment variable name: what a secret-env setting stores (F9b). */
 export const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 
@@ -103,8 +103,11 @@ export class SettingError extends Error {
   }
 }
 
+/** A stored setting value: a list setting is a TOML array of strings. */
+export type SettingValue = string | number | boolean | string[];
+
 /** Check and convert a value (from the CLI as text, or from the console as JSON) to the declared type. */
-export function coerceValue(plugin: string, d: SettingDecl, value: unknown): string | number | boolean {
+export function coerceValue(plugin: string, d: SettingDecl, value: unknown): SettingValue {
   const bad = (why: string) =>
     new SettingError(
       "config-bad-value",
@@ -128,6 +131,12 @@ export function coerceValue(plugin: string, d: SettingDecl, value: unknown): str
     case "select":
       if (typeof value !== "string" || !d.options?.includes(value)) throw bad(`expected one of ${d.options?.join(", ")}`);
       return value;
+    case "list": {
+      // From the CLI: "a, b" -> ["a", "b"]; from the console: an array. Empty items are dropped; "" is the empty list.
+      const items = typeof value === "string" ? value.split(",") : Array.isArray(value) ? value : undefined;
+      if (!items?.every((x) => typeof x === "string" || typeof x === "number")) throw bad("expected a list (comma-separated text or an array)");
+      return items.map((x) => String(x).trim()).filter((x) => x !== "");
+    }
     case "secret-env":
       if (typeof value !== "string" || !ENV_NAME.test(value))
         throw new SettingError(

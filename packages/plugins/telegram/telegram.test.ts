@@ -21,7 +21,7 @@ const tap = (from: number, data: string, messageId: number, text = ""): Omit<TgU
 });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function fakeAssistant(reply = ["Hel", "lo ", "Sam"]) {
+function fakeAssistant(reply = ["Hel", "lo ", "Sam"], notice?: string) {
   const sent: { chat: string; text: string; channel: string; actor: string }[] = [];
   const chats: ChatSummaryData[] = [];
   let n = 0;
@@ -50,6 +50,7 @@ function fakeAssistant(reply = ["Hel", "lo ", "Sam"]) {
     },
     async *send(chat, text, o): AsyncIterable<AssistantEvent> {
       sent.push({ chat, text, channel: o.channel, actor: o.actor.id });
+      if (notice) yield { type: "notice", code: "context-near-limit", message: notice };
       for (const t of reply) {
         await sleep(15);
         if (o.signal?.aborted) return;
@@ -196,6 +197,62 @@ test("/stop cancels the answer in flight", async () => {
     h.api.push(dm(ME, "/stop"));
     await h.api.waitFor(() => sentTexts(h.api).includes("Stopped the current answer."));
     await h.api.waitFor((c) => c.some((x) => x.method === "editMessageText" && String(x.params.text).endsWith("(stopped)")));
+  } finally {
+    await h.done();
+  }
+});
+
+test("an assistant notice is shown as a short line", async () => {
+  const a = fakeAssistant(["ok"], "the chat is near the model's context limit; older messages are trimmed");
+  const h = await boot({ services: { assistant: a.svc } });
+  try {
+    h.api.push(dm(ME, "hi"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Note: the chat is near")));
+    await h.api.waitFor((c) => c.some((x) => x.method === "editMessageText" && x.params.text === "ok"));
+  } finally {
+    await h.done();
+  }
+});
+
+test("/run starts a plan-mode run with this chat as origin; /stop cancels runs of that origin only", async () => {
+  const started: { prompt: string; mode?: string; origin?: string; ticket?: string }[] = [];
+  const cancelled: string[] = [];
+  const states: RunState[] = [
+    { id: "r-other", runtime: "claude-code", mode: "ask", status: "running", started: "x", origin: "console" },
+    { id: "r-tg-old", runtime: "claude-code", mode: "plan", status: "running", started: "x", origin: `telegram:${ME}` },
+  ];
+  const runs: RunManagerService = {
+    async start(o) {
+      started.push({
+        prompt: o.prompt,
+        ...(o.mode ? { mode: o.mode } : {}),
+        ...(o.origin ? { origin: o.origin } : {}),
+        ...(o.ticket ? { ticket: o.ticket } : {}),
+      });
+      const st: RunState = { id: "r-new", runtime: "claude-code", mode: "plan", status: "running", started: "x", ...(o.ticket ? { ticket: o.ticket } : {}) };
+      if (o.origin) st.origin = o.origin;
+      states.push(st);
+      return st;
+    },
+    get: (id) => states.find((s) => s.id === id),
+    active: () => states.filter((s) => s.status === "running"),
+    events: async function* () {},
+    async cancel(id) {
+      cancelled.push(id);
+      const s = states.find((x) => x.id === id);
+      if (s) s.status = "cancelled";
+    },
+  };
+  const h = await boot({ services: { runManager: runs } });
+  try {
+    h.api.push(dm(ME, "/run"));
+    await h.api.waitFor(() => sentTexts(h.api).includes("Usage: /run [ticket id] <task>"));
+    h.api.push(dm(ME, "/run T-001-sa summarise the spec"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Started run r-new on T-001-sa (plan mode)")));
+    assert.deepEqual(started, [{ prompt: "summarise the spec", mode: "plan", origin: `telegram:${ME}`, ticket: "T-001-sa" }]);
+    h.api.push(dm(ME, "/stop"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Cancelled run")));
+    assert.deepEqual(cancelled.sort(), ["r-new", "r-tg-old"], "runs of this chat's origin, never the console's");
   } finally {
     await h.done();
   }

@@ -109,7 +109,7 @@ export function renderTemplate(vars: Record<string, string>, templateDir = TEMPL
         });
       }
     }
-    files.push({ rel, text, executable: rel === "hl" });
+    files.push({ rel, text, executable: rel === "hl" || rel.startsWith(".githooks/") });
   }
   return files;
 }
@@ -145,6 +145,9 @@ export function planInit(o: InitOptions, date: string): { target: string; delive
   return { target, deliveryRel, files };
 }
 
+/** The pre-commit hook: `hl validate` on staged ticket folders and `hl harness sync --check`. */
+export const HOOK_REL = ".githooks/pre-commit";
+
 export const REQUIRED_DIRS = ["artifacts", "archive", "logs", "activity", "projects", "shared/wiki", "shared/templates", "todos", "harness", ".obsidian"];
 
 /** Post-scaffold validator: required folders and files exist and the state files parse. Returns problems (empty = ok). */
@@ -160,6 +163,7 @@ export function validateScaffold(root: string, name: string): string[] {
     "author.local",
     "hl",
     "hl.cmd",
+    HOOK_REL,
     "harness/harness.toml",
     "shared/INDEX.md",
     `${name}.code-workspace`,
@@ -224,7 +228,7 @@ export async function initRepo(
     const cwd = plan.target;
     git(cwd, ["init", "-q", "-b", "main"]);
     git(cwd, ["add", "-A"]);
-    git(cwd, ["update-index", "--chmod=+x", "hl"]);
+    git(cwd, ["update-index", "--chmod=+x", "hl", HOOK_REL]);
     const env: NodeJS.ProcessEnv = { ...process.env };
     const email = o.author.email || `${o.author.slug}@localhost`;
     if (!gitConfigured(cwd, "user.name")) {
@@ -236,6 +240,8 @@ export async function initRepo(
       env.GIT_COMMITTER_EMAIL = email;
     }
     git(cwd, ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `Scaffold ${o.name} knowledge center`], env);
+    // After the first commit, so the scaffold commit does not run the hook (F59, F135; `hl doctor --repair` redoes it).
+    git(cwd, ["config", "core.hooksPath", ".githooks"]);
   }
   return { created, target: plan.target, deliveryRel: plan.deliveryRel };
 }

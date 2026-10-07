@@ -30,11 +30,15 @@ export interface BotOptions {
 
 type Lazy = "assistant" | "approvalQueue" | "runManager" | "context";
 
+/** The origin a run started from this Telegram chat carries (RunState.origin), so /stop can find it. */
+export const telegramOrigin = (dm: number) => `telegram:${dm}`;
+
 const HELP = [
   "Helmlock bot. Send a message to chat with the assistant.",
   "/status - in-flight tickets, waiting approvals, active runs",
   "/new [title] - start a new chat",
   "/use <chat id prefix> - switch chat (no argument lists recent chats)",
+  "/run [ticket id] <task> - start a read-only (plan mode) agent run",
   "/stop - cancel the current answer or a run started from this chat",
   "/todo <text> - add a todo",
   "/ticket <title> - create a ticket",
@@ -260,6 +264,8 @@ export class TelegramBot {
         return this.use(dm, rest);
       case "/stop":
         return this.stopCmd(dm);
+      case "/run":
+        return this.runCmd(dm, rest);
       case "/todo":
         return this.verb("todo add", { text: rest }, rest ? undefined : "Usage: /todo <text>", (d) => `Added todo ${(d as { id: string }).id}.`);
       case "/ticket":
@@ -339,10 +345,29 @@ export class TelegramBot {
     }
     const runs = await this.svc("runManager");
     const mine = this.runsByDm.get(dm);
-    const live = runs?.active().filter((r) => mine?.has(r.id)) ?? [];
+    const origin = telegramOrigin(dm);
+    const live = runs?.active().filter((r) => r.origin === origin || mine?.has(r.id)) ?? [];
     const author = this.o.runtime.info.author ?? "telegram";
     for (const r of live) await runs?.cancel(r.id, author);
     return live.length ? `Cancelled run ${live.map((r) => r.id).join(", ")}.` : "Nothing to stop.";
+  }
+
+  /** Runs from Telegram are low trust (F66): plan mode only, and they carry this chat as their origin. */
+  private async runCmd(dm: number, rest: string): Promise<string> {
+    const m = /^(T-\d+-[a-z0-9]+)\s+(.+)$/is.exec(rest);
+    const ticket = m?.[1];
+    const task = (m?.[2] ?? rest).trim();
+    if (!task) return "Usage: /run [ticket id] <task>";
+    const actor = this.actor();
+    if (!actor) return "No author is set on this machine (author.local).";
+    const runs = await this.svc("runManager");
+    if (!runs) return "Agent runs need hl serve with the runtimes plugin.";
+    try {
+      const st = await runs.start({ prompt: task, actor, mode: "plan", origin: telegramOrigin(dm), ...(ticket ? { ticket } : {}) });
+      return `Started run ${st.id}${st.ticket ? ` on ${st.ticket}` : ""} (plan mode). Send /stop to cancel it.`;
+    } catch (e) {
+      return `Refused: ${(e as Error).message}`;
+    }
   }
 
   // ---------- chat with the assistant ----------
@@ -393,6 +418,7 @@ export class TelegramBot {
         } else if (ev.type === "message" && ev.message.role === "assistant") final = ev.message.text;
         else if (ev.type === "approval") await this.sendCard(dm, ev.card);
         else if (ev.type === "error") error = ev.message;
+        else if (ev.type === "notice") await this.send(dm, `Note: ${ev.message}`);
         else if (ev.type === "done") break;
       }
       const answer = ctl.signal.aborted ? `${buf || final || ""}\n\n(stopped)`.trim() : error ? `Error: ${error}` : final || buf || "(no answer)";
