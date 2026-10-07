@@ -1,0 +1,10 @@
+{
+  "skills": ["do"],
+  "query": "/do Plan T-014-sa, I need the impact and an estimate before anyone writes code.",
+  "expected_behavior": [
+    "Reads the ticket id plus the stage verb plan as a role request and dispatches the planner, not /kickoff",
+    "Passes the ticket and a DONE check, leaving the /plan modes to the agent",
+    "Writes no code and runs no build",
+    "The report names the plan file and the tasks added, with no skill or agent inventory rows"
+  ]
+}

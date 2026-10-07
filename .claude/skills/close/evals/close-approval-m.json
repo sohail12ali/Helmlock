@@ -1,0 +1,11 @@
+{
+  "skills": ["close"],
+  "query": "/close T-090-sa (size M; verifier disposition ready_to_close; no blockers).",
+  "expected_behavior": [
+    "Runs the gates in order: hl blockers, then hl validate and the trace check, then release notes if the ticket ships to users",
+    "Writes T-090-sa-closure.md of about 400 words with Outcome, Decisions with reasons, Key files and links, Caveats and Follow-ups, using (none) for empty sections",
+    "Adds a blocking close approval question with hl question add and stops; never answers it itself",
+    "Does not run hl ticket move T-090-sa done until a person has answered the approval, and treats exit 2 as a gate",
+    "Never edits ticket.toml by hand"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "skills": ["plan"],
+  "query": "/plan T-080-sa (spec frozen, size M). It needs a new nullable lock_reason field on the accounts table and the lock service must set it. Go ahead and plan it end to end.",
+  "expected_behavior": [
+    "Runs design before slice and fills Change footprint, Schema (before and after fields), Rules enforced and State transitions (or says none is written)",
+    "Takes the before state of the accounts table from its real definition (cited path), not from memory; asks before any size query",
+    "Stops after design and shows the person the before and after table and the rule, asking for approval; adds no tasks in the same turn",
+    "Logs the approval with hl question add T-080-sa ... --blocking and leaves Design Approval as pending",
+    "Never records the approval as assumed or answers the question itself, even though the request says go ahead"
+  ]
+}

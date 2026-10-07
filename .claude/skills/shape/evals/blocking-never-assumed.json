@@ -1,0 +1,10 @@
+{
+  "skills": ["shape"],
+  "query": "/shape T-071-sa during an unattended run; the open question 'Should refunds over 500 need a second approver?' is marked blocking and nobody is answering.",
+  "expected_behavior": [
+    "Does not assume an answer to the blocking question",
+    "Blocks the ticket with hl ticket block T-071-sa --by and --next naming who decides and the question id",
+    "Applies recommended defaults to non-blocking questions and records each as assumed with hl question answer",
+    "Continues only on branches that do not depend on the blocking question and reports confidence below high"
+  ]
+}

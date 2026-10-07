@@ -1,0 +1,92 @@
+# Helmlock harness source (system layer).
+#
+# One source for the host config of Claude Code and the Cursor CLI (Blueprint 21).
+# `hl harness sync` generates the files below and stamps each GENERATED with a hash;
+# `hl harness sync --check` fails when a generated file is stale or was edited by hand.
+# `hl harness lint` checks the agents and skills against the format rules.
+#
+# Generated, never hand-edited:
+#   Claude Code  .claude/settings.json, .mcp.json
+#   Cursor CLI   .cursor/hooks.json (version 1), .cursor/cli.json, .cursor/mcp.json,
+#                .cursor/rules/*.mdc, .cursorignore
+#   Both         the block between <!-- hl:generated:start --> and <!-- hl:generated:end -->
+#                in AGENTS.md, and .cursor/rules/helmlock.mdc, both from harness/rules/*.md
+#                joined in file-name order (Cursor does not follow @ imports).
+
+schema_version = 1
+
+# Permissions. Paths are relative to the knowledge repo root (the workspace).
+# Only knowledge-repo state is protected: a builder may still edit pyproject.toml,
+# Cargo.toml or test fixtures in a product repo (Blueprint 25, change A).
+# Deny wins over allow on both hosts.
+[permissions]
+# deny: plain path globs; Edit and Write are denied (Claude Edit(p) + Write(p), Cursor Write(p)).
+# State changes only through `hl` verbs.
+deny = [
+  "artifacts/**/ticket.toml",
+  "artifacts/**/tasks.toml",
+  "artifacts/**/decisions/*.toml",
+  "artifacts/**/questions/*.toml",
+  "artifacts/**/bugs/*.toml",
+  "artifacts/**/gaps/*.toml",
+  "logs/**",
+  "activity/**",
+  "workspace.toml",
+  "people.toml",
+  "projects/*/project.toml",
+]
+# deny_read: Read(p) on secrets, generated output and hidden material.
+deny_read = [
+  ".env",
+  "*.key",
+  "site/**",
+  "archive/**",
+  "_work/**",
+]
+# ask: shell command prefixes that always ask a person first.
+ask = [
+  "git push",
+  "git commit",
+  "git reset --hard",
+  "gh pr create",
+  "gh pr merge",
+]
+
+# Hooks. One command per hook; the generator emits each hook to exactly one place
+# per host and marks it, so the Cursor CLI (which also loads Claude hooks) runs it once.
+# Event mapping: session_start -> Claude SessionStart, Cursor sessionStart
+#                post_edit     -> Claude PostToolUse,  Cursor afterFileEdit
+#                stop          -> Claude Stop,         Cursor stop
+
+[[hooks]]
+event = "session_start"
+command = "hl context --session"
+# Prints a small digest: tickets in flight, approvals waiting, skills per layer.
+
+[[hooks]]
+event = "post_edit"
+matcher = "Edit|Write"
+command = "hl validate --changed"
+# The generator appends the edited file path. Budget: under 300 ms for one file. Non-zero exit shows the rule and the fix.
+
+[[hooks]]
+event = "stop"
+command = "hl log show"
+# Shows today's log lines so the person sees whether this session is logged.
+text = "If this session shipped work, log it once with /log-work: one plain sentence, no agent or skill names. Skip for read-only or aborted work."
+# The Stop hook owns the work log reminder; ticket moves and skills do not log (Blueprint 24, 25 change E).
+
+# Files hidden from indexing and agents on both hosts.
+[ignore]
+globs = [
+  "archive/",
+  "_work/",
+  "node_modules/",
+]
+
+# Run modes, least to most autonomous. `hl run --mode` takes one of these.
+# Never pass Cursor `--mode default`; it is rejected.
+[modes]
+ladder = ["plan", "ask", "auto-review", "force"]
+default = "plan"
+# Host flags per mode are owned by the runtime adapters (hl run), not this file.

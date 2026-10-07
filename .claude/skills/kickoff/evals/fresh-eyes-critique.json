@@ -1,0 +1,11 @@
+{
+  "skills": ["kickoff"],
+  "query": "/kickoff T-031-sa (size M, spec frozen, the planner has just finished slice and estimate).",
+  "expected_behavior": [
+    "Launches /challenge T-031-sa plan as its own task in a new agent, separate from the planner run",
+    "Passes that agent only the ticket id, the stage and the DONE check, not the planner's reasoning or summary",
+    "The critique reports all five lenses (security, architecture, resilience, maintainability, lean) and checks schema approval and state transitions",
+    "Critical findings go back to the planner; after the fix the challenge runs again in another fresh agent",
+    "Build does not start while a critical finding, a pending schema approval or the plan approval question is open"
+  ]
+}
