@@ -8,7 +8,8 @@ await guarded(async () => {
   const a = parseArgs(process.argv.slice(2));
   const p = await readPayload();
   if (isForeign(a.host, p) || stopIsQuiet(p)) return 0;
-  const text = a.policy ? stopText(resolvePolicy(p, a.policy)) : undefined;
+  // The first policy layer with a stop text wins (system, then workspace).
+  const text = a.policies.map((f) => stopText(resolvePolicy(p, f))).find((t) => t);
   if (!text) return 0;
   const v = transcriptVerdict(p);
   if (v && (v.logged || !v.wrote)) return 0;

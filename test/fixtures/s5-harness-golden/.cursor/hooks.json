@@ -3,22 +3,22 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "node \"packages/plugins/harness/hooks/session-start.ts\" --host cursor -- context --session"
+        "command": "node \"../delivery/packages/plugins/harness/hooks/session-start.ts\" --host cursor -- context --session"
       }
     ],
     "afterFileEdit": [
       {
-        "command": "node \"packages/plugins/harness/hooks/post-edit.ts\" --host cursor -- validate --changed"
+        "command": "node \"../delivery/packages/plugins/harness/hooks/post-edit.ts\" --host cursor -- validate --changed"
       }
     ],
     "stop": [
       {
-        "command": "node \"packages/plugins/harness/hooks/stop.ts\" --host cursor --policy harness/harness.toml -- log show"
+        "command": "node \"../delivery/packages/plugins/harness/hooks/stop.ts\" --host cursor --policy harness/harness.toml -- log show"
       }
     ],
     "beforeShellExecution": [
       {
-        "command": "node \"packages/plugins/harness/hooks/pretool.ts\" --host cursor --policy harness/harness.toml"
+        "command": "node \"../delivery/packages/plugins/harness/hooks/pretool.ts\" --host cursor --policy harness/harness.toml"
       }
     ]
   }

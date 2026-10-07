@@ -42,6 +42,18 @@ after(() => {
   rmSync(base, { recursive: true, force: true });
 });
 
+test("init already generated the host config with the system layer; check is clean", () => {
+  const settings = join(ws, ".claude", "settings.json");
+  assert.ok(existsSync(settings), "settings.json written by init");
+  const text = readFileSync(settings, "utf8");
+  assert.ok(text.includes("Edit(artifacts/**/ticket.toml)"), "system deny rules merged in");
+  assert.ok(text.includes("Read(author.local)"), "workspace deny_read merged in");
+  const committed = spawnSync("git", ["ls-files", ".claude/settings.json", ".cursor/rules/helmlock.mdc"], { cwd: ws, encoding: "utf8" }).stdout;
+  assert.match(committed, /\.claude\/settings\.json/, "in the first commit");
+  const check = hl(["harness", "sync", "--check"]);
+  assert.equal(check.code, 0, `${check.stderr}\n${JSON.stringify(check.json)}`);
+});
+
 test("where resolves the new knowledge center", () => {
   const r = hl(["where"]);
   assert.equal(r.code, 0, r.stderr);

@@ -197,8 +197,15 @@ function gitConfigured(cwd: string, key: string): boolean {
   return r.status === 0 && r.stdout.trim() !== "";
 }
 
-/** Writes the planned tree (exclusive create), validates it, then git init + first commit. */
-export function initRepo(o: InitOptions, date: string): { created: string[]; target: string; deliveryRel: string } {
+/**
+ * Writes the planned tree (exclusive create), validates it, runs `generate` (the harness sync, so the host config
+ * is in the first commit; it returns the files it wrote), then git init + first commit.
+ */
+export async function initRepo(
+  o: InitOptions,
+  date: string,
+  generate?: (target: string) => Promise<string[]>,
+): Promise<{ created: string[]; target: string; deliveryRel: string }> {
   const plan = planInit(o, date);
   const created = plan.files.map((f) => f.rel);
   if (o.dryRun) return { created, target: plan.target, deliveryRel: plan.deliveryRel };
@@ -212,6 +219,7 @@ export function initRepo(o: InitOptions, date: string): { created: string[]; tar
   const problems = validateScaffold(plan.target, o.name);
   if (problems.length > 0)
     throw new ScaffoldError("scaffold-invalid", `the new knowledge center failed validation: ${problems.join("; ")}`, { file: plan.target });
+  if (generate) for (const rel of await generate(plan.target)) if (!created.includes(rel)) created.push(rel);
   if (o.git !== false) {
     const cwd = plan.target;
     git(cwd, ["init", "-q", "-b", "main"]);

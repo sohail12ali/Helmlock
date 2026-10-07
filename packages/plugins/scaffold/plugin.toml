@@ -3,6 +3,7 @@ kind = "code"
 version = "0.1.0"
 requires_core = ">=1 <2"
 provides = ["scaffold"]
-requires = []
+# Mount order only: init runs `hl harness sync` in the new repo when the harness plugin is enabled (optional).
+requires = ["harness"]
 verbs = ["init", "project add"]
 entry = "index.ts"

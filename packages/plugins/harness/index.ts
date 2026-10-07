@@ -5,7 +5,7 @@ import type { HarnessService, PluginModule, VerbDef, WorkspaceInfo } from "@helm
 import { fail, ok } from "@helmlock/core";
 import { z } from "zod";
 import { HELMLOCK_LINT, lintHarness } from "./lint.ts";
-import { hasSource, loadSource } from "./source.ts";
+import { hasSource, loadLayers } from "./source.ts";
 import { syncHarness } from "./sync.ts";
 
 /** The sync root: --root, else the knowledge repo when it holds harness/harness.toml, else the delivery repo. */
@@ -22,7 +22,7 @@ export function createHarnessService(ws: WorkspaceInfo): HarnessService {
     async lint(opts = {}) {
       const root = harnessRoot(ws, opts.root);
       // harness.toml [lint] not_skills: folders under .claude/skills that are repo tools, not shipped skills.
-      const extra = hasSource(root) ? ((loadSource(root).toml as { lint?: { not_skills?: string[] } }).lint?.not_skills ?? []) : [];
+      const extra = hasSource(root) ? loadLayers(root, ws.deliveryRoot).toml.lint.not_skills : [];
       return lintHarness(root, { notSkills: [...HELMLOCK_LINT.notSkills, ...extra] });
     },
   };

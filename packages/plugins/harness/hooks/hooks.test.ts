@@ -139,6 +139,15 @@ test("pretool: ask, deny, allow per harness.toml; fails closed on any internal e
   }
 });
 
+test("two policy layers (system, then workspace): pretool unions ask lists, stop takes the first text", () => {
+  const ws = join(FIXTURES, "s5-layers", "knowledge", "harness", "harness.toml");
+  const two = ["--host", "cursor", "--policy", POLICY, "--policy", ws];
+  assert.equal(hook("pretool.ts", two, { command: "npm publish", cwd }).json?.permission, "ask", "from the workspace layer");
+  assert.equal(hook("pretool.ts", two, { command: "rm -rf /", cwd }).json?.permission, "deny", "from the system layer");
+  const k = hook("stop.ts", ["--host", "cursor", "--policy", ws, "--policy", POLICY], { hook_event_name: "stop", loop_count: 0, workspace_roots: [cwd] });
+  assert.match(String(k.json?.followup_message), /log it once/);
+});
+
 test("logic units", () => {
   assert.deepEqual(segments("FOO=1 git push; ls | wc"), ["git push", "ls", "wc"]);
   assert.equal(decide("git pushx", { ask: ["git push"] }).decision, "allow");
