@@ -1,0 +1,390 @@
+import assert from "node:assert/strict";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { test } from "node:test";
+import type { ApprovalCardData, ApprovalQueueService, AssistantEvent, AssistantService, ChatSummaryData, RunManagerService, RunState } from "@helmlock/core";
+import { createRuntime } from "@helmlock/core";
+import { createTestWorkspace, DELIVERY_ROOT, type TestWorkspace } from "@helmlock/core/testing";
+import { catalog } from "../registry.ts";
+import { createBotApi, type TgUpdate } from "./api.ts";
+import { type BotOptions, TelegramBot } from "./bot.ts";
+import { type FakeBotApi, startFakeBotApi } from "./fake-bot-api.ts";
+import { Config, startTelegram } from "./index.ts";
+
+const ME = 4242;
+const STRANGER = 666;
+const dm = (from: number, text: string): Omit<TgUpdate, "update_id"> => ({
+  message: { message_id: 1, from: { id: from }, chat: { id: from, type: "private" }, text },
+});
+const tap = (from: number, data: string, messageId: number, text = ""): Omit<TgUpdate, "update_id"> => ({
+  callback_query: { id: `cb-${messageId}`, from: { id: from }, data, message: { message_id: messageId, chat: { id: from, type: "private" }, text } },
+});
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function fakeAssistant(reply = ["Hel", "lo ", "Sam"]) {
+  const sent: { chat: string; text: string; channel: string; actor: string }[] = [];
+  const chats: ChatSummaryData[] = [];
+  let n = 0;
+  const svc: AssistantService = {
+    async list() {
+      return chats;
+    },
+    async create(o) {
+      n += 1;
+      const c: ChatSummaryData = {
+        id: `chat${n}-${"abcdef".repeat(2)}`,
+        title: o.title ?? `Chat ${n}`,
+        model: o.model ?? "m",
+        channel: o.channel,
+        created: "2026-10-07T00:00:00Z",
+        updated: `2026-10-07T00:00:0${n}Z`,
+      };
+      chats.push(c);
+      return c;
+    },
+    async get(id) {
+      return { summary: chats.find((c) => c.id === id) as ChatSummaryData, messages: [] };
+    },
+    async setModel(id) {
+      return chats.find((c) => c.id === id) as ChatSummaryData;
+    },
+    async *send(chat, text, o): AsyncIterable<AssistantEvent> {
+      sent.push({ chat, text, channel: o.channel, actor: o.actor.id });
+      for (const t of reply) {
+        await sleep(15);
+        if (o.signal?.aborted) return;
+        yield { type: "delta", message_id: "m1", text: t };
+      }
+      yield { type: "message", message: { id: "m1", role: "assistant", text: reply.join(""), ts: "2026-10-07T00:00:00Z" } };
+      yield { type: "done", message_id: "m1" };
+    },
+  };
+  return { svc, sent, chats };
+}
+
+function fakeQueue(cards: ApprovalCardData[] = []) {
+  const answers: { id: string; decision: string; by: string; via: string; scope?: string }[] = [];
+  const svc: ApprovalQueueService = {
+    request: async () => {
+      throw new Error("not used");
+    },
+    pending: () => cards.filter((c) => c.status === "pending"),
+    recent: () => cards,
+    answer(id, decision, by, via, scope) {
+      const c = cards.find((x) => x.id === id);
+      if (!c) throw new Error(`no approval ${id}`);
+      if (c.local_only && via === "telegram") throw new Error("this approval needs the console");
+      answers.push({ id, decision, by, via, ...(scope ? { scope } : {}) });
+      c.status = decision === "allow" ? "allowed" : "denied";
+      return c;
+    },
+  };
+  return { svc, answers };
+}
+
+const card = (id: string, extra: Partial<ApprovalCardData> = {}): ApprovalCardData => ({
+  id,
+  action: "git push",
+  detail: "push m4 to origin",
+  actor: { kind: "agent", id: "builder", onBehalfOf: "sam" },
+  local_only: false,
+  created: "2026-10-07T00:00:00Z",
+  expires: "2026-10-07T00:05:00Z",
+  status: "pending",
+  ...extra,
+});
+
+interface Harness {
+  ws: TestWorkspace;
+  api: FakeBotApi;
+  bot: TelegramBot;
+  logs: string[];
+  done(): Promise<void>;
+}
+
+async function boot(extra: Partial<BotOptions> = {}, notify = true): Promise<Harness> {
+  const ws = await createTestWorkspace({ catalog, fixture: "ws-demo" });
+  const api = await startFakeBotApi();
+  const logs: string[] = [];
+  const bot = new TelegramBot({
+    api: createBotApi(api.token, api.base),
+    runtime: ws.runtime,
+    config: { allowed: [ME], notify, model: undefined },
+    log: (l) => logs.push(l),
+    pollTimeoutSec: 1,
+    backoffMs: 20,
+    editIntervalMs: 0,
+    ...extra,
+  }).start();
+  return {
+    ws,
+    api,
+    bot,
+    logs,
+    async done() {
+      await bot.stop();
+      await api.close();
+      await ws.cleanup();
+    },
+  };
+}
+
+const sentTexts = (api: FakeBotApi) => api.callsTo("sendMessage").map((c) => String(c.params.text));
+
+test("allowlist: a stranger gets nothing and leaves one log line", async () => {
+  const h = await boot();
+  try {
+    h.api.push(dm(STRANGER, "/status"), dm(STRANGER, "hello"), dm(ME, "/help"));
+    await h.api.waitFor(() => sentTexts(h.api).length >= 1);
+    await sleep(50);
+    assert.deepEqual(
+      h.api.callsTo("sendMessage").map((c) => c.params.chat_id),
+      [ME],
+    );
+    assert.equal(h.logs.filter((l) => l.includes(`user ${STRANGER}`)).length, 2);
+    assert.match(sentTexts(h.api)[0] as string, /\/todo/);
+  } finally {
+    await h.done();
+  }
+});
+
+test("a text message sends a working message and edits it into the final answer (low trust channel)", async () => {
+  const a = fakeAssistant();
+  const h = await boot({ services: { assistant: a.svc } });
+  try {
+    h.api.push(dm(ME, "say hello"));
+    await h.api.waitFor((c) => c.some((x) => x.method === "editMessageText" && x.params.text === "Hello Sam"));
+    const working = h.api.callsTo("sendMessage")[0];
+    assert.equal(working?.params.text, "Working…");
+    assert.ok(h.api.callsTo("sendChatAction").length >= 1);
+    const edits = h.api.callsTo("editMessageText");
+    assert.ok(edits.length >= 2, "deltas edit the working message before the final edit");
+    assert.ok(edits.every((e) => e.params.message_id === 100));
+    assert.deepEqual(a.sent, [{ chat: a.chats[0]?.id, text: "say hello", channel: "telegram", actor: "sam" }]);
+    // the DM's chat is remembered locally
+    const state = JSON.parse(readFileSync(join(h.ws.root, ".hl-cache/telegram.json"), "utf8"));
+    assert.equal(state.dms[String(ME)].chat, a.chats[0]?.id);
+  } finally {
+    await h.done();
+  }
+});
+
+test("/new and /use switch the DM's chat", async () => {
+  const a = fakeAssistant();
+  const h = await boot({ services: { assistant: a.svc } });
+  try {
+    h.api.push(dm(ME, "/new First"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("New chat chat1")));
+    h.api.push(dm(ME, "/new Second"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("New chat chat2")));
+    h.api.push(dm(ME, "/use chat1"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Now using chat chat1")));
+    h.api.push(dm(ME, "hi"));
+    await h.api.waitFor(() => a.sent.length === 1);
+    assert.equal(a.sent[0]?.chat, a.chats[0]?.id);
+  } finally {
+    await h.done();
+  }
+});
+
+test("/stop cancels the answer in flight", async () => {
+  const a = fakeAssistant(Array.from({ length: 50 }, () => "x"));
+  const h = await boot({ services: { assistant: a.svc } });
+  try {
+    h.api.push(dm(ME, "long"));
+    await h.api.waitFor((c) => c.some((x) => x.method === "editMessageText"));
+    h.api.push(dm(ME, "/stop"));
+    await h.api.waitFor(() => sentTexts(h.api).includes("Stopped the current answer."));
+    await h.api.waitFor((c) => c.some((x) => x.method === "editMessageText" && String(x.params.text).endsWith("(stopped)")));
+  } finally {
+    await h.done();
+  }
+});
+
+test("/todo and /ticket write through the verb registry as the person", async () => {
+  const h = await boot();
+  try {
+    h.api.push(dm(ME, "/todo buy domain for the console"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Added todo")));
+    assert.ok(sentTexts(h.api).includes("Added todo TD-002-sa."));
+    assert.match(readFileSync(join(h.ws.root, "todos/TD-002-sa.toml"), "utf8"), /buy domain for the console/);
+
+    h.api.push(dm(ME, "/ticket Gift card redemption"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Created ticket")));
+    const line = sentTexts(h.api).find((t) => t.startsWith("Created ticket")) as string;
+    const id = /Created ticket (T-\d+-sa)/.exec(line)?.[1];
+    assert.ok(id, line);
+    assert.match(line, /Gift card redemption/);
+
+    h.api.push(dm(ME, "/todo"));
+    await h.api.waitFor(() => sentTexts(h.api).includes("Usage: /todo <text>"));
+  } finally {
+    await h.done();
+  }
+});
+
+test("approval card: buttons answer the queue via telegram and the card is edited", async () => {
+  const q = fakeQueue([card("ap1"), card("ap2")]);
+  const h = await boot({ services: { approvalQueue: q.svc } });
+  try {
+    await h.ws.runtime.ctx.emit("approval.requested", { id: "ap1", action: "git push", detail: "push m4 to origin", localOnly: false });
+    await h.api.waitFor(() => h.api.callsTo("sendMessage").length === 1);
+    const sent = h.api.callsTo("sendMessage")[0]?.params as { text: string; reply_markup: { inline_keyboard: { text: string; callback_data: string }[][] } };
+    assert.match(sent.text, /^Approval: git push/);
+    const buttons = sent.reply_markup.inline_keyboard.flat();
+    assert.deepEqual(
+      buttons.map((b) => b.text),
+      ["Allow", "Allow for this chat", "Deny"],
+    );
+    h.api.push(tap(ME, buttons[1]?.callback_data as string, 100, sent.text));
+    await h.api.waitFor((c) => c.some((x) => x.method === "editMessageText"));
+    assert.deepEqual(q.answers, [{ id: "ap1", decision: "allow", by: "sam", via: "telegram", scope: "chat" }]);
+    assert.equal(h.api.callsTo("answerCallbackQuery")[0]?.params.text, "Allowed for this chat");
+    const edit = h.api.callsTo("editMessageText")[0]?.params;
+    assert.equal(edit?.message_id, 100);
+    assert.equal(edit?.reply_markup, undefined, "buttons are removed");
+    assert.match(String(edit?.text), /— Allowed for this chat by sam \(Telegram\)$/);
+
+    // a stranger's tap is dropped
+    h.api.push(tap(STRANGER, "ap:a:ap2", 100));
+    await sleep(80);
+    assert.equal(q.answers.length, 1);
+
+    // decided elsewhere: the card is edited, and a timeout sends a notification
+    await h.ws.runtime.ctx.emit("approval.requested", { id: "ap2", action: "git push", detail: "again", localOnly: false });
+    await h.api.waitFor(() => h.api.callsTo("sendMessage").length === 2);
+    await h.ws.runtime.ctx.emit("approval.decided", { id: "ap2", decision: "deny", by: "timeout", channel: "timeout" });
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Approval timed out")));
+    assert.ok(h.api.callsTo("editMessageText").some((c) => /Expired/.test(String(c.params.text))));
+  } finally {
+    await h.done();
+  }
+});
+
+test("a local_only card says it needs the console and has no buttons", async () => {
+  const q = fakeQueue([card("ap9", { action: "shell", detail: "rm -rf build", local_only: true })]);
+  const h = await boot({ services: { approvalQueue: q.svc } });
+  try {
+    await h.ws.runtime.ctx.emit("approval.requested", { id: "ap9", action: "shell", detail: "rm -rf build", localOnly: true });
+    await h.api.waitFor(() => h.api.callsTo("sendMessage").length === 1);
+    const p = h.api.callsTo("sendMessage")[0]?.params;
+    assert.equal(p?.reply_markup, undefined);
+    assert.match(String(p?.text), /needs the console/);
+    // even a forged button press is refused by the queue
+    h.api.push(tap(ME, "ap:a:ap9", 100, String(p?.text)));
+    await h.api.waitFor(() => h.api.callsTo("answerCallbackQuery").length === 1);
+    assert.equal(q.answers.length, 0);
+  } finally {
+    await h.done();
+  }
+});
+
+test("/status and notifications", async () => {
+  const run: RunState = {
+    id: "r1",
+    runtime: "claude-code",
+    agent: "builder",
+    ticket: "T-014-sa",
+    mode: "ask",
+    status: "running",
+    started: "x",
+    first_result_line: "Built slice 1",
+  };
+  const runs: RunManagerService = {
+    start: async () => run,
+    get: () => run,
+    active: () => [run],
+    events: async function* () {},
+    cancel: async () => {},
+  };
+  const q = fakeQueue([card("ap1")]);
+  const h = await boot({ services: { approvalQueue: q.svc, runManager: runs } });
+  try {
+    h.api.push(dm(ME, "/status"));
+    await h.api.waitFor(() => sentTexts(h.api).length === 1);
+    const s = sentTexts(h.api)[0] as string;
+    assert.match(s, /in flight/);
+    assert.match(s, /1 approval waiting/);
+    assert.match(s, /1 active run/);
+    await h.ws.runtime.ctx.emit("run.finished", { runId: "r1", runtime: "claude-code", ticket: "T-014-sa", ok: true });
+    await h.ws.runtime.ctx.emit("ticket.blocked", {
+      id: "T-014-sa",
+      blocked: true,
+      by: "Q-001",
+      next: "answer it",
+      actor: { kind: "person", id: "sam", onBehalfOf: "sam" },
+    });
+    await h.api.waitFor(() => sentTexts(h.api).length === 3);
+    assert.ok(sentTexts(h.api).includes("Run r1 on T-014-sa finished: Built slice 1"));
+    assert.ok(sentTexts(h.api).includes("T-014-sa is blocked by Q-001. Next: answer it"));
+  } finally {
+    await h.done();
+  }
+});
+
+test("backoff on 502, then the loop keeps polling", async () => {
+  const h = await boot();
+  try {
+    h.api.failNext(502, 2);
+    await h.api.waitFor(() => h.logs.filter((l) => l.includes("getUpdates failed")).length === 2);
+    assert.match(h.logs[0] as string, /502/);
+    assert.match(h.logs[1] as string, /retrying in 40 ms/, "the wait doubles");
+    h.api.push(dm(ME, "/help"));
+    await h.api.waitFor(() => sentTexts(h.api).length === 1);
+  } finally {
+    await h.done();
+  }
+});
+
+test("stop ends the loop and aborts the poll in flight", async () => {
+  const h = await boot({ pollTimeoutSec: 50 });
+  try {
+    await h.api.waitFor((c) => c.filter((x) => x.method === "getUpdates").length >= 2);
+    const t0 = Date.now();
+    await h.bot.stop();
+    assert.ok(Date.now() - t0 < 1000, "a parked 50 s poll does not hold up shutdown");
+    const n = h.api.callsTo("getUpdates").length;
+    await sleep(100);
+    assert.equal(h.api.callsTo("getUpdates").length, n);
+    assert.equal(h.bot.stopped, true);
+  } finally {
+    await h.done();
+  }
+});
+
+test("startTelegram: needs the token env var and an allowlist; reads settings from workspace.local.toml", async () => {
+  const ws = await createTestWorkspace({ catalog, fixture: "ws-demo" });
+  const api = await startFakeBotApi();
+  const logs: string[] = [];
+  try {
+    assert.equal(startTelegram(ws.runtime, { env: {}, log: (l) => logs.push(l) }), undefined);
+    assert.equal(logs.length, 0, "silent when not configured");
+    assert.equal(startTelegram(ws.runtime, { env: { HL_TELEGRAM_TOKEN: "x" }, log: (l) => logs.push(l) }), undefined);
+    assert.match(logs[0] as string, /allowed_user_ids is empty/);
+
+    writeFileSync(
+      join(ws.root, "workspace.local.toml"),
+      `schema_version = 1\n\n[[plugin]]\nid = "telegram"\nconfig = { token_env = "MY_BOT", allowed_user_ids = "${ME}, 77", notify = false }\n`,
+    );
+    const rt = await createRuntime({ cwd: ws.root, env: { HL_DELIVERY: DELIVERY_ROOT }, catalog });
+    try {
+      const h = startTelegram(rt, { env: { MY_BOT: api.token }, apiBase: api.base, log: (l) => logs.push(l), pollTimeoutSec: 1 });
+      assert.ok(h);
+      api.push(dm(77, "/help"));
+      await api.waitFor(() => api.callsTo("sendMessage").length === 1);
+      await h.stop();
+      assert.ok(existsSync(join(ws.root, "workspace.local.toml")));
+    } finally {
+      await rt.dispose();
+    }
+  } finally {
+    await api.close();
+    await ws.cleanup();
+  }
+});
+
+test("Config parses the allowlist from text or a list and drops junk", () => {
+  assert.deepEqual(Config.parse({ allowed_user_ids: "1, 2;3 x" }).allowed_user_ids, [1, 2, 3]);
+  assert.deepEqual(Config.parse({ allowed_user_ids: [5, "6"] }).allowed_user_ids, [5, 6]);
+  assert.deepEqual(Config.parse({}).allowed_user_ids, []);
+});

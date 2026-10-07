@@ -1,0 +1,43 @@
+id = "telegram"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = []
+requires = []
+verbs = []
+entry = "index.ts"
+
+# The bot runs only inside `hl serve` (F110) and long-polls getUpdates, so it needs no public URL (F4a).
+# Every setting is per machine: the token and the Telegram ids are personal.
+
+[settings.token_env]
+type = "secret-env"
+label = "Bot token variable"
+hint = "Name of the environment variable that holds the BotFather token (never the token itself). The bot starts with hl serve when it is set."
+default = "HL_TELEGRAM_TOKEN"
+scope = "local"
+section = "telegram"
+
+[settings.allowed_user_ids]
+type = "string"
+label = "Allowed Telegram user ids"
+hint = "Comma-separated numeric user ids. Anyone else gets nothing; empty means nobody (fail-closed)."
+default = ""
+scope = "local"
+section = "telegram"
+
+[settings.notify]
+type = "boolean"
+label = "Notifications"
+hint = "Message me when a run finishes, a ticket is blocked or an approval times out."
+default = true
+scope = "local"
+section = "telegram"
+
+[settings.model]
+type = "string"
+label = "Chat model"
+hint = "Model for new Telegram chats (empty = the assistant's default)."
+default = ""
+scope = "local"
+section = "telegram"

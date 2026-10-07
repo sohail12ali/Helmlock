@@ -2,6 +2,7 @@
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Runtime } from "@helmlock/core";
+import { startTelegram } from "@helmlock/plugins/telegram/index.ts";
 import { createAdaptorServer } from "@hono/node-server";
 import { createApp } from "./app.ts";
 import { createChangeHub } from "./events.ts";
@@ -61,6 +62,8 @@ export async function startServer(o: StartOptions): Promise<RunningServer> {
   }
   bound = (server.address() as AddressInfo).port;
   const url = `http://${HOST}:${bound}/`;
+  // Telegram works only while hl serve runs (F110); starts only when enabled and its token env var is set.
+  const telegram = startTelegram(o.runtime, { log });
   let closing: Promise<void> | undefined;
   return {
     url,
@@ -68,7 +71,8 @@ export async function startServer(o: StartOptions): Promise<RunningServer> {
     close() {
       closing ??= new Promise<void>((done) => {
         hub.close();
-        server.close(() => done());
+        const tg = telegram?.stop();
+        server.close(() => void Promise.resolve(tg).finally(done));
         server.closeIdleConnections?.();
         setTimeout(() => server.closeAllConnections?.(), 1000).unref();
       });

@@ -22,4 +22,5 @@ export const catalog: PluginCatalog = {
   scaffold: { dir: join(here, "scaffold"), load: () => import("./scaffold/index.ts") },
   pages: { dir: join(here, "pages"), load: () => import("./pages/index.ts") },
   settings: { dir: join(here, "settings"), load: () => import("./settings/index.ts") },
+  telegram: { dir: join(here, "telegram"), load: () => import("./telegram/index.ts") },
 };
