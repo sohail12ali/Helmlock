@@ -27,6 +27,7 @@ const STATUS_BY_RULE: Record<string, number> = {
   "bad-request": 400,
   "path-outside-ticket": 400,
   "too-large": 413,
+  config: 422,
 };
 
 /** Map any thrown value to a status and an error body. Unknown errors keep their message but no stack. */

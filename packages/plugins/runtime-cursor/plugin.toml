@@ -6,3 +6,18 @@ provides = []
 requires = ["runtimes"]
 verbs = ["run"]
 entry = "index.ts"
+
+[settings.protect]
+type = "boolean"
+label = "Protect state files (Cursor)"
+hint = "After each run, refuse changes to protected state paths that bypassed the deny rules."
+default = true
+scope = "workspace"
+section = "permissions"
+
+[settings.command]
+type = "string"
+label = "Cursor binary path"
+hint = "Override the Cursor CLI binary on this machine (empty = found on PATH)."
+scope = "local"
+section = "agents"

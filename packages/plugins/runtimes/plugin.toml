@@ -6,3 +6,22 @@ provides = ["runtimes"]
 requires = []
 verbs = ["run"]
 entry = "index.ts"
+
+[settings.default_runtime]
+type = "select"
+label = "Default runtime"
+hint = "Agent CLI used by `hl run` when --runtime is not given."
+options = ["claude-code", "cursor"]
+default = "claude-code"
+scope = "workspace"
+section = "agents"
+
+[settings.silence_sec]
+type = "number"
+label = "Silence timeout (seconds)"
+hint = "A run with no output for this long is stopped."
+default = 1800
+min = 1
+integer = true
+scope = "workspace"
+section = "agents"

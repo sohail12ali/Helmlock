@@ -24,6 +24,7 @@ export const BUNDLES: Record<string, PluginRow[]> = {
     "runtime-cursor",
     "scaffold",
     "pages",
+    "settings",
   ].map((id) => ({ id, use: id })),
 };
 
