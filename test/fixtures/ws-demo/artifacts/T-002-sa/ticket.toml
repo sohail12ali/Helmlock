@@ -1,0 +1,17 @@
+schema_version = 1
+
+[ticket]
+id = "T-002-sa"
+title = "Export orders to CSV"
+stage = "build"
+size = "S"
+priority = "normal"
+owner = "sam"
+created = "2026-10-07T10:09:26.218Z"
+updated = "2026-10-07T10:09:29.770Z"
+
+[flags]
+blocked = false
+
+[links]
+related = []

@@ -1,0 +1,19 @@
+schema_version = 1
+
+[day]
+date = "2026-10-07"
+author = "sam"
+
+[[entry]]
+ticket = "T-001-sa"
+category = "Development"
+text = "Wrote the gift card spec and the first decision"
+weight = 3
+logged = "2026-10-07T15:39:31"
+
+[[entry]]
+ticket = "T-002-sa"
+category = "Development"
+text = "Planned the CSV export in one slice"
+weight = 2
+logged = "2026-10-07T15:39:32"

@@ -1,0 +1,10 @@
+schema_version = 1
+id = "D-001-sa"
+ticket = "T-001-sa"
+title = "Where the balance lives"
+status = "accepted"
+chosen = "Gift card service"
+why = "One source of truth"
+rejected = ["Order table"]
+date = "2026-10-07T10:09:28.149Z"
+author = "sam"

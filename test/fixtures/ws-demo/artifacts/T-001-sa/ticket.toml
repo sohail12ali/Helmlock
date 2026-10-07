@@ -1,0 +1,21 @@
+schema_version = 1
+
+[ticket]
+id = "T-001-sa"
+title = "Gift card redemption at checkout"
+stage = "spec"
+size = "M"
+priority = "high"
+owner = "sam"
+created = "2026-10-07T10:09:25.828Z"
+updated = "2026-10-07T10:09:31.287Z"
+
+[flags]
+blocked = false
+
+[claim]
+claimed_by = "sam"
+claimed_at = "2026-10-07T10:09:31.286Z"
+
+[links]
+related = []

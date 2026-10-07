@@ -1,0 +1,22 @@
+schema_version = 1
+ticket = "T-002-sa"
+
+[[task]]
+id = "S1-T1"
+slice = "S1"
+title = "CSV endpoint"
+layer = "api"
+acs = ["AC-1"]
+status = "done"
+depends = []
+files = []
+
+[[task]]
+id = "S1-T2"
+slice = "S1"
+title = "Export button"
+layer = "ui"
+acs = ["AC-1"]
+status = "todo"
+depends = []
+files = []

@@ -1,0 +1,8 @@
+schema_version = 1
+id = "TD-001-sa"
+text = "Ask finance about rounding"
+status = "open"
+priority = "normal"
+ticket = "T-004-sa"
+created = "2026-10-07T10:09:32.414Z"
+author = "sam"

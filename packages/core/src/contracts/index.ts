@@ -10,3 +10,4 @@ export * from "./schemas.ts";
 export type * from "./services.ts";
 export type { Actor, VerbCtx, VerbDef, VerbError, VerbResult, VerbsService } from "./verbs.ts";
 export { blocked, fail, ok } from "./verbs.ts";
+export type * from "./api.ts";

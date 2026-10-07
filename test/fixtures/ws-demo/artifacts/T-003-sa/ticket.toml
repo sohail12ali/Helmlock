@@ -1,0 +1,17 @@
+schema_version = 1
+
+[ticket]
+id = "T-003-sa"
+title = "Customer login with email link"
+stage = "backlog"
+size = "L"
+priority = "normal"
+owner = "sam"
+created = "2026-10-07T10:09:26.496Z"
+updated = "2026-10-07T10:09:26.496Z"
+
+[flags]
+blocked = false
+
+[links]
+related = []

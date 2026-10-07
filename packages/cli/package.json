@@ -9,6 +9,7 @@
     "@clack/prompts": "^1.8.1",
     "@helmlock/core": "workspace:^",
     "@helmlock/plugins": "workspace:^",
+    "@helmlock/server": "workspace:^",
     "commander": "^15.0.0"
   }
 }

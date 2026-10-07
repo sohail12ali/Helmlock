@@ -24,10 +24,10 @@ node_modules/
 .claude/worktrees/
 
 # The delivery repo is not a knowledge repo: no state or generated host config here
-activity/
-runs/
-logs/
+/activity/
+/runs/
+/logs/
 .claude/settings.json
 .claude/harness.lock
-.cursor/
-.cursorignore
+/.cursor/
+/.cursorignore
