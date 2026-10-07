@@ -134,7 +134,8 @@ export function createAssistant(ctx: Context, o: AssistantOptions = {}): Assista
     async create(opts) {
       const model = opts.model ?? ctx.get("providers").defaultModel("assistant") ?? "";
       if (opts.model) checkModel(opts.model);
-      return store.create({ ...(opts.title ? { title: opts.title } : {}), model, channel: opts.channel });
+      // responsible: the person on this machine (author.local); credentials are this machine's (Blueprint 31).
+      return store.create({ ...(opts.title ? { title: opts.title } : {}), model, channel: opts.channel, ...(ws.author ? { responsible: ws.author } : {}) });
     },
     async get(id) {
       const c = await store.load(id);

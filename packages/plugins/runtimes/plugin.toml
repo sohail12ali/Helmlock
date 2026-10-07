@@ -3,8 +3,9 @@ kind = "code"
 version = "0.1.0"
 requires_core = ">=1 <2"
 provides = ["runtimes", "runManager"]
-requires = []
-verbs = ["run"]
+# "tickets" only orders the mount for `run attach`; `hl run` works without it.
+requires = ["tickets"]
+verbs = ["run", "run attach"]
 entry = "index.ts"
 
 [settings.default_runtime]

@@ -20,6 +20,17 @@ export interface RunRecord {
   first_result_line: string;
   /** Where a server-started run came from ("console", "telegram:<chat id>"); absent for `hl run`. */
   origin?: string;
+  /** The person accountable for the run (the actor's on_behalf_of, Blueprint 31). */
+  responsible?: string;
+  /** Logins and keys come from this machine (.env, workspace.local.toml, the CLI's own login), never from an agent. */
+  credentials?: "this machine";
+}
+
+/** Stamps who is responsible for a run; credentials are always this machine's. */
+export function stampResponsible(record: RunRecord, slug: string | undefined): RunRecord {
+  if (slug) record.responsible = slug;
+  record.credentials = "this machine";
+  return record;
 }
 
 /** Folds a run's events into what the record needs. */

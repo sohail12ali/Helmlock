@@ -64,6 +64,10 @@ test("allow once: the card is allowed, the next identical call asks again", asyn
     rows.map((r) => r.event),
     ["requested", "decided", "requested", "decided"],
   );
+  assert.ok(
+    rows.every((r) => r.responsible === "sam"),
+    "every log line names the responsible person (Blueprint 31)",
+  );
   const decided = events.filter((e) => e.name === "approval.decided").map((e) => (e.payload as { decision: string; channel: string }).decision);
   assert.deepEqual(decided, ["allow", "deny"]);
   assert.throws(() => q.answer(pending.id, "deny", "sam", "console"), { rule: "already-decided" } as object);

@@ -264,7 +264,8 @@ test("/todo and /ticket write through the verb registry as the person", async ()
     h.api.push(dm(ME, "/todo buy domain for the console"));
     await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Added todo")));
     assert.ok(sentTexts(h.api).includes("Added todo TD-002-sa."));
-    assert.match(readFileSync(join(h.ws.root, "todos/TD-002-sa.toml"), "utf8"), /buy domain for the console/);
+    // A todo is personal by default (Blueprint 31): people/<slug>/todos/.
+    assert.match(readFileSync(join(h.ws.root, "people/sam/todos/TD-002-sa.toml"), "utf8"), /buy domain for the console/);
 
     h.api.push(dm(ME, "/ticket Gift card redemption"));
     await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Created ticket")));

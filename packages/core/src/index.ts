@@ -9,6 +9,7 @@ export { createKernel, type FullKernel, type KernelOptions } from "./kernel/kern
 export { readManifest, readManifests } from "./runtime/manifests.ts";
 export { createRuntime, type Runtime, type RuntimeOptions, type RunVerbOptions } from "./runtime/runtime.ts";
 export { defineEmitter } from "./schemas/define-emitter.ts";
+export { LOCAL_DIR, PEOPLE_DIR, SCOPE_LABEL, scopeDir, scopeGlobs, scopeOfPath } from "./scopes.ts";
 export { AGENT_CONTRACT, CORE_VERBS } from "./verbs/core-verbs.ts";
 export type { CheckResult } from "./verbs/doctor.ts";
 export { describeInput, type FieldInfo, liteObject } from "./verbs/input.ts";
