@@ -317,3 +317,50 @@ export interface ChatDetail {
 /** POST /api/v1/chats/:id/messages { text } -> 202; the turn streams over GET /api/v1/chats/:id/events (SSE "assistant"
  *  frames with AssistantEvent). POST /api/v1/chats/:id/model { model } -> ChatSummary. */
 export type ChatEvent = AssistantEvent;
+
+// ---------------------------------------------------------------------------------------------------------------
+// Milestone 5: v1 completion (knowledge, inbox state, lifecycle, first-run setup).
+// ---------------------------------------------------------------------------------------------------------------
+
+/** GET /api/v1/knowledge: the shared area and projects (F115, F143), for the Knowledge page. */
+export interface KnowledgeView {
+  /** Lines of the generated shared/INDEX.md: one per document (F116). */
+  index: {
+    path: string;
+    title: string;
+    summary: string;
+    kind: "wiki" | "decision" | "runbook" | "standard" | "glossary" | "template" | "checklist" | "digest" | "other";
+  }[];
+  projects: { id: string; name: string; status: string; owners: string[]; repos: string[]; goals: string[]; tickets: number }[];
+  /** Closure digests of closed tickets, newest first (F125). */
+  digests: { ticket: string; title: string; closed: string; path: string }[];
+}
+/** GET /api/v1/knowledge/doc?path=shared/... -> raw markdown (inside shared/ or projects/ only). */
+export interface KnowledgeDoc {
+  path: string;
+  text: string;
+}
+
+/** Inbox read/archive state per person, stored locally (F67): items resurface on new activity. */
+export interface InboxItemState {
+  key: string;
+  read_at?: string;
+  archived_at?: string;
+}
+/** GET /api/v1/inbox -> items derived from files plus local state; POST /api/v1/inbox/:key { read?: boolean, archived?: boolean }. */
+export interface InboxItem {
+  key: string;
+  kind: "approval" | "question" | "blocked" | "run-failed" | "claim-stale" | "setup" | "retention";
+  title: string;
+  detail?: string;
+  ticket?: string;
+  id?: string;
+  updated: string;
+  read: boolean;
+  archived: boolean;
+}
+
+/** GET /api/v1/setup: first-run checklist for the web wizard (F1a after the writable console). */
+export interface SetupStatus {
+  steps: { id: "author" | "model" | "telegram" | "first-ticket" | "agents" | "trust"; label: string; done: boolean; detail: string; action?: string }[];
+}

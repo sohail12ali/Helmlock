@@ -98,6 +98,8 @@ export interface RunStartOptions extends Omit<RunOptions, "cwd" | "mode"> {
   cwd?: string;
   /** Who started it (F98: the person's own logins are used). */
   actor: Actor;
+  /** Where the start came from, e.g. "console" or "telegram:<chat id>" (so /stop can find its runs). */
+  origin?: string;
 }
 export interface RunState {
   id: string;
@@ -105,6 +107,7 @@ export interface RunState {
   agent?: string;
   ticket?: string;
   mode: RunMode;
+  origin?: string;
   status: "running" | "done" | "failed" | "cancelled";
   started: string;
   ended?: string;
@@ -196,6 +199,8 @@ export type AssistantEvent =
   | { type: "delta"; message_id: string; text: string }
   | { type: "approval"; card: ApprovalCardData }
   | { type: "error"; code: string; message: string }
+  /** e.g. the context window is near its limit (F74). */
+  | { type: "notice"; code: string; message: string }
   | { type: "done"; message_id: string };
 /** The assistant (F11d L3): chat + search + verbs as tools; writes need a confirmation card. History is local JSONL (F11e, B25). */
 export interface AssistantService {
