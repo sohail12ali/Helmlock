@@ -1,8 +1,8 @@
 {
  "title": "Helmlock plan",
- "iteration": 38,
+ "iteration": 39,
  "updated": "2026-10-07",
- "phase": "Scope",
+ "phase": "Build",
  "phases": [
   {
    "id": "foundations",
