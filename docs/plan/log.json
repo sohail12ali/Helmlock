@@ -1,6 +1,11 @@
 [
  {
   "date": "2026-10-07",
+  "you": "This can be used by multiple person and we should give options to store things shared or local; see lc config and control center for users info and personal vs shared agents, tasks, todos",
+  "change": "Researched the three reference repos; proposed storage scopes and per-kind options in Blueprint 31; open question with recommendation. Also fixed: run transcripts persist, full-width pages, provider add model ids, assistant grounding; LM Studio connected."
+ },
+ {
+  "date": "2026-10-07",
   "you": "keep going and tell me when it's done",
   "change": "Fast-forwarded setup/initial, synced the knowledge repo agents, and completed v1 with three parallel agents: notes and index, close/archive/restore/retention, inbox state, knowledge page, setup wizard, CI, hooks, README, and the remaining gaps. Blueprint 30."
  },

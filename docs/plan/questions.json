@@ -1,5 +1,16 @@
 [
  {
+  "text": "Multi-person storage (Blueprint 31): three scopes (shared in git, personal under people/<slug>/ in git, local never committed) with per-kind options (todo team/personal/private, chat local with share, personal agent and skill variants, attach a run to a ticket). Build it?",
+  "rec": "Yes, as proposed: local by default for chats and runs, personal-shared by default for todos, and overrides resolving local, then personal, then shared.",
+  "why": "Matches lc-wms (one file per person, personal flag) and Paperclip (responsible user, personal credentials), stays merge-friendly, and nothing personal is committed by accident.",
+  "cards": [
+   "F62",
+   "F93",
+   "F98",
+   "F9b"
+  ]
+ },
+ {
   "text": "Second review (Blueprint 25): accept changes A to J and the v1 against later cut?",
   "rec": "Accept all ten changes and the cut. None reverses a direction you chose; they narrow scope and remove friction.",
   "why": "A and B prevent real problems in product repos and in the shared git history; the rest makes v1 smaller.",
