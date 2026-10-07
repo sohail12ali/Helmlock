@@ -111,9 +111,12 @@ function Row({
           {item.detail && <p className="truncate text-xs font-normal text-muted-foreground">{item.detail}</p>}
         </div>
         <span className="flex shrink-0 items-center gap-0.5">
-          <Mono className="mr-1 text-xs font-normal text-muted-foreground" title={item.updated}>
-            {age(item.updated)}
-          </Mono>
+          {/* Setup items carry no real time (a fixed epoch keeps them archived once archived): show no age. */}
+          {Date.parse(item.updated) > 0 && (
+            <Mono className="mr-1 text-xs font-normal text-muted-foreground" title={item.updated}>
+              {age(item.updated)}
+            </Mono>
+          )}
           <Button
             variant="ghost"
             size="icon"

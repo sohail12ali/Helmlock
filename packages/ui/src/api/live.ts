@@ -26,10 +26,13 @@ export function useLiveUpdates(): LiveState {
       setState("offline");
       return;
     }
-    const es = new EventSource(EVENTS_URL);
     const pending = new Set<ChangeEvent["areas"][number]>();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let lastVersion = -1;
+    let es: EventSource | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    let closed = false;
 
     const flush = () => {
       timer = undefined;
@@ -37,35 +40,55 @@ export function useLiveUpdates(): LiveState {
       pending.clear();
     };
 
-    es.addEventListener("snapshot", (e) => {
-      setState("live");
-      try {
-        const v = (JSON.parse((e as MessageEvent).data) as { version: number }).version;
-        // Reconnected after missing changes: refresh everything once.
-        if (lastVersion !== -1 && v !== lastVersion) void qc.invalidateQueries();
-        lastVersion = v;
-      } catch {
-        /* ignore malformed snapshot */
-      }
-    });
-    es.addEventListener("change", (e) => {
-      try {
-        const ev = JSON.parse((e as MessageEvent).data) as ChangeEvent;
-        lastVersion = ev.version;
-        for (const a of ev.areas) pending.add(a);
-        // Milestone 4 views (runs, approvals, chats) follow the same stream without a second connection (src/api/m4.ts).
-        window.dispatchEvent(new CustomEvent("hl:change", { detail: ev }));
-        if (!timer) timer = setTimeout(flush, 300);
-      } catch {
-        /* ignore malformed change */
-      }
-    });
-    es.onopen = () => setState("live");
-    es.onerror = () => setState(es.readyState === EventSource.CLOSED ? "offline" : "connecting");
+    // Reconnect ourselves with exponential backoff (2 s doubling to 30 s) so a stopped server is not hammered.
+    const connect = () => {
+      if (closed) return;
+      const src = new EventSource(EVENTS_URL);
+      es = src;
+      src.addEventListener("snapshot", (e) => {
+        setState("live");
+        attempt = 0;
+        try {
+          const v = (JSON.parse((e as MessageEvent).data) as { version: number }).version;
+          // Reconnected after missing changes: refresh everything once.
+          if (lastVersion !== -1 && v !== lastVersion) void qc.invalidateQueries();
+          lastVersion = v;
+        } catch {
+          /* ignore malformed snapshot */
+        }
+      });
+      src.addEventListener("change", (e) => {
+        try {
+          const ev = JSON.parse((e as MessageEvent).data) as ChangeEvent;
+          lastVersion = ev.version;
+          for (const a of ev.areas) pending.add(a);
+          // Milestone 4 views (runs, approvals, chats) follow the same stream without a second connection (src/api/m4.ts).
+          window.dispatchEvent(new CustomEvent("hl:change", { detail: ev }));
+          if (!timer) timer = setTimeout(flush, 300);
+        } catch {
+          /* ignore malformed change */
+        }
+      });
+      src.onopen = () => {
+        attempt = 0;
+        setState("live");
+      };
+      src.onerror = () => {
+        src.close();
+        if (closed) return;
+        setState(attempt >= 3 ? "offline" : "connecting");
+        const delay = Math.min(30_000, 2_000 * 2 ** attempt);
+        attempt++;
+        retry = setTimeout(connect, delay);
+      };
+    };
+    connect();
 
     return () => {
+      closed = true;
       if (timer) clearTimeout(timer);
-      es.close();
+      if (retry) clearTimeout(retry);
+      es?.close();
     };
   }, [qc]);
 
