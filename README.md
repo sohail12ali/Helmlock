@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/helmlock-icon.svg" width="96" alt="Helmlock icon: a ship's helm with a padlock hub"></p>
+<p align="center"><img src="docs/assets/helmlock-icon.svg" width="96" alt="Helmlock icon: a padlock with a ship's helm as its keyhole"></p>
 
 # Helmlock
 

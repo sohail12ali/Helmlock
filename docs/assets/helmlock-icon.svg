@@ -2,20 +2,18 @@
   <title>Helmlock</title>
   <!-- tile -->
   <rect x="2" y="2" width="60" height="60" rx="14" fill="#0a0a0a"/>
-  <!-- helm: eight handles and spokes, and the rim -->
-  <g stroke="#ffffff" stroke-linecap="round" fill="none">
-    <g stroke-width="4.2">
-      <line x1="32" y1="5.5" x2="32" y2="58.5"/>
-      <line x1="5.5" y1="32" x2="58.5" y2="32"/>
-      <line x1="13.3" y1="13.3" x2="50.7" y2="50.7"/>
-      <line x1="50.7" y1="13.3" x2="13.3" y2="50.7"/>
+  <!-- the lock: shackle and body -->
+  <path d="M21 28v-6.5a11 11 0 0 1 22 0V28" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  <rect x="11" y="26" width="42" height="32" rx="7" fill="#ffffff"/>
+  <!-- the helm, where the keyhole would be -->
+  <g stroke="#0a0a0a" stroke-linecap="round" fill="none">
+    <g stroke-width="2.6">
+      <line x1="32" y1="29.6" x2="32" y2="54.4"/>
+      <line x1="19.6" y1="42" x2="44.4" y2="42"/>
+      <line x1="23.2" y1="33.2" x2="40.8" y2="50.8"/>
+      <line x1="40.8" y1="33.2" x2="23.2" y2="50.8"/>
     </g>
-    <circle cx="32" cy="32" r="18.5" stroke-width="4.6"/>
+    <circle cx="32" cy="42" r="8.4" stroke-width="2.8"/>
   </g>
-  <!-- hub: a padlock -->
-  <circle cx="32" cy="32" r="11.6" fill="#0a0a0a" stroke="#ffffff" stroke-width="1.6"/>
-  <path d="M27.2 31.2v-3.1a4.8 4.8 0 0 1 9.6 0v3.1" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
-  <rect x="24.6" y="30.4" width="14.8" height="10.6" rx="2.6" fill="#ffffff"/>
-  <circle cx="32" cy="34.6" r="1.7" fill="#0a0a0a"/>
-  <rect x="31.1" y="35.2" width="1.8" height="3.4" rx="0.9" fill="#0a0a0a"/>
+  <circle cx="32" cy="42" r="3.4" fill="#0a0a0a"/>
 </svg>
