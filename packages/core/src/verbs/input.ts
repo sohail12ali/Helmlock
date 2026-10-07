@@ -32,8 +32,25 @@ function kindOf(s: ZodLike, info: { required: boolean; choices?: string[]; of?: 
     case "readonly":
       if (def.type !== "nullable") info.required = false;
       return kindOf(def.innerType as ZodLike, info);
-    case "pipe":
-      return kindOf(def.in as ZodLike, info);
+    case "pipe": {
+      // z.preprocess puts a transform first; z.transform puts it last. Use whichever side has a type.
+      const first = kindOf(def.in as ZodLike, info);
+      return first !== "unknown" ? first : kindOf(def.out as ZodLike, info);
+    }
+    case "union": {
+      // Flags written as unions (boolean | "true"/"false", string | string[]): pick the most specific kind.
+      const kinds = (def.options as ZodLike[]).map((o) => {
+        const sub: { required: boolean; choices?: string[]; of?: FieldKind } = { required: true };
+        const k = kindOf(o, sub);
+        if (sub.of) info.of = sub.of;
+        return k;
+      });
+      if (kinds.includes("boolean")) return "boolean";
+      if (kinds.includes("array")) return "array";
+      if (kinds.includes("number")) return "number";
+      if (kinds.includes("string")) return "string";
+      return "unknown";
+    }
     case "boolean":
       return "boolean";
     case "number":
