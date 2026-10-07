@@ -24,6 +24,8 @@ interface Filters {
   size: string;
   text: string;
   stage: string;
+  /** Project id (from Knowledge > Projects). */
+  project?: string;
 }
 
 export function filterTickets(tickets: TicketCard[], f: Filters, me: string | undefined): TicketCard[] {
@@ -34,6 +36,7 @@ export function filterTickets(tickets: TicketCard[], f: Filters, me: string | un
       (!f.blocked || t.blocked) &&
       (!f.size || t.size === f.size) &&
       (!f.stage || t.stage === f.stage) &&
+      (!f.project || t.project === f.project) &&
       (!text || t.id.toLowerCase().includes(text) || t.title.toLowerCase().includes(text)),
   );
 }
@@ -293,6 +296,7 @@ export function TicketsPage() {
     size: params.get("size") ?? "",
     text: params.get("q") ?? "",
     stage: params.get("stage") ?? "",
+    project: params.get("project") ?? "",
   };
   const selected = params.get("t") ?? undefined;
   const me = ws.data?.author?.id;
@@ -387,6 +391,11 @@ export function TicketsPage() {
         {filters.stage && (
           <Chip active onClick={() => set("stage", undefined)}>
             Stage: {stageLabel(filters.stage)} ×
+          </Chip>
+        )}
+        {filters.project && (
+          <Chip active onClick={() => set("project", undefined)}>
+            Project: {filters.project} ×
           </Chip>
         )}
         <span className="ml-auto text-xs text-muted-foreground">

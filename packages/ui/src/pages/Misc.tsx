@@ -1,41 +1,8 @@
-// Knowledge, Search and Not found. Simple read-only pages; Todos, Work and Settings have their own files.
+// Search and Not found. Simple read-only pages; Todos, Work and Settings have their own files.
 import { Link, useSearchParams } from "react-router";
-import { useSearch, useSkills } from "@/api/hooks";
+import { useSearch } from "@/api/hooks";
 import { EmptyState, ErrorState, Loading, Mono, PageHeader } from "@/components/common";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-
-export function KnowledgePage() {
-  const q = useSkills();
-  return (
-    <PageLayout id="knowledge">
-      <PageHeader title="Knowledge" />
-      <p className="mb-3 text-sm text-muted-foreground">
-        The wiki and project graph arrive in a later milestone. Skills across the three layers are listed here.
-      </p>
-      {q.isPending ? (
-        <Loading />
-      ) : q.isError ? (
-        <ErrorState error={q.error} />
-      ) : q.data.length === 0 ? (
-        <EmptyState title="No skills found." command="hl skill list" />
-      ) : (
-        <Card className="p-3">
-          <ul className="divide-y text-sm" aria-label="Skills">
-            {q.data.map((s) => (
-              <li key={`${s.layer}-${s.name}`} className="flex flex-wrap items-baseline gap-2 py-2">
-                <Mono className="font-medium">{s.name}</Mono>
-                <Badge variant="outline">{s.layer}</Badge>
-                <span className="w-full text-ink2">{s.description}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-    </PageLayout>
-  );
-}
 
 export function SearchPage() {
   const [params] = useSearchParams();
