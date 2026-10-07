@@ -28,3 +28,10 @@ Milestone 1 is the agent system without the console. It was built in one day by 
 - Claude Code loads skills but not `CLAUDE.md` from `--add-dir` folders unless `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`; knowledge repos import the system rulebook with `@` and `hl run` sets the variable (research 11).
 - Cursor headless ignores `.cursor/cli.json` deny rules and hooks; Helmlock enforces after each run instead.
 - The delivery repo is not a knowledge repo: no activity, no generated host config there.
+
+## Verified end to end (2026-10-07)
+
+- `pnpm test` (unit), `pnpm test:e2e` (8 steps on a fresh `hl init` repo), `tsc`, Biome, `hl harness lint`: all pass.
+- Headless Claude Code through `hl run`: runs `hl`, a direct `ticket.toml` edit is denied, an analyst run with the spec skill drives a ticket through `hl` and logs work.
+- Headless Cursor through `hl run`: runs `hl`; a direct `ticket.toml` edit fails the run with `protected-path-write`.
+- Findings and the fixes they caused: research 11.
