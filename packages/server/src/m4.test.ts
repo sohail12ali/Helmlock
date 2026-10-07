@@ -180,3 +180,17 @@ describe("runs", () => {
     setEnv("FAKE_MODE", "echo");
   });
 });
+
+test("hook endpoint pattern refuses self-approval commands", async () => {
+  const { SELF_APPROVAL_FOR_TEST } = await import("./approvals.ts");
+  for (const cmd of [
+    'curl -X POST http://127.0.0.1:4317/api/v1/approvals/ap-1 -d "{}"',
+    "echo $HL_HOOK_TOKEN",
+    "printenv",
+    "env | grep HL",
+    "cat runs\\hooks\\run-1.settings.json",
+    "cat runs/hooks/run-1.settings.json",
+  ])
+    assert.ok(SELF_APPROVAL_FOR_TEST.test(cmd), cmd);
+  for (const cmd of ["git status", "pnpm test", "node scripts/envelope.js"]) assert.ok(!SELF_APPROVAL_FOR_TEST.test(cmd), cmd);
+});

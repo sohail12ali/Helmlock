@@ -10,6 +10,15 @@ import { ApiError } from "./errors.ts";
 import { currentPerson, failM4, jsonBody, type M4Deps } from "./runs.ts";
 import { checkWriteRequest } from "./writes.ts";
 
+/**
+ * Shell commands that could approve a card from inside a run (the approvals or hook API, the hook token, dumping the
+ * environment). A guard against an agent approving itself, not a sandbox: a process running as the user can still
+ * reach localhost by other means. The approval gate protects against mistakes; it is not a security boundary.
+ */
+const SELF_APPROVAL =
+  /api\/v1\/(approvals|hooks)|HL_HOOK_TOKEN|X-Helmlock-Hook-Token|runs[\\/]hooks|\bprintenv\b|^\s*env\b|[;&|]\s*env\b|Get-ChildItem\s+env:/i;
+export const SELF_APPROVAL_FOR_TEST = SELF_APPROVAL;
+
 /** hl is how agents change state, so hl-only commands never need a card (harness.toml permissions.allow). */
 const HL_PREFIXES = ["hl", "hl.cmd", "./hl"];
 
@@ -104,6 +113,8 @@ export function registerApprovalRoutes(api: Hono, d: M4Deps): void {
       if (tool_name === "Bash") {
         const command = typeof (tool_input as { command?: unknown })?.command === "string" ? (tool_input as { command: string }).command : "";
         if (!command) return deny("no command in the Bash call");
+        // An agent must not answer its own approval cards: refuse commands that reach the approvals API or the hook secret.
+        if (SELF_APPROVAL.test(command)) return deny("agents may not call the approvals API or read the hook token");
         if (isHlOnly(command))
           return c.json({ ok: true, data: { decision: "allow", reason: "hl verbs are always allowed" } } satisfies ApiResponse<HookDecision>);
         const policy = decide(command, { deny_shell: denyShellOf([runtime.info.deliveryRoot, runtime.info.root]) });
