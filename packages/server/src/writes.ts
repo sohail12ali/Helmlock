@@ -125,7 +125,15 @@ export async function todoList(runtime: Runtime, status: string | undefined, tic
   if (ticket) filter.ticket = ticket;
   const rows = await runtime.ctx.get("todos").list(filter);
   return rows.map((t) => {
-    const item: TodoItem = { id: t.id, text: t.text, status: t.status, priority: t.priority, created: t.created, author: t.author };
+    const item: TodoItem = {
+      id: t.id,
+      text: t.text,
+      status: t.status,
+      priority: t.priority,
+      created: t.created,
+      author: t.author,
+      scope: t.scope ?? "personal",
+    };
     if (t.due) item.due = t.due;
     if (t.ticket) item.ticket = t.ticket;
     return item;

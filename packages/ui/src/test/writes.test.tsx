@@ -29,7 +29,7 @@ const taskAdd: VerbInfo = {
 };
 
 const todos: TodoList = [
-  { id: "TD-001-sa", text: "Ask about the tax rule", status: "open", priority: "normal", created: "2026-10-05T09:00:00Z", author: "sam" },
+  { id: "TD-001-sa", text: "Ask about the tax rule", status: "open", priority: "normal", created: "2026-10-05T09:00:00Z", author: "sam", scope: "personal" },
   {
     id: "TD-002-sa",
     text: "Review CSV export",
@@ -39,6 +39,7 @@ const todos: TodoList = [
     ticket: "T-002-sa",
     created: "2026-10-06T09:00:00Z",
     author: "sam",
+    scope: "team",
   },
 ];
 

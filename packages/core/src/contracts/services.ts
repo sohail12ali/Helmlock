@@ -8,6 +8,7 @@ import type {
   Person,
   PluginRow,
   RecordKindName,
+  Scope,
   Task,
   TicketRecord,
   TicketToml,
@@ -322,12 +323,15 @@ export interface ValidateService {
 // ---------- knowledge ----------
 export interface TodosService {
   add(
-    input: { text: string; ticket?: string; due?: string; priority?: TodoRecord["priority"] },
+    input: { text: string; ticket?: string; due?: string; priority?: TodoRecord["priority"]; scope?: Scope },
     actor: Actor,
     opts?: { dryRun?: boolean },
   ): Promise<TodoRecord>;
   done(id: string, actor: Actor, opts?: { dryRun?: boolean }): Promise<TodoRecord>;
-  list(filter?: { status?: "open" | "done"; ticket?: string }): Promise<TodoRecord[]>;
+  /** Move a todo between scopes (team, personal, private); the id stays. */
+  move(id: string, scope: Scope, actor: Actor, opts?: { dryRun?: boolean }): Promise<TodoRecord>;
+  /** Team todos, the current person's personal and private ones; `mine` limits to the current person (default true). */
+  list(filter?: { status?: "open" | "done"; ticket?: string; scope?: Scope; mine?: boolean }): Promise<TodoRecord[]>;
 }
 
 export interface WorkLogService {

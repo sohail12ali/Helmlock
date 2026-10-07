@@ -27,9 +27,20 @@ export const Person = z
     initials: Initials,
     email: z.string().optional(),
     role: z.string().optional(),
+    /** Every git author name or email seen for this person (attribution only; never used to guess who is at the keyboard). */
+    git: z.array(z.string()).default([]),
   })
   .loose();
 export type Person = z.infer<typeof Person>;
+
+/**
+ * Where a thing is stored (Blueprint 31):
+ * - "team": shared, committed at the usual place (e.g. todos/)
+ * - "personal": committed under people/<slug>/, visible to the team
+ * - "private": this machine only, under .hl-local/ (gitignored)
+ */
+export const Scope = z.enum(["team", "personal", "private"]);
+export type Scope = z.infer<typeof Scope>;
 export const PeopleToml = z.object({ schema_version: SchemaVersion, person: z.array(Person).default([]) }).loose();
 export type PeopleToml = z.infer<typeof PeopleToml>;
 
@@ -44,7 +55,8 @@ export const PluginRow = z
   .loose();
 export type PluginRow = z.infer<typeof PluginRow>;
 
-export const LayerName = z.enum(["system", "workspace", "project"]);
+/** Agent and skill layers; personal (people/<slug>/) and local (.hl-local/) override the shared ones (Blueprint 31). */
+export const LayerName = z.enum(["system", "workspace", "project", "personal", "local"]);
 export type LayerName = z.infer<typeof LayerName>;
 
 export const WorkspaceToml = z
@@ -243,6 +255,8 @@ export const TodoRecord = z
     ticket: TicketId.optional(),
     created: IsoTime,
     author: AuthorSlug,
+    /** Derived from where the file lives; written for readers, never trusted over the location. */
+    scope: Scope.default("personal"),
   })
   .loose();
 export type TodoRecord = z.infer<typeof TodoRecord>;

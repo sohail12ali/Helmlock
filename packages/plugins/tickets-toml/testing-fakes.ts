@@ -3,8 +3,8 @@ import type { ActivityLine, Person, PluginCatalog, PluginModule } from "@helmloc
 import { catalog } from "../registry.ts";
 
 export const PEOPLE: Person[] = [
-  { id: "sam", name: "Sam Abbott", initials: "sa" },
-  { id: "kim", name: "Kim Lee", initials: "kl" },
+  { id: "sam", name: "Sam Abbott", initials: "sa", git: [] },
+  { id: "kim", name: "Kim Lee", initials: "kl", git: [] },
 ];
 
 export const activityLines: ActivityLine[] = [];

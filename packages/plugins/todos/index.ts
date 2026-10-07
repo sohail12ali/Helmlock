@@ -61,6 +61,9 @@ export function createTodos(ctx: Context): TodosService {
       await files.writeToml(todoPath(rec.id), TODO_KIND, rec, { dryRun: opts?.dryRun });
       return rec;
     },
+    async move() {
+      throw Object.assign(new Error("todo move is not built yet (milestone 6)"), { rule: "not-built" });
+    },
     async done(id, _actor, opts) {
       const { data, hash } = await read(id);
       const rec = TodoRecord.parse({ ...data, status: "done" });

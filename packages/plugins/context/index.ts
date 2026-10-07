@@ -131,7 +131,7 @@ export function createContext(ctx: Context): ContextService {
           }
         }
       }
-      const skills: Record<LayerName, string[]> = { system: [], workspace: [], project: [] };
+      const skills: Record<LayerName, string[]> = { system: [], workspace: [], project: [], personal: [], local: [] };
       if (ctx.has("skills")) {
         for (const s of await ctx.get("skills").list()) {
           const label = s.layer === "project" ? `${s.folder}/${s.name}` : s.name;

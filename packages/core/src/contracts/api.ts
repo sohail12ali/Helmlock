@@ -180,6 +180,11 @@ export const CONSOLE_VERBS = [
   "ticket restore",
   "notes build",
   "index build",
+  "todo move",
+  "chat share",
+  "run attach",
+  "people add",
+  "people claim",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 
@@ -227,6 +232,7 @@ export interface TodoItem {
   ticket?: string;
   created: string;
   author: string;
+  scope: "team" | "personal" | "private";
 }
 export type TodoList = TodoItem[];
 
@@ -380,3 +386,27 @@ export interface InboxItem {
 export interface SetupStatus {
   steps: { id: "author" | "model" | "telegram" | "first-ticket" | "agents" | "trust"; label: string; done: boolean; detail: string; action?: string }[];
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Milestone 6: people and storage scopes (Blueprint 31). Shared = committed; personal = committed under
+// people/<slug>/ (visible to the team); private/local = .hl-local/ and other gitignored paths, this machine only.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** GET /api/v1/people */
+export interface PeopleView {
+  me: { id: string; name: string; initials: string; email?: string } | null;
+  people: { id: string; name: string; initials: string; role?: string; email?: string; git: string[] }[];
+  /** git author names or emails in this repo's history that no person claims (lc-wms `people --unknown`). */
+  unknown_git: { name: string; email: string; commits: number }[];
+}
+
+/** One agent or skill after layer resolution: which layer won, and which ones it hides. */
+export interface ResolvedItem {
+  kind: "agent" | "skill";
+  name: string;
+  layer: "system" | "workspace" | "project" | "personal" | "local";
+  path: string;
+  overrides: { layer: string; path: string }[];
+}
+/** GET /api/v1/overrides */
+export type OverridesView = ResolvedItem[];
