@@ -1,0 +1,24 @@
+# Workspace layer fixture (knowledge repo).
+schema_version = 1
+
+[permissions]
+deny = ["logs/**", "secrets/**"]
+ask = ["git push", "npm publish"]
+deny_read = ["author.local", "*.local.toml", ".env"]
+
+[[hooks]]
+event = "post_edit"
+matcher = "Edit|Write"
+command = "hl validate --changed"
+
+[[hooks]]
+event = "session_start"
+command = "hl where"
+
+[ignore]
+globs = ["runs/**", "_work/"]
+
+[[mcp]]
+name = "helmlock"
+command = "node"
+args = ["other.ts"]

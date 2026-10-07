@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/packages/plugins/harness/hooks/session-start.ts\" --host claude -- context --session",
+            "command": "node \"$CLAUDE_PROJECT_DIR/../delivery/packages/plugins/harness/hooks/session-start.ts\" --host claude -- context --session",
             "timeout": 30
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/packages/plugins/harness/hooks/post-edit.ts\" --host claude -- validate --changed",
+            "command": "node \"$CLAUDE_PROJECT_DIR/../delivery/packages/plugins/harness/hooks/post-edit.ts\" --host claude -- validate --changed",
             "timeout": 15
           }
         ]
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/packages/plugins/harness/hooks/stop.ts\" --host claude --policy harness/harness.toml -- log show",
+            "command": "node \"$CLAUDE_PROJECT_DIR/../delivery/packages/plugins/harness/hooks/stop.ts\" --host claude --policy harness/harness.toml -- log show",
             "timeout": 30
           }
         ]

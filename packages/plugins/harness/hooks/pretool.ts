@@ -11,9 +11,16 @@ await guarded(
     if (isForeign(args.host, p)) return 0;
     const command = commandOf(p);
     if (command === undefined) throw new Error("no shell command in the hook payload");
-    if (!args.policy) throw new Error("no --policy given");
-    const t = parse(readText(resolvePolicy(p, args.policy))) as { permissions?: { ask?: string[]; deny_shell?: string[] } };
-    const { decision, reason } = decide(command, t.permissions ?? {});
+    if (!args.policies.length) throw new Error("no --policy given");
+    // Every policy layer counts (system, then workspace): their ask and deny_shell lists are unioned.
+    const ask: string[] = [];
+    const denyShell: string[] = [];
+    for (const policy of args.policies) {
+      const t = parse(readText(resolvePolicy(p, policy))) as { permissions?: { ask?: string[]; deny_shell?: string[] } };
+      ask.push(...(t.permissions?.ask ?? []));
+      denyShell.push(...(t.permissions?.deny_shell ?? []));
+    }
+    const { decision, reason } = decide(command, { ask, deny_shell: denyShell });
     print(shellEnvelope(args.host, decision, reason));
     return 0;
   },

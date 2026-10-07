@@ -1,17 +1,20 @@
 // Write (or, with check, compare) the generated host files. Line endings are compared as LF so a CRLF checkout
-// is not reported stale.
+// is not reported stale. In a knowledge repo both layers are merged (system, then workspace); in the delivery repo
+// only the AGENTS.md block is generated: it is not a knowledge repo, so its own sessions get no knowledge-repo
+// deny rules or hooks.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { HarnessFileResult } from "@helmlock/core";
 import { generate } from "./generate.ts";
-import { loadSource } from "./source.ts";
+import { isDeliveryRoot, loadLayers } from "./source.ts";
 
 const lf = (s: string) => s.replace(/\r\n/g, "\n");
 
 export function syncHarness(root: string, deliveryRoot: string, opts: { check?: boolean } = {}): HarnessFileResult[] {
-  const src = loadSource(root);
+  const src = loadLayers(root, deliveryRoot);
   const agentsPath = join(root, "AGENTS.md");
-  const files = generate(src, { deliveryRoot, agentsMd: existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : undefined });
+  let files = generate(src, { deliveryRoot, agentsMd: existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : undefined });
+  if (isDeliveryRoot(root, deliveryRoot)) files = files.filter((f) => f.path === "AGENTS.md");
   const out: HarnessFileResult[] = [];
   for (const f of files) {
     const abs = join(root, f.path);

@@ -1,22 +1,19 @@
-# Workspace layer of the agent harness. `hl harness sync` merges it with the system layer
-# from the delivery repo and writes the host config (Claude Code and Cursor). Edit, then sync.
+# Workspace layer of the agent harness: additions to the system layer (the delivery repo's
+# harness/harness.toml, same keys). `hl harness sync` merges both and writes the host config.
 schema_version = 1
 
 [permissions]
-# Tools or paths agents may never use, must ask for, or may never read.
+# Path globs agents may never edit, shell prefixes that ask a person first, paths never read.
 deny = []
 ask = []
-deny_read = ["_work/**", "author.local", "*.local.toml", ".env"]
+deny_read = ["author.local", "*.local.toml", ".env", "_work/**"]
 
-# Add a hook with a [[hooks]] table, for example:
+# Add a hook (events: session_start, post_edit, stop), for example:
 # [[hooks]]
-# event = "PostToolUse"
+# event = "post_edit"
 # matcher = "Edit|Write"
-# command = "hl validate --changed {file}"
+# command = "hl validate --changed"
 
 [ignore]
-# Paths agents skip when searching.
-paths = ["archive/**", "_work/**", "runs/**", "chats/**", "usage/**", "audio/**", ".hl-cache/**"]
-
-[modes]
-default = "ask"
+# Hidden from indexing and agents on both hosts.
+globs = ["runs/**", "chats/**", "usage/**", "audio/**", ".hl-cache/**"]

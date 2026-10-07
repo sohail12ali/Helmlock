@@ -10,7 +10,8 @@ export type Payload = Record<string, unknown>;
 
 export interface HookArgs {
   host: Host;
-  policy?: string;
+  /** Every `--policy` in order: the system harness.toml first, then the workspace's, in a knowledge repo. */
+  policies: string[];
   /** hl arguments after `--`. */
   hl: string[];
 }
@@ -24,8 +25,8 @@ export function parseArgs(argv: string[]): HookArgs {
     return i >= 0 ? own[i + 1] : undefined;
   };
   const host = get("--host") === "cursor" ? "cursor" : "claude";
-  const policy = get("--policy");
-  return { host, hl, ...(policy ? { policy } : {}) };
+  const policies = own.flatMap((a, i) => (a === "--policy" && own[i + 1] ? [own[i + 1] as string] : []));
+  return { host, hl, policies };
 }
 
 export async function readPayload(): Promise<Payload> {

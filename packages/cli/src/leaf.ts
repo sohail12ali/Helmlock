@@ -61,8 +61,14 @@ export function parseLeaf(spec: LeafSpec, argv: string[]): ParsedLeaf {
   spec.cmd.parse(argv, { from: "user" });
   const input: Record<string, unknown> = {};
   const opts = spec.cmd.opts() as Record<string, unknown>;
+  // Commander reads a `--no-x` flag as the negation of x (default true): map it back to the field `no_x`.
+  const negated = new Set(spec.cmd.options.filter((o) => o.negate).map((o) => o.attributeName()));
   for (const [a, v] of Object.entries(opts)) {
     const key = spec.attr.get(a) ?? a;
+    if (negated.has(a)) {
+      if (v === false) input[key] = true;
+      continue;
+    }
     input[key] = v;
   }
   const pos = spec.cmd.processedArgs as unknown[];

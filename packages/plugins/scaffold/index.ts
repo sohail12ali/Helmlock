@@ -167,7 +167,10 @@ const plugin: PluginModule = {
     await ctx.effect(() => files.registerEmitter(projectEmitter));
     const service: ScaffoldService = {
       async init(opts) {
-        const { created } = initRepo(opts, today());
+        // Host config (.claude/settings.json, .cursor/*) goes into the first commit when the harness plugin is loaded.
+        const harness = ctx.has("harness") ? ctx.get("harness") : undefined;
+        const generate = harness ? async (root: string) => (await harness.sync({ root })).filter((f) => f.status === "written").map((f) => f.path) : undefined;
+        const { created } = await initRepo(opts, today(), generate);
         return { created };
       },
       async addProject(opts) {
