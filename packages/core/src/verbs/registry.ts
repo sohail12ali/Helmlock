@@ -47,7 +47,9 @@ export function createVerbRegistry(root: Context): VerbRegistry {
   const finish = async (def: VerbDef, input: Record<string, unknown>, v: VerbCtx, res: VerbResult): Promise<VerbResult> => {
     const code = res.ok ? 0 : res.code;
     const entity = entityOf(res, input);
-    if (def.writes && !v.dryRun && v.ctx.has("activity")) {
+    // No activity line outside a knowledge repo (e.g. `hl init` run before one exists).
+    const outside = v.ctx.has("workspace") && v.ctx.get("workspace").codeWorkspaceFile === undefined;
+    if (def.writes && !v.dryRun && !outside && v.ctx.has("activity")) {
       try {
         const line: Parameters<ActivityService["append"]>[0] = {
           actor: { kind: v.actor.kind, id: v.actor.id },

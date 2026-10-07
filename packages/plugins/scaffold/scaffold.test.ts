@@ -196,7 +196,7 @@ test("the generated hl.cmd runs `where` from another folder", { skip: process.pl
   delete env.HL_WORKSPACE;
   const r = spawnSync(`"${join(root, "hl.cmd")}" where --json`, { shell: true, cwd: tmpdir(), env, encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
-  const data = JSON.parse(r.stdout) as { name: string; author: string; workspace: string; delivery: string };
+  const { data } = JSON.parse(r.stdout) as { data: { name: string; author: string; workspace: string; delivery: string } };
   assert.equal(data.name, "Acme");
   assert.equal(data.author, "sam-abbott");
   assert.ok(same(data.workspace, root));
