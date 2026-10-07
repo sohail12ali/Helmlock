@@ -109,7 +109,7 @@ export interface WorkLogLine {
   hours_alloc: number;
 }
 
-/** GET /api/v1/overview */
+/** GET /api/v1/overview?date=YYYY-MM-DD (date defaults to today; tests pin it) */
 export interface Overview {
   needs_you: NeedsYouItem[];
   stages: (StageDef & { count: number })[];
@@ -139,7 +139,7 @@ export interface SnapshotEvent {
 }
 export interface ChangeEvent {
   version: number;
-  areas: ("tickets" | "records" | "tasks" | "worklog" | "activity" | "runs" | "workspace" | "skills")[];
+  areas: ("tickets" | "records" | "tasks" | "worklog" | "activity" | "runs" | "workspace" | "skills" | "todos")[];
   tickets: string[];
   paths: string[];
 }
