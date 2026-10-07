@@ -196,6 +196,8 @@ export interface ChatSummaryData {
   title: string;
   model: string;
   channel: "console" | "telegram";
+  /** Copied to people/<slug>/chats/ (committed, visible to the team) with `chat share`. */
+  shared?: boolean;
   created: string;
   updated: string;
 }
