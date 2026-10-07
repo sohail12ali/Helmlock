@@ -18,6 +18,10 @@ export interface ProviderAddInput {
   key_env?: string | undefined;
   model: string;
   label?: string | undefined;
+  /** What a probe found for the model (try before save); written on the model row. */
+  context_window?: number | undefined;
+  tool_calls?: boolean | undefined;
+  vision?: boolean | undefined;
 }
 
 export interface ProviderAddResult {
@@ -55,12 +59,18 @@ export async function addProvider(files: FileLayer, kind: string, i: ProviderAdd
   const models = Array.isArray(cfg.models) ? [...(cfg.models as unknown[])] : [];
   if (providers.some((x) => isObj(x) && x.id === i.id)) throw new SettingError("config-bad-value", `provider "${i.id}" already exists`, "pick another id");
 
-  const modelId = i.model.includes("/") ? i.model : `${i.id}/${i.model}`;
+  const modelId = i.model.startsWith(`${i.id}/`) ? i.model : `${i.id}/${i.model}`;
   const prov: Record<string, unknown> = { id: i.id, label: i.label ?? (typeof p.label === "string" ? p.label : i.id), base_url };
   if (i.preset) prov.preset = i.preset;
   if (i.key_env) prov.key_env = i.key_env;
   providers.push(prov);
-  if (!models.some((m) => isObj(m) && m.id === modelId)) models.push({ id: modelId, provider: i.id, label: i.model });
+  if (!models.some((m) => isObj(m) && m.id === modelId)) {
+    const m: Record<string, unknown> = { id: modelId, provider: i.id, label: i.model };
+    if (i.context_window !== undefined) m.context_window = i.context_window;
+    if (i.tool_calls !== undefined) m.tool_calls = i.tool_calls;
+    if (i.vision !== undefined) m.vision = i.vision;
+    models.push(m);
+  }
 
   let next = setInDoc(doc.data, "providers", "providers", providers);
   next = setInDoc(next, "providers", "models", models);
@@ -86,6 +96,9 @@ export const providerAddVerb = (kind: string): VerbDef =>
       key_env: z.string().optional(),
       model: z.string().min(1),
       label: z.string().optional(),
+      context_window: z.coerce.number().int().positive().optional(),
+      tool_calls: z.boolean().optional(),
+      vision: z.boolean().optional(),
     }),
     writes: true,
     async run(v: VerbCtx, i: ProviderAddInput) {

@@ -17,26 +17,65 @@ function Check({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
-export function ProbeView({ r }: { r: ModelProbe }) {
+/** What to check next for a probe error code. */
+export function probeHint(code: string): string {
+  switch (code) {
+    case "network":
+      return "Is the server running and reachable from this machine? Check the IP and port, and that LM Studio's server allows LAN access (Serve on Local Network).";
+    case "timeout":
+      return "The server did not answer in time. A local model may still be loading; try again in a moment.";
+    case "auth":
+      return "The server wants a key: set the environment variable named above for hl serve, then restart it.";
+    case "bad_request":
+      return "Check the base URL, the model name and the key variable name.";
+    case "rate_limit":
+      return "The server is rate limiting; wait a little and try again.";
+    case "context_exceeded":
+      return "The model's context is too small for the test prompt; load it with a larger context.";
+    case "server":
+      return "The server answered with an error; its log says why.";
+    default:
+      return "";
+  }
+}
+
+export function ProbeError({ error }: { error: { code: string; message: string } }) {
+  const hint = probeHint(error.code);
+  return (
+    <div className="flex flex-col gap-0.5 text-destructive" role="alert">
+      <p>
+        <Mono>{error.code}</Mono> {error.message}
+      </p>
+      {hint && <p className="text-ink2">{hint}</p>}
+    </div>
+  );
+}
+
+export function ProbeView({ r, steps = true }: { r: ModelProbe; steps?: boolean }) {
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-sunk p-2 text-xs" data-testid="probe-result" role="status">
       <p className="flex flex-wrap gap-3">
         <Check ok={r.reachable} label="reachable" />
-        <Check ok={r.chat} label="chat" />
-        <Check ok={r.streaming} label="streaming" />
-        <Check ok={r.tool_calls} label="tool calls" />
+        {steps && (
+          <>
+            <Check ok={r.chat} label="chat" />
+            <Check ok={r.streaming} label="streaming" />
+            <Check ok={r.tool_calls} label="tool calls" />
+          </>
+        )}
       </p>
+      {steps && r.model && (
+        <p className="text-muted-foreground">
+          tested <Mono>{r.model}</Mono>
+        </p>
+      )}
       {r.models.length > 0 && (
         <p className="text-muted-foreground">
           {r.models.length} model{r.models.length === 1 ? "" : "s"}: <Mono>{r.models.slice(0, 6).join(", ")}</Mono>
           {r.models.length > 6 ? " …" : ""}
         </p>
       )}
-      {r.error && (
-        <p className="text-destructive">
-          {r.error.message} <Mono>{r.error.code}</Mono>
-        </p>
-      )}
+      {r.error && <ProbeError error={r.error} />}
     </div>
   );
 }

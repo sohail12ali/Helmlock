@@ -167,6 +167,12 @@ export interface ProbeResult {
   chat: boolean;
   streaming: boolean;
   tool_calls: boolean;
+  /** Per-model details from the server's list (LM Studio's native list adds context, tool use, vision, loaded). */
+  model_info?: { id: string; label?: string; context_window?: number; tool_calls?: boolean; vision?: boolean; loaded?: boolean }[];
+  /** The model (server name) the chat, streaming and tool-call steps ran against. */
+  model?: string;
+  /** The OpenAI root that was probed (a draft's base URL after normalising); save this one. */
+  base_url?: string;
   error?: { code: "auth" | "rate_limit" | "timeout" | "context_exceeded" | "server" | "bad_request" | "network"; message: string };
 }
 export interface ProvidersService {
@@ -176,6 +182,12 @@ export interface ProvidersService {
   /** Streams one completion; retries per provider policy (F75); appends a usage line (F78, local). */
   complete(req: { model: string; messages: ChatTurn[]; tools?: ToolSpec[]; signal?: AbortSignal }): AsyncIterable<CompletionDelta>;
   probe(providerId: string): Promise<ProbeResult>;
+  /** Probe a provider that is not saved yet (try before save). Reads the remote server only; writes no file.
+   *  listOnly: reach + list models. model: the server model name to test (default: first loaded / first listed). */
+  probeDraft(
+    draft: { base_url: string; key_env?: string; preset?: string; compat?: Record<string, boolean> },
+    opts?: { model?: string; listOnly?: boolean },
+  ): Promise<ProbeResult>;
 }
 
 export interface ChatSummaryData {

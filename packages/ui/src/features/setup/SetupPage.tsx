@@ -1,18 +1,17 @@
 // First-run setup wizard (F1a after the writable console, F84, B25, mockup 08). The CLI already created the knowledge
 // repo; this finishes the rest: author, a model, Telegram (optional), the first ticket, agents and trust.
 // Progress comes from GET /setup (derived from the files), so leaving and coming back resumes where it stands.
-import type { SetupStatus, VerbCallResult } from "@helmlock/core/contracts";
-import { useQueryClient } from "@tanstack/react-query";
+import type { SetupStatus } from "@helmlock/core/contracts";
 import { Check, Circle } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWorkspace } from "@/api/hooks";
-import { useModels, useProbe } from "@/api/m4";
-import { addProvider, useSetup } from "@/api/m5";
+import { useModels } from "@/api/m4";
+import { useSetup } from "@/api/m5";
 import { INVALIDATE, useSettings } from "@/api/write-hooks";
 import { openNewTicket } from "@/components/actions/NewTicket";
 import { CopyCommand, ErrorState, Loading, Mono, PageHeader } from "@/components/common";
-import { Field, Select } from "@/components/forms/controls";
+import { Field } from "@/components/forms/controls";
 import { useVerbRun } from "@/components/forms/useVerbRun";
 import { VerbResult } from "@/components/forms/VerbResult";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -20,10 +19,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ModelsTest, ProbeView } from "@/features/chat/ModelsTest";
+import { ModelsTest } from "@/features/chat/ModelsTest";
 import { readPref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
-import { ENV_NAME, PRESETS, PROVIDER_ID, splitList } from "./presets";
+import { ProviderForm } from "./ProviderForm";
+import { ENV_NAME, splitList } from "./presets";
 
 type Step = SetupStatus["steps"][number];
 const STEP_KEY = "setup.step";
@@ -48,134 +48,10 @@ function Action({ action }: { action?: string }) {
 // ---------- model ----------
 
 function ModelStep() {
-  const uid = useId();
-  const qc = useQueryClient();
   const models = useModels();
-  const probe = useProbe();
-  const [preset, setPreset] = useState(PRESETS[0]!.id);
-  const p = PRESETS.find((x) => x.id === preset) ?? PRESETS[0]!;
-  const [id, setId] = useState(p.id);
-  const [baseUrl, setBaseUrl] = useState(p.base_url);
-  const [keyEnv, setKeyEnv] = useState(p.key_env ?? "");
-  const [model, setModel] = useState("");
-  const [pending, setPending] = useState(false);
-  const [result, setResult] = useState<VerbCallResult>();
-  const [problem, setProblem] = useState<string>();
-
-  const choose = (next: string) => {
-    const n = PRESETS.find((x) => x.id === next) ?? PRESETS[0]!;
-    // Keep what the person typed; follow the preset only where they kept the previous preset's value.
-    if (id === p.id) setId(n.id === "custom" ? "" : n.id);
-    if (baseUrl === p.base_url) setBaseUrl(n.base_url);
-    if (keyEnv === (p.key_env ?? "")) setKeyEnv(n.key_env ?? "");
-    setPreset(n.id);
-  };
-
-  const submit = async () => {
-    setProblem(undefined);
-    setResult(undefined);
-    const pid = id.trim();
-    if (!PROVIDER_ID.test(pid)) return setProblem("Provider id: letters, digits, dot, dash or underscore.");
-    if (!/^https?:\/\//.test(baseUrl.trim())) return setProblem("Base URL must start with http:// or https://.");
-    if (keyEnv.trim() && !ENV_NAME.test(keyEnv.trim()))
-      return setProblem("Key: the NAME of an environment variable, such as OPENROUTER_API_KEY. The key itself stays in your environment.");
-    if (!model.trim()) return setProblem("Model id is required, for example qwen3:14b.");
-    setPending(true);
-    try {
-      const r = await addProvider({
-        id: pid,
-        preset,
-        base_url: baseUrl.trim(),
-        ...(keyEnv.trim() ? { key_env: keyEnv.trim() } : {}),
-        model: model.trim(),
-      });
-      setResult(r);
-      if (r.ok) {
-        void qc.invalidateQueries({ queryKey: ["models"] });
-        void qc.invalidateQueries({ queryKey: ["setup"] });
-        void qc.invalidateQueries({ queryKey: ["settings"] });
-        probe.mutate(pid);
-      }
-    } catch {
-      setResult({ ok: false, code: 1, error: { rule: "offline", message: "The console server is not reachable.", fix: "start it with hl serve" } });
-    } finally {
-      setPending(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-3">
-      <fieldset className="grid grid-cols-2 gap-2 @2xl:grid-cols-4" aria-label="Provider preset">
-        {PRESETS.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            aria-pressed={preset === x.id}
-            onClick={() => choose(x.id)}
-            className={cn(
-              "flex flex-col items-start gap-0.5 rounded-md border bg-card px-3 py-2 text-left text-sm hover:border-primary/50",
-              preset === x.id && "border-primary bg-accent",
-            )}
-          >
-            <span className="font-medium">{x.label}</span>
-            <span className="text-xs text-muted-foreground">{x.hint}</span>
-          </button>
-        ))}
-      </fieldset>
-      <form
-        aria-label="Add a provider"
-        className="grid grid-cols-1 gap-2 @2xl:grid-cols-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <Field label="Preset" htmlFor={`${uid}-preset`}>
-          <Select id={`${uid}-preset`} value={preset} onChange={(e) => choose(e.target.value)}>
-            {PRESETS.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Provider id" htmlFor={`${uid}-id`} required>
-          <Input id={`${uid}-id`} className="font-mono" value={id} onChange={(e) => setId(e.target.value)} placeholder="ollama" />
-        </Field>
-        <Field label="Base URL" htmlFor={`${uid}-url`} required>
-          <Input id={`${uid}-url`} className="font-mono" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="http://127.0.0.1:11434/v1" />
-        </Field>
-        <Field label="Key variable (name only)" htmlFor={`${uid}-key`} hint="The secret stays in your environment; only its variable name is saved.">
-          <Input
-            id={`${uid}-key`}
-            className="font-mono"
-            value={keyEnv}
-            onChange={(e) => setKeyEnv(e.target.value)}
-            placeholder={p.key_env ?? "none for local servers"}
-          />
-        </Field>
-        <Field label="Model id" htmlFor={`${uid}-model`} required hint="As the server names it, for example qwen3:14b or openai/gpt-5-mini.">
-          <Input id={`${uid}-model`} className="font-mono" value={model} onChange={(e) => setModel(e.target.value)} />
-        </Field>
-        <div className="flex flex-wrap items-end gap-2">
-          <Button type="submit" disabled={pending || probe.isPending}>
-            {pending ? "Saving" : probe.isPending ? "Testing" : "Save and test connection"}
-          </Button>
-        </div>
-      </form>
-      {problem && (
-        <p role="alert" className="text-sm text-destructive">
-          {problem}
-        </p>
-      )}
-      {result && !result.ok && <VerbResult result={result} />}
-      {result?.ok && <p className="text-sm text-ok">Provider saved.</p>}
-      {probe.data && <ProbeView r={probe.data} />}
-      {probe.isError && (
-        <p role="alert" className="text-sm text-destructive">
-          The connection test did not run.
-        </p>
-      )}
+      <ProviderForm cards />
       {(models.data?.providers.length ?? 0) > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs text-muted-foreground">

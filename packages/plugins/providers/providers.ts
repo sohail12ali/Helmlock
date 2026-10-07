@@ -175,7 +175,7 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
     t: Target,
     body: Record<string, unknown>,
     signal: AbortSignal | undefined,
-    stats: { ttft?: number; start: number },
+    stats: { ttft?: number; start: number; chunks?: number },
   ): AsyncGenerator<CompletionDelta> {
     const ac = new AbortController();
     let timedOut = false;
@@ -234,6 +234,7 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
             } catch {
               continue; // one bad keep-alive must not end the reply
             }
+            stats.chunks = (stats.chunks ?? 0) + 1;
             const text = acc.feed(chunk as Parameters<Accumulator["feed"]>[0]);
             if (text) {
               stats.ttft ??= Date.now() - stats.start;
@@ -376,89 +377,21 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
     async probe(providerId) {
       const cfg = current();
       const p = cfg.providers.find((x) => x.id === providerId);
-      const out: ProbeResult = { provider: providerId, reachable: false, models: [], chat: false, streaming: false, tool_calls: false };
       if (!p) {
         const why = cfg.problems.find((x) => x.startsWith(`provider ${providerId}:`));
-        out.error = { code: "bad_request", message: why ?? `no provider "${providerId}" in the providers table` };
-        return out;
+        return { ...emptyProbe(providerId), error: { code: "bad_request", message: why ?? `no provider "${providerId}" in the providers table` } };
       }
-      const probeTimeout = Math.min(p.timeout_ms, p.local ? 120_000 : 30_000);
-      const quick: ProviderRow = { ...p, timeout_ms: probeTimeout };
-      const fail = (e: unknown) => {
-        if (!out.error) out.error = e instanceof ProviderError ? { code: e.code, message: e.message } : { code: "network", message: (e as Error).message };
-      };
-      // 1. reach + list models
-      try {
-        const ac = new AbortController();
-        const timer = setTimeout(() => ac.abort(), probeTimeout);
-        try {
-          const res = await doFetch(`${p.base_url}/models`, { headers: headers(p), signal: ac.signal });
-          out.reachable = true;
-          const text = await res.text();
-          if (!res.ok) throw new ProviderError(classifyStatus(res.status, text), errorMessage(text, res.status), { status: res.status });
-          const j = JSON.parse(text) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] };
-          out.models = (j.data ?? j.models ?? []).map((m) => (m as { id?: string; name?: string }).id ?? (m as { name?: string }).name ?? "").filter(Boolean);
-        } finally {
-          clearTimeout(timer);
-        }
-      } catch (e) {
-        if (e instanceof ProviderError) fail(e);
-        else fail(new ProviderError(ac_timeout(e) ? "timeout" : "network", `cannot reach ${p.base_url}: ${(e as Error).message}`));
-        if (!out.reachable || out.error?.code === "auth") return out;
-      }
-      // 2-4. tiny prompt, streaming, tiny tool call, against the model the user will use
-      const cfgModels = cfg.models.filter((m) => m.provider === p.id);
+      // The model the user will use: the default when it is on this provider, else its first configured model.
       const def = service.defaultModel();
-      const modelId = (def && splitModelId(def, [p]) ? def : undefined) ?? cfgModels[0]?.id ?? (out.models[0] ? `${p.id}/${out.models[0]}` : undefined);
-      if (!modelId) {
-        out.error ??= { code: "bad_request", message: "the server lists no models and none is configured" };
-        return out;
-      }
-      const split = splitModelId(modelId, [p]) as { wire: string };
-      const t: Target = {
-        provider: quick,
-        wire: split.wire,
-        model: { id: modelId, provider: p.id, label: split.wire, capabilities: { tool_calls: false, vision: false, streaming: true } },
-      };
-      const run = async (body: Record<string, unknown>) => {
-        const deltas: CompletionDelta[] = [];
-        for await (const d of attempt(t, body, undefined, { start: Date.now() })) deltas.push(d);
-        return deltas;
-      };
-      const cap = (n: number) => ({ [p.compat.max_completion_tokens ? "max_completion_tokens" : "max_tokens"]: n });
-      const ping: ChatTurn[] = [{ role: "user", content: "Reply with the single word OK." }];
-      try {
-        const d = await run({ ...requestBody(t, ping, undefined, cap(16)), stream: false, stream_options: undefined });
-        out.chat = d.some((x) => x.type === "done");
-      } catch (e) {
-        fail(e);
-      }
-      try {
-        const d = await run({ ...requestBody(t, ping, undefined, cap(16)), stream: true });
-        out.streaming = d.some((x) => x.type === "text");
-      } catch (e) {
-        fail(e);
-      }
-      try {
-        const tool: ToolSpec = {
-          name: "ping",
-          description: "Answer a connection test.",
-          parameters: { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
-        };
-        const d = await run({
-          ...requestBody(t, [{ role: "user", content: 'Call the ping tool with value "ok". Do not answer in text.' }], [tool], cap(64)),
-          stream: out.streaming,
-          stream_options: undefined,
-        });
-        out.tool_calls = d.some((x) => x.type === "tool_call" && x.name === "ping");
-      } catch (e) {
-        // A server without tool support usually answers 400: that is a finding, not a failure of the probe.
-        if (!(e instanceof ProviderError && e.code === "bad_request")) fail(e);
-      }
+      const cfgModels = cfg.models.filter((m) => m.provider === p.id);
+      const modelId = (def && splitModelId(def, [p]) ? def : undefined) ?? cfgModels[0]?.id;
+      const wire = modelId ? splitModelId(modelId, [p])?.wire : undefined;
+      const out = await runProbe(p, wire ? { model: wire } : {});
+      if (!out.model) return out;
       const cache: ProbeCache = {
         provider: p.id,
         at: now().toISOString(),
-        model: modelId,
+        model: `${p.id}/${out.model}`,
         models: out.models,
         chat: out.chat,
         streaming: out.streaming,
@@ -473,8 +406,189 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
       }
       return out;
     },
+
+    async probeDraft(draft, opts = {}) {
+      const cfg = readProvidersConfig({
+        providers: [
+          {
+            id: DRAFT_ID,
+            base_url: normaliseBaseUrl(draft.base_url ?? "", draft.preset),
+            ...(draft.preset ? { preset: draft.preset } : {}),
+            ...(draft.key_env ? { key_env: draft.key_env } : {}),
+            ...(draft.compat ? { compat: draft.compat } : {}),
+          },
+        ],
+      });
+      const p = cfg.providers[0];
+      if (!p) {
+        const why = (cfg.problems[0] ?? "the provider is not valid").replace(/^provider draft: /, "");
+        return { ...emptyProbe(DRAFT_ID), error: { code: "bad_request", message: why } };
+      }
+      return { ...(await runProbe(p, opts)), base_url: p.base_url };
+    },
   };
+
+  /** Reach + list (the OpenAI list, then LM Studio's native list when the server has one), then unless listOnly: a
+   *  tiny prompt, streaming and a tiny tool call against `model` (a wire name) or the first loaded / listed model.
+   *  Writes no file. */
+  async function runProbe(p: ProviderRow, opts: { model?: string | undefined; listOnly?: boolean | undefined }): Promise<ProbeResult> {
+    const out = emptyProbe(p.id);
+    const slow = p.local || p.billing === "local";
+    const probeTimeout = Math.min(p.timeout_ms, opts.listOnly ? 15_000 : slow ? 120_000 : 30_000);
+    const quick: ProviderRow = { ...p, timeout_ms: probeTimeout };
+    const fail = (e: unknown) => {
+      if (!out.error) out.error = e instanceof ProviderError ? { code: e.code, message: e.message } : { code: "network", message: (e as Error).message };
+    };
+    const get = async (url: string, ms: number): Promise<{ res: Response; text: string }> => {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), ms);
+      try {
+        const res = await doFetch(url, { headers: headers(p), signal: ac.signal });
+        return { res, text: await res.text() };
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+    // 1. reach + list models
+    try {
+      const { res, text } = await get(`${p.base_url}/models`, probeTimeout);
+      out.reachable = true;
+      if (!res.ok) throw new ProviderError(classifyStatus(res.status, text), errorMessage(text, res.status), { status: res.status });
+      let j: { data?: { id?: string; name?: string }[]; models?: { id?: string; name?: string }[] };
+      try {
+        j = JSON.parse(text);
+      } catch {
+        throw new ProviderError("server", `${p.base_url}/models did not answer with JSON: is this an OpenAI-compatible base URL?`, { status: res.status });
+      }
+      out.models = (j.data ?? j.models ?? []).map((m) => m.id ?? m.name ?? "").filter(Boolean);
+      out.model_info = out.models.map((id) => ({ id }));
+    } catch (e) {
+      if (e instanceof ProviderError) fail(e);
+      else fail(new ProviderError(ac_timeout(e) ? "timeout" : "network", `cannot reach ${p.base_url}: ${causeOf(e)}`));
+      if (!out.reachable || out.error?.code === "auth") return out;
+    }
+    // 1b. LM Studio's native list (context, tool use, vision, loaded). Optional: any failure is ignored.
+    if (!out.error && p.preset !== "openai" && p.preset !== "openrouter") {
+      try {
+        const { res, text } = await get(`${new URL(p.base_url).origin}/api/v1/models`, Math.min(probeTimeout, 5_000));
+        const native = res.ok ? parseLmStudioModels(JSON.parse(text)) : undefined;
+        if (native?.length) out.model_info = native;
+      } catch {
+        // not LM Studio, or an older one
+      }
+    }
+    if (opts.listOnly) return out;
+    // 2-4. tiny prompt, streaming, tiny tool call
+    const info = out.model_info ?? [];
+    const wire = opts.model ?? info.find((m) => m.loaded)?.id ?? info[0]?.id ?? out.models[0];
+    if (!wire) {
+      out.error ??= { code: "bad_request", message: "the server lists no models and none is configured" };
+      return out;
+    }
+    out.model = wire;
+    const t: Target = {
+      provider: quick,
+      wire,
+      model: { id: `${p.id}/${wire}`, provider: p.id, label: wire, capabilities: { tool_calls: false, vision: false, streaming: true } },
+    };
+    let sseChunks = 0;
+    const run = async (body: Record<string, unknown>) => {
+      const deltas: CompletionDelta[] = [];
+      const stats: { start: number; chunks?: number } = { start: Date.now() };
+      for await (const d of attempt(t, body, undefined, stats)) deltas.push(d);
+      sseChunks = stats.chunks ?? 0;
+      return deltas;
+    };
+    const cap = (n: number) => ({ [p.compat.max_completion_tokens ? "max_completion_tokens" : "max_tokens"]: n });
+    const ping: ChatTurn[] = [{ role: "user", content: "Reply with the single word OK." }];
+    try {
+      const d = await run({ ...requestBody(t, ping, undefined, cap(16)), stream: false, stream_options: undefined });
+      out.chat = d.some((x) => x.type === "done");
+    } catch (e) {
+      fail(e);
+    }
+    try {
+      const d = await run({ ...requestBody(t, ping, undefined, cap(16)), stream: true });
+      // Reasoning models may spend the whole tiny budget thinking (reasoning_content only): streamed chunks count.
+      out.streaming = d.some((x) => x.type === "text") || sseChunks > 1;
+    } catch (e) {
+      fail(e);
+    }
+    try {
+      const tool: ToolSpec = {
+        name: "ping",
+        description: "Answer a connection test.",
+        parameters: { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
+      };
+      const d = await run({
+        ...requestBody(t, [{ role: "user", content: 'Call the ping tool with value "ok". Do not answer in text.' }], [tool], cap(1024)), // room for a reasoning model to think first
+        stream: out.streaming,
+        stream_options: undefined,
+      });
+      out.tool_calls = d.some((x) => x.type === "tool_call" && x.name === "ping");
+    } catch (e) {
+      // A server without tool support usually answers 400: that is a finding, not a failure of the probe.
+      if (!(e instanceof ProviderError && e.code === "bad_request")) fail(e);
+    }
+    return out;
+  }
+
   return service;
+}
+
+const DRAFT_ID = "draft";
+const emptyProbe = (provider: string): ProbeResult => ({ provider, reachable: false, models: [], chat: false, streaming: false, tool_calls: false });
+const causeOf = (e: unknown) => ((e as Error).cause ? String((e as Error & { cause: unknown }).cause) : (e as Error).message);
+
+/** A base URL as people paste it -> the OpenAI root (".../v1"). Accepts ".../v1", ".../v1/models", LM Studio's native
+ *  "/api/v1/models", a bare origin and a host without a scheme. OpenRouter's root really is "/api/v1": left alone. */
+export function normaliseBaseUrl(raw: string, preset?: string): string {
+  let url = raw.trim().replace(/\/+$/, "");
+  if (!url) return url;
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = `http://${url}`;
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return url;
+  }
+  let path = u.pathname.replace(/\/+$/, "");
+  const openrouter = preset === "openrouter" || u.hostname.endsWith("openrouter.ai");
+  if (!openrouter && /^\/api\/v1(\/models)?$/.test(path)) path = "/v1";
+  else if (path.endsWith("/v1/models")) path = path.slice(0, -"/models".length);
+  else if (path === "") path = "/v1";
+  return `${u.origin}${path}`;
+}
+
+type ModelDetails = NonNullable<ProbeResult["model_info"]>;
+
+/** LM Studio's GET /api/v1/models -> per-model details (chat models only; a loaded model reports its live context). */
+export function parseLmStudioModels(j: unknown): ModelDetails | undefined {
+  const list = (j as { models?: unknown } | null)?.models;
+  if (!Array.isArray(list)) return undefined;
+  const out: ModelDetails = [];
+  for (const raw of list) {
+    const m = raw as {
+      type?: string;
+      key?: string;
+      display_name?: string;
+      max_context_length?: number;
+      capabilities?: { vision?: boolean; trained_for_tool_use?: boolean };
+      loaded_instances?: { config?: { context_length?: number } }[];
+    } | null;
+    if (typeof m?.key !== "string" || !m.key || (m.type && m.type !== "llm" && m.type !== "vlm")) continue;
+    const loaded = Array.isArray(m.loaded_instances) && m.loaded_instances.length > 0;
+    const ctx = (loaded ? m.loaded_instances?.[0]?.config?.context_length : undefined) ?? m.max_context_length;
+    out.push({
+      id: m.key,
+      ...(m.display_name ? { label: m.display_name } : {}),
+      ...(typeof ctx === "number" && ctx > 0 ? { context_window: ctx } : {}),
+      ...(typeof m.capabilities?.trained_for_tool_use === "boolean" ? { tool_calls: m.capabilities.trained_for_tool_use } : {}),
+      ...(typeof m.capabilities?.vision === "boolean" ? { vision: m.capabilities.vision } : {}),
+      loaded,
+    });
+  }
+  return out;
 }
 
 const ac_timeout = (e: unknown) => (e as Error)?.name === "AbortError" || (e as Error)?.name === "TimeoutError";

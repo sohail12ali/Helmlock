@@ -312,6 +312,16 @@ export interface ModelsView {
 }
 /** POST /api/v1/models/test { provider } */
 export type ModelProbe = ProbeResult;
+/** POST /api/v1/models/try { base_url, key_env?, preset?, model?, list_only? } -> ModelProbe. Try a provider before
+ *  saving it: same write protection as other writes, but it only reads the remote server and writes nothing locally.
+ *  base_url may be given with or without a trailing /v1, /v1/models or /api/v1/models. */
+export interface ModelTry {
+  base_url: string;
+  key_env?: string;
+  preset?: string;
+  model?: string;
+  list_only?: boolean;
+}
 
 /** GET /api/v1/chats ; POST /api/v1/chats { title?, model? } -> ChatSummary */
 export type ChatSummary = ChatSummaryData;

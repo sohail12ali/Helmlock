@@ -91,6 +91,10 @@ export interface ProviderAddInput {
   key_env?: string;
   model: string;
   label?: string;
+  /** What a try-before-save probe found for the model. */
+  context_window?: number;
+  tool_calls?: boolean;
+  vision?: boolean;
 }
 export const addProvider = (input: ProviderAddInput) => callVerb(PROVIDER_ADD, { ...input });
 

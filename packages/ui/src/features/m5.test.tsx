@@ -310,32 +310,119 @@ describe("setup wizard", () => {
     expect(screen.getByRole("button", { name: "Save and exit" })).toBeInTheDocument();
   });
 
-  it("the model step adds a provider through the verb, then tests the connection", async () => {
-    const spy = setupServer();
+  const LAN = "http://192.168.1.14:1234";
+  const listed: ModelProbe = {
+    provider: "draft",
+    reachable: true,
+    models: ["spark-x2.5-4b", "google/gemma-4-12b-qat", "text-embedding-nomic"],
+    chat: false,
+    streaming: false,
+    tool_calls: false,
+    base_url: `${LAN}/v1`,
+    model_info: [
+      { id: "spark-x2.5-4b", label: "Spark X2.5 4B", context_window: 1048576, tool_calls: true, vision: false, loaded: false },
+      { id: "google/gemma-4-12b-qat", label: "Gemma 4 12B QAT", context_window: 262144, tool_calls: true, vision: true, loaded: true },
+    ],
+  };
+  const tested: ModelProbe = { ...listed, chat: true, streaming: true, tool_calls: true, model: "spark-x2.5-4b" };
+  const tryServer = (fetchReply: () => Response = () => ok(listed)) =>
+    setupServer((u, init) => {
+      if (u.pathname !== "/api/v1/models/try" || init?.method !== "POST") return undefined;
+      return JSON.parse(String(init.body)).list_only ? fetchReply() : ok(tested);
+    });
+
+  it("the model step tries a provider before saving: fetch, pick, test, save", async () => {
+    const spy = tryServer();
     renderApp("/setup");
     const step = await screen.findByRole("region", { name: "Step: Model" });
-    fireEvent.change(within(step).getByLabelText(/Model id/), { target: { value: "qwen3:14b" } });
-    fireEvent.click(within(step).getByRole("button", { name: "Save and test connection" }));
+    // LM Studio is the default preset; the base URL is editable (another machine on the LAN).
+    expect(within(step).getByLabelText(/Base URL/)).toHaveValue("http://127.0.0.1:1234/v1");
+    const save = within(step).getByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+    fireEvent.change(within(step).getByLabelText(/Base URL/), { target: { value: LAN } });
+    fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
+    await waitFor(() => expect(posts(spy, "/models/try")).toHaveLength(1));
+    const fetchCall = posts(spy, "/models/try")[0]!;
+    expect(fetchCall.body).toEqual({ base_url: LAN, preset: "lmstudio", list_only: true });
+    expect(fetchCall.headers["X-Helmlock-Request"]).toBe("1");
+
+    // The picker lists the loaded model first, with its badges, and preselects it.
+    const picker = await within(step).findByRole("radiogroup", { name: "Models on the server" });
+    const radios = within(picker).getAllByRole("radio");
+    expect(radios.map((r) => (r as HTMLInputElement).value)).toEqual(["google/gemma-4-12b-qat", "spark-x2.5-4b"]);
+    expect(radios[0]).toBeChecked();
+    expect(picker).toHaveTextContent("loaded");
+    expect(picker).toHaveTextContent("256k ctx");
+    expect(picker).toHaveTextContent("1M ctx");
+    expect(picker).toHaveTextContent("vision");
+    expect(save).toBeEnabled();
+    expect(posts(spy, "/verbs/provider/add")).toHaveLength(0);
+
+    fireEvent.click(within(picker).getByRole("radio", { name: /spark-x2\.5-4b/ }));
+    fireEvent.click(within(step).getByRole("button", { name: "Test connection" }));
+    await waitFor(() => expect(posts(spy, "/models/try")).toHaveLength(2));
+    expect(posts(spy, "/models/try")[1]!.body).toEqual({ base_url: LAN, preset: "lmstudio", model: "spark-x2.5-4b" });
+    const result = await within(step).findByTestId("probe-result");
+    expect(result).toHaveTextContent("chat yes");
+    expect(result).toHaveTextContent("tool calls yes");
+    expect(result).toHaveTextContent("tested spark-x2.5-4b");
+
+    fireEvent.click(save);
     await waitFor(() => expect(posts(spy, "/verbs/provider/add")).toHaveLength(1));
-    const add = posts(spy, "/verbs/provider/add")[0]!;
-    expect(add.body).toEqual({ input: { id: "ollama", preset: "ollama", base_url: "http://127.0.0.1:11434/v1", model: "qwen3:14b" } });
-    expect(add.headers["X-Helmlock-Request"]).toBe("1");
-    await waitFor(() => expect(posts(spy, "/models/test")).toHaveLength(1));
-    expect(posts(spy, "/models/test")[0]!.body).toEqual({ provider: "ollama" });
-    expect(await screen.findByTestId("probe-result")).toHaveTextContent("1 model: qwen3:14b");
+    expect(posts(spy, "/verbs/provider/add")[0]!.body).toEqual({
+      input: {
+        id: "lmstudio",
+        preset: "lmstudio",
+        base_url: `${LAN}/v1`,
+        model: "spark-x2.5-4b",
+        context_window: 1048576,
+        tool_calls: true,
+        vision: false,
+      },
+    });
+    expect(await within(step).findByText(/Provider saved/)).toHaveTextContent("lmstudio/spark-x2.5-4b");
+  });
+
+  it("a failed fetch shows the code, the message and a hint, and Save stays off", async () => {
+    tryServer(() =>
+      ok({ ...listed, reachable: false, models: [], model_info: undefined, error: { code: "network", message: "cannot reach http://192.168.1.14:1234/v1" } }),
+    );
+    renderApp("/setup");
+    const step = await screen.findByRole("region", { name: "Step: Model" });
+    fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
+    const out = await within(step).findByTestId("fetch-result");
+    expect(out).toHaveTextContent("network");
+    expect(out).toHaveTextContent("cannot reach");
+    expect(out).toHaveTextContent(/allows LAN access/);
+    expect(within(step).getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("Settings > Models offers the same try-before-save form under Add provider", async () => {
+    const spy = tryServer();
+    const base = spy.getMockImplementation()!;
+    spy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input).split("?")[0] === "/api/v1/settings"
+        ? ok({ sections: [{ id: "models", label: "Models", plugins: [] }] } satisfies SettingsView)
+        : base(input, init),
+    );
+    renderApp("/settings");
+    fireEvent.click(await screen.findByRole("button", { name: "Add provider" }));
+    const form = await screen.findByTestId("provider-form");
+    fireEvent.click(within(form).getByRole("button", { name: "Fetch models" }));
+    await waitFor(() => expect(posts(spy, "/models/try")).toHaveLength(1));
+    expect(await within(form).findByRole("radiogroup", { name: "Models on the server" })).toBeInTheDocument();
   });
 
   it("the model step refuses a key instead of a variable name", async () => {
-    const spy = setupServer();
+    const spy = tryServer();
     renderApp("/setup");
     const step = await screen.findByRole("region", { name: "Step: Model" });
     fireEvent.click(within(step).getByRole("button", { name: /OpenRouter/ }));
     expect(within(step).getByLabelText(/Key variable/)).toHaveValue("OPENROUTER_API_KEY");
     fireEvent.change(within(step).getByLabelText(/Key variable/), { target: { value: "sk-or-123" } });
-    fireEvent.change(within(step).getByLabelText(/Model id/), { target: { value: "openai/gpt-5-mini" } });
-    fireEvent.click(within(step).getByRole("button", { name: "Save and test connection" }));
+    fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
     expect(await within(step).findByRole("alert")).toHaveTextContent(/NAME of an environment variable/);
-    expect(posts(spy, "/verbs/provider/add")).toHaveLength(0);
+    expect(posts(spy, "/models/try")).toHaveLength(0);
   });
 
   it("the telegram step saves the allowed ids as an array through config set", async () => {
