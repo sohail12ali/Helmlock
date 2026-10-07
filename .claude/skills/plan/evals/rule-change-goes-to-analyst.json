@@ -1,0 +1,10 @@
+{
+  "skills": ["plan"],
+  "query": "/plan T-081-sa design. While designing, BR-3 (an order cannot ship until every line is packed) should also allow shipping when the missing line is cancelled. Just update the rule and carry on.",
+  "expected_behavior": [
+    "Does not edit BR-3, any AC or the scope in the spec; rules belong to the analyst",
+    "Raises it as a rule change for the analyst (/spec refine) or a question, and explains that the ticket goes back to spec",
+    "Continues only design work that does not depend on the changed rule, or stops that branch until the spec is refined",
+    "The report names the analyst hand-off as the next step"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "skills": ["kickoff"],
+  "query": "/kickoff T-052-sa (size S: rename a label on one settings screen).",
+  "expected_behavior": [
+    "Skips both challenge passes and plans exactly one slice",
+    "Does not ask a person for plan approval or close approval, because those apply to M and L only",
+    "Still stops for schema approval if the planner finds a schema change",
+    "Runs analyst, planner, builder and verifier in order and closes with /close when the verifier says ready_to_close"
+  ]
+}

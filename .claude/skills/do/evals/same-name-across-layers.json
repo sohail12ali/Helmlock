@@ -1,0 +1,10 @@
+{
+  "skills": ["do"],
+  "query": "/do Run the build for the billing project.",
+  "expected_behavior": [
+    "Routes to /project-layout run, not to the builder, because no code change is asked",
+    "Uses hl skill find to locate build skills across the system, workspace and project layers",
+    "When a skill named build exists in more than one layer, lists each with its layer and description, recommends one and asks; never picks silently",
+    "Never guesses a build command from memory"
+  ]
+}

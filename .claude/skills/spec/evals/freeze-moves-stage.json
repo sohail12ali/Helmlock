@@ -1,0 +1,10 @@
+{
+  "skills": ["spec"],
+  "query": "/spec T-062-sa freeze (size M; the challenge ran and one critical question is still open).",
+  "expected_behavior": [
+    "Runs the freeze checklist in order and stops at the first failure: hl blockers T-062-sa exits non-zero",
+    "Reports the open question id, a pointer and the next command (/shape or /spec refine), and does not move the ticket",
+    "Never edits ticket.toml or any record TOML by hand",
+    "Once the checklist passes, records the freeze with hl decision add and moves the ticket with hl ticket move T-062-sa plan, treating exit 2 as a gate"
+  ]
+}

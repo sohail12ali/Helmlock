@@ -1,0 +1,10 @@
+{
+  "skills": ["do"],
+  "query": "/do Fix the export thing.",
+  "expected_behavior": [
+    "Does not guess a target: scope, ticket and project are all unknown",
+    "Treats the low-confidence route as a blocking unknown and asks once, with closed choices and a recommendation each (which ticket, which project, what symptom)",
+    "Exits without editing files, running builds or routing to /kickoff",
+    "The report starts with a literal STATUS: line reading needs an answer and carries the questions table"
+  ]
+}
