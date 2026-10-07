@@ -116,13 +116,23 @@ export function verbCatalog(runtime: Runtime): VerbInfo[] {
   return out;
 }
 
-/** GET /api/v1/todos */
-export async function todoList(runtime: Runtime, status: string | undefined, ticket: string | undefined): Promise<TodoItem[]> {
+/** GET /api/v1/todos?status=&ticket=&scope=team|personal|private&all=1 (all = other people's personal lists too). */
+export async function todoList(
+  runtime: Runtime,
+  status: string | undefined,
+  ticket: string | undefined,
+  more: { scope?: string | undefined; all?: string | undefined } = {},
+): Promise<TodoItem[]> {
   if (status !== undefined && status !== "open" && status !== "done")
     throw new ApiError(400, "bad-request", `status must be open or done, got ${JSON.stringify(status)}`);
-  const filter: { status?: "open" | "done"; ticket?: string } = {};
+  const { scope, all } = more;
+  if (scope !== undefined && scope !== "team" && scope !== "personal" && scope !== "private")
+    throw new ApiError(400, "bad-request", `scope must be team, personal or private, got ${JSON.stringify(scope)}`);
+  const filter: { status?: "open" | "done"; ticket?: string; scope?: "team" | "personal" | "private"; mine?: boolean } = {};
   if (status) filter.status = status;
   if (ticket) filter.ticket = ticket;
+  if (scope) filter.scope = scope;
+  if (all === "1" || all === "true") filter.mine = false;
   const rows = await runtime.ctx.get("todos").list(filter);
   return rows.map((t) => {
     const item: TodoItem = {

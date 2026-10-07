@@ -4,5 +4,5 @@ version = "0.1.0"
 requires_core = ">=1 <2"
 provides = ["todos"]
 requires = ["roster", "activity"]
-verbs = ["todo add", "todo done", "todo list"]
+verbs = ["todo add", "todo move", "todo done", "todo list"]
 entry = "index.ts"

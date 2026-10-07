@@ -2,6 +2,9 @@
 // The author is read from author.local and must be in the roster. It is never guessed from git.
 import type { Context, Person, PluginModule, RosterService, TomlEmitter } from "@helmlock/core";
 import { PeopleToml } from "@helmlock/core";
+import { peopleVerbs } from "./people.ts";
+
+export { claimant, type GitAuthor, gitAuthors, unknownAuthors } from "./people.ts";
 
 export const PEOPLE_FILE = "people.toml";
 export const PEOPLE_KIND = "people";
@@ -10,7 +13,7 @@ export const peopleEmitter: TomlEmitter<PeopleToml> = {
   kind: PEOPLE_KIND,
   schema: PeopleToml,
   version: 1,
-  order: { "": ["schema_version"], person: ["id", "name", "initials", "email", "role"] },
+  order: { "": ["schema_version"], person: ["id", "name", "initials", "email", "role", "git"] },
 };
 
 export interface RuleError extends Error {
@@ -54,6 +57,8 @@ const plugin: PluginModule = {
   async apply(ctx) {
     await ctx.effect(() => ctx.get("files").registerEmitter(peopleEmitter));
     ctx.provide("roster", createRoster(ctx));
+    // people add / claim / unknown (Blueprint 31)
+    if (ctx.has("verbs")) for (const def of peopleVerbs()) await ctx.effect(() => ctx.get("verbs").register(def));
   },
 };
 

@@ -6,12 +6,27 @@ import { z } from "zod";
 
 export type StoredCall = { id: string; name: string; arguments: string };
 export type ChatLine =
-  | { t: "meta"; id: string; title: string; model: string; channel: ChatSummaryData["channel"]; created: string }
+  | {
+      t: "meta";
+      id: string;
+      title: string;
+      model: string;
+      channel: ChatSummaryData["channel"];
+      created: string;
+      /** The person accountable for the chat (author.local); model credentials come from this machine. */
+      responsible?: string;
+      credentials?: "this machine";
+    }
+  /** The chat was copied to people/<slug>/chats/ (committed, visible to the team). */
+  | { t: "shared"; path: string; by: string; ts: string }
   | { t: "msg"; m: ChatMessageData; calls?: StoredCall[]; call_id?: string }
   | { t: "model"; model: string; ts: string }
   | { t: "title"; title: string; ts: string }
   | { t: "error"; code: string; message: string; ts: string }
   | { t: "trim"; dropped: number; ts: string };
+
+/** Summary plus the milestone 6 fields (shared after `chat share`; responsible from the chat's header line). */
+export type SharedSummary = ChatSummaryData & { shared?: boolean; responsible?: string };
 
 export interface StoredMessage {
   m: ChatMessageData;
@@ -47,12 +62,14 @@ export function createChatStore(files: FileLayer, now: () => Date = () => new Da
   const fold = (lines: ChatLine[], id: string): LoadedChat => {
     const meta = lines.find((l): l is Extract<ChatLine, { t: "meta" }> => l.t === "meta");
     if (!meta) throw chatError("not-found", `chat ${id} has no header line`, `delete chats/${id}.jsonl or start a new chat`);
-    const summary: ChatSummaryData = { id: meta.id, title: meta.title, model: meta.model, channel: meta.channel, created: meta.created, updated: meta.created };
+    const summary: SharedSummary = { id: meta.id, title: meta.title, model: meta.model, channel: meta.channel, created: meta.created, updated: meta.created };
+    if (meta.responsible) summary.responsible = meta.responsible;
     // A Map keeps first-insertion order when a key is set again, so an updated message stays where it started.
     const byId = new Map<string, StoredMessage>();
     for (const l of lines) {
       if (l.t === "model") summary.model = l.model;
       if (l.t === "title") summary.title = l.title;
+      if (l.t === "shared") summary.shared = true;
       const ts = l.t === "msg" ? l.m.ts : l.t === "meta" ? l.created : l.ts;
       if (ts && ts > summary.updated) summary.updated = ts;
       if (l.t !== "msg") continue;
@@ -68,11 +85,19 @@ export function createChatStore(files: FileLayer, now: () => Date = () => new Da
   };
 
   return {
-    async create(o: { title?: string; model: string; channel: ChatSummaryData["channel"] }): Promise<ChatSummaryData> {
+    async create(o: { title?: string; model: string; channel: ChatSummaryData["channel"]; responsible?: string }): Promise<ChatSummaryData> {
       const d = now();
       let id = newChatId(d);
       while (await files.exists(rel(id))) id = newChatId(d);
-      const line: ChatLine = { t: "meta", id, title: o.title?.trim() || UNTITLED, model: o.model, channel: o.channel, created: d.toISOString() };
+      const line: ChatLine = {
+        t: "meta",
+        id,
+        title: o.title?.trim() || UNTITLED,
+        model: o.model,
+        channel: o.channel,
+        created: d.toISOString(),
+        ...(o.responsible ? { responsible: o.responsible, credentials: "this machine" as const } : {}),
+      };
       await files.appendJsonl(rel(id), line);
       return fold([line], id).summary;
     },

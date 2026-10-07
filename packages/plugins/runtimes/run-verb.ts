@@ -3,7 +3,7 @@ import { delimiter, resolve } from "node:path";
 import type { RunEvent, RunOptions, VerbDef, VerbResult } from "@helmlock/core";
 import { z } from "zod";
 import { RUNTIME_ALIASES } from "./registry.ts";
-import { buildRecord, RunTally, writeRunRecord } from "./run-record.ts";
+import { buildRecord, RunTally, stampResponsible, writeRunRecord } from "./run-record.ts";
 
 /** Windows names it "Path"; reuse the existing key so the child does not get two. */
 const PATH_KEY = Object.keys(process.env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
@@ -150,7 +150,7 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
         process.removeListener("SIGINT", onSigint);
       }
       const done = await handle.done;
-      const record = buildRecord(handle.id, adapter.id, opts, started, done, tally);
+      const record = stampResponsible(buildRecord(handle.id, adapter.id, opts, started, done, tally), v.actor.onBehalfOf);
       const file = await writeRunRecord(v.ctx.get("files"), record);
       await v.ctx.emit("run.finished", { runId: handle.id, runtime: adapter.id, ok: done.ok, ...(opts.ticket ? { ticket: opts.ticket } : {}) });
       if (!done.ok)

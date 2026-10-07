@@ -8,7 +8,7 @@ import { join, resolve } from "node:path";
 import type { Context, RunEvent, RunManagerService, RunMode, RunStartOptions, RunState } from "@helmlock/core";
 import { type ManagedRunOptions, newRunId } from "./process-run.ts";
 import { RUNTIME_ALIASES } from "./registry.ts";
-import { buildRecord, RunTally, writeRunRecord } from "./run-record.ts";
+import { buildRecord, RunTally, stampResponsible, writeRunRecord } from "./run-record.ts";
 import { baseRunEnv, defaultAddDirs, MODES } from "./run-verb.ts";
 
 export const COALESCE_MS = 10_000;
@@ -208,6 +208,7 @@ export function createRunManager(o: RunManagerOptions): RunManager {
       if (cancelled) done = { ...done, ok: false };
       const record = buildRecord(id, adapter.id, run, r.state.started, done, tally, cancelled ? "cancelled" : undefined);
       if (r.state.origin) record.origin = r.state.origin;
+      stampResponsible(record, opts.actor.onBehalfOf);
       try {
         await writeRunRecord(files, record);
       } catch (e) {

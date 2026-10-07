@@ -1,6 +1,7 @@
 // Runtimes plugin: the adapter registry (service "runtimes"), the run manager (service "runManager") and `hl run`.
 import type { PluginModule, VerbDef } from "@helmlock/core";
 import { z } from "zod";
+import { createAttachVerb } from "./attach.ts";
 import { createRuntimesService } from "./registry.ts";
 import { createRunManager } from "./run-manager.ts";
 import { createRunVerb } from "./run-verb.ts";
@@ -30,6 +31,8 @@ const plugin: PluginModule<typeof Config> = {
       .get("verbs")
       .register(createRunVerb({ defaultRuntime: config.default_runtime, defaultSilenceSec: config.silence_sec }) as unknown as VerbDef);
     void ctx.effect(() => off);
+    const offAttach = ctx.get("verbs").register(createAttachVerb());
+    void ctx.effect(() => offAttach);
   },
 };
 

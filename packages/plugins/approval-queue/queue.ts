@@ -34,6 +34,8 @@ export class ApprovalError extends Error {
 export interface ApprovalLogRow {
   ts: string;
   event: "requested" | "decided";
+  /** The person accountable for the action (the actor's on_behalf_of, Blueprint 31). */
+  responsible: string;
   card: ApprovalCardData;
 }
 
@@ -73,7 +75,8 @@ export function createApprovalQueue(o: ApprovalQueueOptions = {}): ApprovalQueue
 
   const log = (event: ApprovalLogRow["event"], card: ApprovalCardData) => {
     try {
-      void Promise.resolve(o.log?.({ ts: now().toISOString(), event, card: { ...card } })).catch(() => {});
+      const row: ApprovalLogRow = { ts: now().toISOString(), event, responsible: card.actor.onBehalfOf, card: { ...card } };
+      void Promise.resolve(o.log?.(row)).catch(() => {});
     } catch {
       /* logging never breaks a decision */
     }

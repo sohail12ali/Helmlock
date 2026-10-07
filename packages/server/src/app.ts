@@ -11,6 +11,7 @@ import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
 import { registerKnowledgeRoutes } from "./knowledge.ts";
 import { mountModelRoutes } from "./models.ts";
+import { peopleView } from "./people.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import {
@@ -198,7 +199,13 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   });
 
   route("/verbs", async () => verbCatalog(runtime));
-  route("/todos", async (_m, c) => todoList(runtime, c.req.query("status") || undefined, c.req.query("ticket") || undefined));
+  route("/todos", async (_m, c) =>
+    todoList(runtime, c.req.query("status") || undefined, c.req.query("ticket") || undefined, {
+      scope: c.req.query("scope") || undefined,
+      all: c.req.query("all") || undefined,
+    }),
+  );
+  route("/people", async () => peopleView(runtime));
   route("/settings", async () => settingsView(runtime));
 
   // Milestone 4: models and the assistant (each POST runs the same write checks as verb calls).
