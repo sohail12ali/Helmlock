@@ -57,7 +57,7 @@ export function createStore(ctx: Context) {
     let globs: string[];
     // Archived tickets (archive/YYYY-MM/<T>) keep their ids: never issue one again.
     if (prefix === "T") globs = [`${ARTIFACTS}/T-*`, "archive/*/T-*"];
-    else if (prefix === "TD") globs = ["todos/TD-*", "todos/*/TD-*"];
+    else if (prefix === "TD") globs = ["todos/TD-*", "todos/*/TD-*", "people/*/todos/TD-*", ".hl-local/todos/TD-*"];
     else {
       const folder = RECORD_FOLDERS[KIND_BY_PREFIX[prefix]!];
       globs = [`${ARTIFACTS}/*/${folder}/${prefix}-*.toml`, `archive/*/*/${folder}/${prefix}-*.toml`];
