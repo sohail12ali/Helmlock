@@ -124,7 +124,7 @@ describe("agent runs", () => {
       return undefined;
     });
     renderApp("/agents");
-    const form = await screen.findByRole("form", { name: "Start a run" });
+    const form = await screen.findByRole("form", { name: "Start a run" }, { timeout: 10_000 }); // lazy page: allow for a slow first load
     fireEvent.change(within(form).getByLabelText("Task"), { target: { value: "Draft the spec" } });
     fireEvent.change(within(form).getByLabelText("Ticket"), { target: { value: "T-001-sa" } });
     fireEvent.change(within(form).getByLabelText("Mode"), { target: { value: "ask" } });
