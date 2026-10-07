@@ -120,7 +120,9 @@ const configSet = verb({
     const r = await setSetting(v.ctx.get("files"), i, { dryRun: v.dryRun });
     const shown = typeof r.value === "string" ? JSON.stringify(r.value) : String(r.value);
     const verb = v.dryRun ? "would set" : r.changed ? "set" : "unchanged:";
-    return ok(r, `${verb} ${r.plugin}.${r.key} = ${shown} in ${r.file}`);
+    // Config reload only (F107): hl commands read it now; a running `hl serve` picks it up when restarted (F132 style).
+    const note = r.changed && !v.dryRun ? " (applies to hl commands now; restart hl serve for the console)" : "";
+    return ok({ ...r, applies: "next-start" }, `${verb} ${r.plugin}.${r.key} = ${shown} in ${r.file}${note}`);
   },
 });
 
