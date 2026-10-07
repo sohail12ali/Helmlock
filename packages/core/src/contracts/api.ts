@@ -246,3 +246,74 @@ export interface PluginSettings {
 export interface SettingsView {
   sections: { id: "workspace" | "models" | "agents" | "permissions" | "telegram"; label: string; plugins: PluginSettings[] }[];
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Milestone 4: agent runs from the console, approvals, the assistant and models. All writes below need the same
+// protection as verb calls (JSON, WRITE_HEADER, same origin, Host check).
+// ---------------------------------------------------------------------------------------------------------------
+import type {
+  ApprovalCardData,
+  AssistantEvent,
+  ChatMessageData,
+  ChatSummaryData,
+  ModelInfo,
+  ProbeResult,
+  ProviderInfo,
+  RunEvent,
+  RunMode,
+  RunState,
+} from "./services.ts";
+
+/** POST /api/v1/runs. Modes allowed from the console: plan, ask, auto-review ("force" stays in the terminal). */
+export interface RunStart {
+  task: string;
+  runtime?: "claude-code" | "cursor";
+  agent?: string;
+  ticket?: string;
+  mode?: Exclude<RunMode, "force">;
+  model?: string;
+}
+/** GET /api/v1/runs/:id and the 201 body of POST /runs. */
+export type RunDetail = RunState;
+/** GET /api/v1/runs/:id/events (SSE): "event" frames with RunEventLine (replayed from ?from=seq, default 0), then "end". */
+export interface RunEventLine {
+  seq: number;
+  ts: string;
+  event: RunEvent;
+}
+/** POST /api/v1/runs/:id/cancel -> RunDetail. */
+
+/** GET /api/v1/approvals?status=pending|recent */
+export type ApprovalCard = ApprovalCardData;
+/** POST /api/v1/approvals/:id */
+export interface ApprovalAnswer {
+  decision: "allow" | "deny";
+  scope?: "once" | "chat";
+}
+/** Internal: POST /api/v1/hooks/pretooluse from the hook script of a server-started run. Authenticated by the header
+ *  X-Helmlock-Hook-Token (a per-server secret passed to child runs as HL_HOOK_TOKEN); waits for the person; returns
+ *  the Claude Code PreToolUse decision. Not callable from the browser. */
+export interface HookDecision {
+  decision: "allow" | "deny";
+  reason: string;
+}
+
+/** GET /api/v1/models */
+export interface ModelsView {
+  providers: ProviderInfo[];
+  models: ModelInfo[];
+  default?: string;
+}
+/** POST /api/v1/models/test { provider } */
+export type ModelProbe = ProbeResult;
+
+/** GET /api/v1/chats ; POST /api/v1/chats { title?, model? } -> ChatSummary */
+export type ChatSummary = ChatSummaryData;
+/** GET /api/v1/chats/:id */
+export interface ChatDetail {
+  summary: ChatSummaryData;
+  messages: ChatMessageData[];
+}
+/** POST /api/v1/chats/:id/messages { text } -> 202; the turn streams over GET /api/v1/chats/:id/events (SSE "assistant"
+ *  frames with AssistantEvent). POST /api/v1/chats/:id/model { model } -> ChatSummary. */
+export type ChatEvent = AssistantEvent;

@@ -60,6 +60,153 @@ export interface ApprovalsService {
   decide(req: ApprovalRequest): Promise<{ decision: "allow" | "deny"; reason: string }>;
 }
 
+// ---------- milestone 4: approval queue, runs from the server, providers, assistant, channels ----------
+
+/** A pending decision a person answers in the console or Telegram (F5d, F14, F84 permission card). */
+export interface ApprovalCardData {
+  id: string;
+  action: string;
+  detail: string;
+  /** Tool name and a short preview of its input, when it comes from an agent tool call. */
+  tool?: string;
+  input_preview?: string;
+  actor: Actor;
+  run_id?: string;
+  chat_id?: string;
+  /** Clipboard, screenshots and shell from low-trust sources can never be approved from Telegram (F4c, F122). */
+  local_only: boolean;
+  created: string;
+  expires: string;
+  status: "pending" | "allowed" | "denied" | "expired";
+  decided_by?: string;
+  decided_via?: "console" | "telegram" | "terminal" | "timeout";
+  /** "chat" = allow the same tool for the rest of this chat or run. */
+  scope?: "once" | "chat";
+}
+export interface ApprovalQueueService {
+  /** Adds a card and waits for a person; resolves deny after the timeout (fail-closed, default 5 minutes). */
+  request(req: Omit<ApprovalCardData, "id" | "created" | "expires" | "status">, opts?: { timeoutMs?: number }): Promise<ApprovalCardData>;
+  pending(): ApprovalCardData[];
+  recent(limit?: number): ApprovalCardData[];
+  /** Returns the updated card; refuses local_only cards from channel "telegram". */
+  answer(id: string, decision: "allow" | "deny", by: string, via: "console" | "telegram" | "terminal", scope?: "once" | "chat"): ApprovalCardData;
+}
+
+export interface RunStartOptions extends Omit<RunOptions, "cwd" | "mode"> {
+  runtime?: "claude-code" | "cursor";
+  mode?: RunMode;
+  cwd?: string;
+  /** Who started it (F98: the person's own logins are used). */
+  actor: Actor;
+}
+export interface RunState {
+  id: string;
+  runtime: string;
+  agent?: string;
+  ticket?: string;
+  mode: RunMode;
+  status: "running" | "done" | "failed" | "cancelled";
+  started: string;
+  ended?: string;
+  first_result_line?: string;
+  failure_class?: string;
+  usage?: { input_tokens: number; output_tokens: number; cost_usd: number | null };
+}
+/** Runs started from the server (console, Telegram); the CLI `hl run` keeps its own path. */
+export interface RunManagerService {
+  start(opts: RunStartOptions): Promise<RunState>;
+  get(id: string): RunState | undefined;
+  active(): RunState[];
+  /** Buffered events from seq (0 = all) and live ones after; the iterator ends when the run ends. */
+  events(id: string, fromSeq?: number): AsyncIterable<{ seq: number; ts: string; event: RunEvent }>;
+  cancel(id: string, by: string): Promise<void>;
+}
+
+/** OpenAI-compatible provider layer (F11a-c, F72-F78). Config re-read on every request. */
+export interface ProviderInfo {
+  id: string;
+  label: string;
+  base_url: string;
+  /** Env-var NAME holding the key (F9b); never the key. */
+  key_env?: string;
+  preset?: string;
+  compat: Record<string, boolean>;
+}
+export interface ModelInfo {
+  id: string;
+  provider: string;
+  label: string;
+  context_window?: number;
+  max_tokens?: number;
+  capabilities: { tool_calls: boolean; vision: boolean; streaming: boolean };
+}
+export interface ChatTurn {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_calls?: { id: string; name: string; arguments: string }[];
+  tool_call_id?: string;
+}
+export interface ToolSpec {
+  name: string;
+  description: string;
+  /** JSON schema of the arguments. */
+  parameters: Record<string, unknown>;
+}
+export type CompletionDelta =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; id: string; name: string; arguments: string }
+  | { type: "usage"; input_tokens: number; output_tokens: number; cache_read_tokens?: number }
+  | { type: "done"; finish_reason: string };
+export interface ProbeResult {
+  provider: string;
+  reachable: boolean;
+  models: string[];
+  chat: boolean;
+  streaming: boolean;
+  tool_calls: boolean;
+  error?: { code: "auth" | "rate_limit" | "timeout" | "context_exceeded" | "server" | "bad_request" | "network"; message: string };
+}
+export interface ProvidersService {
+  providers(): ProviderInfo[];
+  models(): ModelInfo[];
+  defaultModel(role?: "assistant" | "summariser" | "titles" | "refiner"): string | undefined;
+  /** Streams one completion; retries per provider policy (F75); appends a usage line (F78, local). */
+  complete(req: { model: string; messages: ChatTurn[]; tools?: ToolSpec[]; signal?: AbortSignal }): AsyncIterable<CompletionDelta>;
+  probe(providerId: string): Promise<ProbeResult>;
+}
+
+export interface ChatSummaryData {
+  id: string;
+  title: string;
+  model: string;
+  channel: "console" | "telegram";
+  created: string;
+  updated: string;
+}
+export interface ChatMessageData {
+  id: string;
+  role: "user" | "assistant" | "tool";
+  text: string;
+  tool?: { name: string; input: unknown; status: "proposed" | "approved" | "denied" | "done" | "failed"; result?: string; approval_id?: string };
+  ts: string;
+  usage?: { input_tokens: number; output_tokens: number };
+}
+export type AssistantEvent =
+  | { type: "message"; message: ChatMessageData }
+  | { type: "delta"; message_id: string; text: string }
+  | { type: "approval"; card: ApprovalCardData }
+  | { type: "error"; code: string; message: string }
+  | { type: "done"; message_id: string };
+/** The assistant (F11d L3): chat + search + verbs as tools; writes need a confirmation card. History is local JSONL (F11e, B25). */
+export interface AssistantService {
+  list(): Promise<ChatSummaryData[]>;
+  create(opts: { title?: string; model?: string; channel: "console" | "telegram" }): Promise<ChatSummaryData>;
+  get(id: string): Promise<{ summary: ChatSummaryData; messages: ChatMessageData[] }>;
+  setModel(id: string, model: string): Promise<ChatSummaryData>;
+  /** Runs one user turn; events stream until "done". Low-trust channels get the low-trust preset (F66). */
+  send(id: string, text: string, opts: { actor: Actor; channel: "console" | "telegram"; signal?: AbortSignal }): AsyncIterable<AssistantEvent>;
+}
+
 // ---------- people ----------
 export interface RosterService {
   list(): Promise<Person[]>;
@@ -319,4 +466,9 @@ export interface Services {
   harness: HarnessService;
   runtimes: RuntimesService;
   scaffold: ScaffoldService;
+  // milestone 4
+  approvalQueue: ApprovalQueueService;
+  runManager: RunManagerService;
+  providers: ProvidersService;
+  assistant: AssistantService;
 }

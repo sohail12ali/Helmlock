@@ -10,4 +10,8 @@ export interface Events {
   "verb.done": { verb: string; code: 0 | 1 | 2; entity?: string; actor: Actor; dryRun: boolean };
   "run.started": { runId: string; runtime: string; ticket?: string };
   "run.finished": { runId: string; runtime: string; ticket?: string; ok: boolean };
+  // milestone 4
+  "approval.requested": { id: string; action: string; detail: string; runId?: string; chatId?: string; localOnly: boolean };
+  "approval.decided": { id: string; decision: "allow" | "deny"; by: string; channel: "console" | "telegram" | "terminal" | "timeout" };
+  "chat.message": { chatId: string; role: "user" | "assistant"; text: string; channel: "console" | "telegram" };
 }
