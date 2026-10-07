@@ -1,0 +1,38 @@
+schema_version = 2
+origin = "import"
+
+[ticket]
+id = "T-014-sa"
+title = "Hold \"TikTok\" invoices — 1 hour, café ☕"
+summary = "Line one\nLine two\twith tab and \\ backslash"
+stage = "build"
+size = "M"
+priority = "high"
+owner = "sohail"
+project = "wms"
+created = "2026-10-01T09:00:00Z"
+updated = "2026-10-07T10:30:00Z"
+feature_name = "tiktok-invoice-window"
+
+[flags]
+blocked = false
+
+[links]
+related = ["T-009-sa", "T-010-om"]
+
+[[changes]]
+repo = "wms-api"
+branch = "feat/T-014"
+projects = ["Database-Scripts"]
+
+[[changes]]
+repo = "wms-ui"
+
+[notes]
+stage_note = "Ready for verify"
+weight = 2.0
+ratio = 0.75
+"odd key" = 1
+
+[notes.history]
+moved = 3

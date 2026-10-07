@@ -1,0 +1,11 @@
+// VS Code allows comments and trailing commas here.
+{
+  "folders": [
+    { "name": "knowledge", "path": "." },
+    { "name": "system", "path": "../delivery" },
+    /* no name: the folder's base name is used */
+    { "path": "../wms-api" },
+    { "name": "overlay", "path": "overlays/wms", },
+  ],
+  "settings": { "files.exclude": { "**/*.lock": true, "url": "http://example.com/a,]" } },
+}
