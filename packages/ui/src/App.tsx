@@ -10,10 +10,11 @@ import { TicketsPage } from "@/pages/Tickets";
 const TicketPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.TicketPage })));
 const ArtifactPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.ArtifactPage })));
 const AgentsPage = lazy(() => import("@/pages/Agents").then((m) => ({ default: m.AgentsPage })));
-const TodosPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.TodosPage })));
-const WorkPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.WorkPage })));
+const TodosPage = lazy(() => import("@/pages/Todos").then((m) => ({ default: m.TodosPage })));
+const WorkPage = lazy(() => import("@/pages/Work").then((m) => ({ default: m.WorkPage })));
 const KnowledgePage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.KnowledgePage })));
-const SettingsPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.SettingsPage })));
+const SettingsPage = lazy(() => import("@/pages/Settings").then((m) => ({ default: m.SettingsPage })));
+const ActionsPage = lazy(() => import("@/pages/Actions").then((m) => ({ default: m.ActionsPage })));
 const SearchPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.SearchPage })));
 const NotFoundPage = lazy(() => import("@/pages/Misc").then((m) => ({ default: m.NotFoundPage })));
 
@@ -54,6 +55,7 @@ export function AppRoutes() {
         <Route path="work" element={s(<WorkPage />)} />
         <Route path="knowledge" element={s(<KnowledgePage />)} />
         <Route path="settings" element={s(<SettingsPage />)} />
+        <Route path="actions" element={s(<ActionsPage />)} />
         <Route path="search" element={s(<SearchPage />)} />
         <Route path="*" element={s(<NotFoundPage />)} />
       </Route>

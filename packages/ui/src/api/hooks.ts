@@ -13,6 +13,8 @@ export const keys = {
   artifact: (ticket: string, id: string) => ["artifact", ticket, id] as const,
   activity: (q?: object) => ["activity", q ?? {}] as const,
   worklog: (q?: object) => ["worklog", q ?? {}] as const,
+  todos: (q?: object) => ["todos", q ?? {}] as const,
+  settings: ["settings"] as const,
   runs: ["runs"] as const,
   skills: ["skills"] as const,
   search: (q: string) => ["search", q] as const,
