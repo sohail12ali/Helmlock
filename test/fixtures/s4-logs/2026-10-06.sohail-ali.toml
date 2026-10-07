@@ -1,0 +1,22 @@
+# Work log — one file per author per day.
+# Append with `/log-work` (or `python .kanban/kanban.py log …`);
+# hours are allocated by `/work-summary`, not stored per entry.
+
+[day]
+date = 2026-10-06
+author = "Sohail Ali"
+slug = "sohail-ali"
+
+[[entry]]
+ticket = "WLC-886"
+category = "Testing"
+text = "Verified invoice clubbing on UAT. Review passed, savings mail and volume checks closed, and a rolled-back skip proof left the audit log unchanged."
+weight = 2
+logged = "2026-10-06T11:35:32"
+
+[[entry]]
+ticket = "WLC-886"
+category = "Testing"
+text = "Placed 153 UAT standard shipping orders for customers with untouched invoices so clubbing can be checked later."
+weight = 2
+logged = "2026-10-06T14:26:58"

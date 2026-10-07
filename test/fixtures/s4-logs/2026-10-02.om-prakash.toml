@@ -1,0 +1,36 @@
+# Work log — one file per author per day.
+# Append with `/log-work` (or `python .kanban/kanban.py log …`);
+# hours are allocated by `/work-summary`, not stored per entry.
+
+[day]
+date = 2026-10-02
+author = "Om Prakash"
+slug = "om-prakash"
+
+[[entry]]
+ticket = "Internal"
+category = "Development"
+text = "Optimized the AMS stock search popup procedure so the slow 9 second product lookup only reads the current page of products"
+weight = 2
+logged = "2026-10-02T19:02:33"
+
+[[entry]]
+ticket = "Internal"
+category = "Development"
+text = "Reworked the AMS product web page view so stock search popup lookups seek by product instead of reading the full product catalogue"
+weight = 2
+logged = "2026-10-02T19:17:24"
+
+[[entry]]
+ticket = "WLC-978"
+category = "Development"
+text = "Prod deployed BacklogSummary SP and synced slc-dbscripts mirror index deferred"
+weight = 2
+logged = "2026-10-02T20:26:32"
+
+[[entry]]
+ticket = "WLC-978"
+category = "Development"
+text = "WLC-978 closed path index cancelled prod BacklogSummary under 5 seconds"
+weight = 2
+logged = "2026-10-02T20:32:01"
