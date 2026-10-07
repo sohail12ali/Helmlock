@@ -1,0 +1,9 @@
+schema_version = 1
+
+[ticket]
+id = "T-1-x"
+title = "Seeded fault 1: bad ticket id"
+stage = "backlog"
+priority = "normal"
+created = "2026-10-01T09:00:00.000Z"
+updated = "2026-10-01T09:00:00.000Z"
