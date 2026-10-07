@@ -2,7 +2,7 @@
 // is not reported stale. In a knowledge repo both layers are merged (system, then workspace); in the delivery repo
 // only the AGENTS.md block is generated: it is not a knowledge repo, so its own sessions get no knowledge-repo
 // deny rules or hooks.
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { HarnessFileResult } from "@helmlock/core";
 import { generate } from "./generate.ts";
@@ -13,7 +13,15 @@ const lf = (s: string) => s.replace(/\r\n/g, "\n");
 export function syncHarness(root: string, deliveryRoot: string, opts: { check?: boolean } = {}): HarnessFileResult[] {
   const src = loadLayers(root, deliveryRoot);
   const agentsPath = join(root, "AGENTS.md");
-  let files = generate(src, { deliveryRoot, agentsMd: existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : undefined });
+  const agentsDir = join(deliveryRoot, ".claude", "agents");
+  const systemAgents =
+    !isDeliveryRoot(root, deliveryRoot) && existsSync(agentsDir)
+      ? readdirSync(agentsDir)
+          .filter((n) => n.endsWith(".md"))
+          .sort()
+          .map((name) => ({ name, text: readFileSync(join(agentsDir, name), "utf8") }))
+      : [];
+  let files = generate(src, { deliveryRoot, agentsMd: existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : undefined, systemAgents });
   if (isDeliveryRoot(root, deliveryRoot)) files = files.filter((f) => f.path === "AGENTS.md");
   const out: HarnessFileResult[] = [];
   for (const f of files) {
