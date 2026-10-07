@@ -20,6 +20,7 @@ export const GO_KEYS: Record<string, { path: string; label: string }> = {
   w: { path: "/work", label: "Work" },
   a: { path: "/agents", label: "Agents and chat" },
   k: { path: "/knowledge", label: "Knowledge" },
+  p: { path: "/people", label: "People" },
   s: { path: "/settings", label: "Settings" },
 };
 

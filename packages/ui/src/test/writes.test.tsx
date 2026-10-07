@@ -238,7 +238,7 @@ describe("todos", () => {
   it("lists todos with ticket link and due, adds one and checks one done", async () => {
     const calls = mockServer();
     renderApp("/todos");
-    const list = await screen.findByRole("list", { name: "Open todos" });
+    const list = await screen.findByTestId("todo-sections");
     expect(within(list).getByRole("link", { name: "T-002-sa" })).toBeInTheDocument();
     expect(within(list).getByText(/overdue/)).toBeInTheDocument();
 
@@ -250,7 +250,7 @@ describe("todos", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]!.path).toBe("/verbs/todo/add");
     expect(calls[0]!.headers["X-Helmlock-Request"]).toBe("1");
-    expect(calls[0]!.body.input).toEqual({ text: "Call the tax office", ticket: "T-004-sa", due: "2026-10-09", priority: "high" });
+    expect(calls[0]!.body.input).toEqual({ text: "Call the tax office", ticket: "T-004-sa", due: "2026-10-09", priority: "high", scope: "personal" });
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Mark done: Ask about the tax rule" }));
     await waitFor(() => expect(calls).toHaveLength(2));
@@ -269,7 +269,7 @@ describe("todos", () => {
       }),
     );
     renderApp("/todos");
-    await screen.findByRole("list", { name: "Open todos" });
+    await screen.findByTestId("todo-sections");
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(await screen.findByText("No done todos yet.")).toBeInTheDocument();
   });

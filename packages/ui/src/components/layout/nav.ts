@@ -1,4 +1,4 @@
-import { BookOpen, Bot, CheckSquare, Clock, Inbox, LayoutDashboard, type LucideIcon, Settings, SquareKanban } from "lucide-react";
+import { BookOpen, Bot, CheckSquare, Clock, Inbox, LayoutDashboard, type LucideIcon, Settings, SquareKanban, Users } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -16,6 +16,7 @@ export const NAV: NavItem[] = [
   { id: "work", label: "Work", path: "/work", icon: Clock, hotkey: "g w" },
   { id: "agents", label: "Agents and chat", path: "/agents", icon: Bot, hotkey: "g a" },
   { id: "knowledge", label: "Knowledge", path: "/knowledge", icon: BookOpen, hotkey: "g k" },
+  { id: "people", label: "People", path: "/people", icon: Users, hotkey: "g p" },
   { id: "settings", label: "Settings", path: "/settings", icon: Settings, hotkey: "g s" },
 ];
 
