@@ -20,4 +20,5 @@ export const catalog: PluginCatalog = {
   "runtime-claude": { dir: join(here, "runtime-claude"), load: () => import("./runtime-claude/index.ts") },
   "runtime-cursor": { dir: join(here, "runtime-cursor"), load: () => import("./runtime-cursor/index.ts") },
   scaffold: { dir: join(here, "scaffold"), load: () => import("./scaffold/index.ts") },
+  pages: { dir: join(here, "pages"), load: () => import("./pages/index.ts") },
 };

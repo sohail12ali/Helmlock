@@ -23,6 +23,7 @@ export const BUNDLES: Record<string, PluginRow[]> = {
     "runtime-claude",
     "runtime-cursor",
     "scaffold",
+    "pages",
   ].map((id) => ({ id, use: id })),
 };
 
