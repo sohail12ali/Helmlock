@@ -9,6 +9,7 @@ import { mountChatRoutes } from "./chats.ts";
 import { createReadModel, helmlockVersion, localDate, type ReadModel } from "./data.ts";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
+import { registerKnowledgeRoutes } from "./knowledge.ts";
 import { mountModelRoutes } from "./models.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
@@ -132,7 +133,7 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
     c.header("Cache-Control", "no-store");
     const isVerbCall =
       c.req.method === "POST" &&
-      (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/cancel$|approvals\/[^/]+$|hooks\/pretooluse$)/.test(c.req.path) ||
+      (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/cancel$|approvals\/[^/]+$|inbox\/[^/]+$|hooks\/pretooluse$)/.test(c.req.path) ||
         /^\/api\/v1\/(chats|models)(\/|$)/.test(c.req.path));
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && !isVerbCall)
       return c.json(
@@ -203,6 +204,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   // Milestone 4: models and the assistant (each POST runs the same write checks as verb calls).
   mountModelRoutes(api, m4);
   mountChatRoutes(api, m4);
+  // Milestone 5: knowledge, inbox state and the first-run checklist.
+  registerKnowledgeRoutes(api, m4);
 
   api.post("/verbs/*", async (c) => {
     try {

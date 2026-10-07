@@ -26,4 +26,6 @@ export const catalog: PluginCatalog = {
   "approval-queue": { dir: join(here, "approval-queue"), load: () => import("./approval-queue/index.ts") },
   providers: { dir: join(here, "providers"), load: () => import("./providers/index.ts") },
   assistant: { dir: join(here, "assistant"), load: () => import("./assistant/index.ts") },
+  notes: { dir: join(here, "notes"), load: () => import("./notes/index.ts") },
+  lifecycle: { dir: join(here, "lifecycle"), load: () => import("./lifecycle/index.ts") },
 };

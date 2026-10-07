@@ -66,7 +66,7 @@ test("--help on a verb shows its examples; hl --help lists nouns", () => {
   assert.match(v.stdout, /Examples:\n {2}hl doctor/);
   const top = hl("--help");
   assert.equal(top.code, 0);
-  assert.match(top.stdout, /ticket\s+.*move/);
+  assert.match(top.stdout, /ticket\s+[^\n]*\n?[^\n]*move/);
 });
 
 test("bad flag on a verb: exit 1 with the rule", () => {
