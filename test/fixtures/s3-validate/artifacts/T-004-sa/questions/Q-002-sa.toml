@@ -1,0 +1,9 @@
+schema_version = 1
+id = "Q-002-sa"
+ticket = "T-004-sa"
+text = "Which catalog?"
+blocking = true
+status = "answered"
+answer = "WMS"
+asked = "2026-10-01T09:00:00.000Z"
+author = "sam"

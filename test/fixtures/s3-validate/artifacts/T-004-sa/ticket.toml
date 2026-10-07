@@ -1,0 +1,18 @@
+schema_version = 1
+
+[ticket]
+id = "T-004-sa"
+title = "A clean ticket"
+stage = "verify"
+size = "M"
+priority = "high"
+owner = "sam"
+created = "2026-10-01T09:00:00.000Z"
+updated = "2026-10-02T09:00:00.000Z"
+
+[flags]
+blocked = false
+
+[claim]
+claimed_by = "sam"
+claimed_at = "2026-10-02T09:00:00.000Z"

@@ -1,0 +1,18 @@
+schema_version = 1
+ticket = "T-002-sa"
+
+[[task]]
+id = "S1-T1"
+slice = "S1"
+title = "Gift card table"
+layer = "db"
+acs = ["AC-1"]
+status = "doing"
+
+[[task]]
+id = "S1-T2"
+slice = "S1"
+title = "Refund endpoint"
+layer = "api"
+acs = ["AC-9"]
+status = "todo"

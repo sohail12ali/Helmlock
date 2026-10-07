@@ -1,0 +1,14 @@
+schema_version = 1
+bundles = ["delivery-lite"]
+
+[workspace]
+name = "Test"
+console_name = "Test Console"
+
+[[layers]]
+folder = "system"
+layer = "system"
+
+[[layers]]
+folder = "knowledge"
+layer = "workspace"
