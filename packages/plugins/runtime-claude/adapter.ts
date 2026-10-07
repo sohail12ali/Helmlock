@@ -16,8 +16,13 @@ export const CLAUDE_PERMISSION_MODE: Record<RunMode, string> = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Agents change state only through hl, so hl is always allowed (harness.toml permissions.allow). */
+export const HL_ALLOWED_TOOLS = ["Bash(hl:*)", "Bash(hl.cmd:*)", "Bash(./hl:*)"];
+
 export function claudeArgs(o: RunOptions, resume: string | undefined): string[] {
   const args = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", CLAUDE_PERMISSION_MODE[o.mode]];
+  // Settings allow rules are ignored until a folder is trusted interactively, so pass the hl allow on the command line.
+  args.push("--allowedTools", HL_ALLOWED_TOOLS.join(","));
   if (o.model) args.push("--model", o.model);
   if (o.agent) args.push("--agent", o.agent);
   for (const d of o.addDirs ?? []) args.push("--add-dir", d);

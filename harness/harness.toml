@@ -20,6 +20,12 @@ schema_version = 1
 # Cargo.toml or test fixtures in a product repo (Blueprint 25, change A).
 # Deny wins over allow on both hosts.
 [permissions]
+# allow: tool rules agents may use without asking. `hl` is how agents change state, so it is always allowed.
+allow = [
+  "Bash(hl:*)",
+  "Bash(hl.cmd:*)",
+  "Bash(./hl:*)",
+]
 # deny: plain path globs; Edit and Write are denied (Claude Edit(p) + Write(p), Cursor Write(p)).
 # State changes only through `hl` verbs.
 deny = [

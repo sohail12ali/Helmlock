@@ -6,11 +6,8 @@
     ],
     "deny": [
       "Edit(artifacts/**/ticket.toml)",
-      "Write(artifacts/**/ticket.toml)",
       "Edit(logs/**)",
-      "Write(logs/**)",
       "Edit(workspace.toml)",
-      "Write(workspace.toml)",
       "Read(.env)",
       "Read(site/**)",
       "Bash(rm -rf:*)"

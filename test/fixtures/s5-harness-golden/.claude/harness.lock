@@ -3,7 +3,7 @@
 source = "5ebf41a073152f4e7f514675f2018d324004f6f8d490efeed7113078e5ca36c6"
 
 [files]
-".claude/settings.json" = "456ea242507f0c6a28e1f840d18325b2528100a111458802e4b96dd0d059eabe"
+".claude/settings.json" = "fde71f5c61a06e48820e77c3d44249b67a864dcfeb13c42e8901ad5a8e29c403"
 ".mcp.json" = "8c8d1cdaf6dc900906f257c572d2ded2765c3372ff2739fbc27f98cb13d57ffd"
 ".cursor/hooks.json" = "bb4fbdda7baf4eb1974b29b68e8f137e1848f4798fca132f181dce4b99c550c5"
 ".cursor/cli.json" = "358256807599a8510b3a4ed5996edf61228529b1caff9049fa5b55f95cb7a465"

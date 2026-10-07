@@ -1,8 +1,11 @@
 // `hl run "<task>"`: start one agent run, stream its events, write runs/<run-id>.json (gitignored, B25).
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 import type { RunEvent, RunOptions, VerbDef, VerbResult } from "@helmlock/core";
 import { z } from "zod";
 import { RUNTIME_ALIASES } from "./registry.ts";
+
+/** Windows names it "Path"; reuse the existing key so the child does not get two. */
+const PATH_KEY = Object.keys(process.env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
 
 export const MODES = ["plan", "ask", "auto-review", "force"] as const;
 
@@ -121,6 +124,8 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
         addDirs,
         mode: input.mode,
         silenceSec: input.silence_sec ?? o.defaultSilenceSec ?? 1800,
+        // The knowledge repo's hl launcher on PATH, so the agent can call `hl` like the rulebook says.
+        env: { [PATH_KEY]: `${ws.root}${delimiter}${process.env[PATH_KEY] ?? ""}`, HL_WORKSPACE: ws.root },
         ...(input.agent ? { agent: input.agent } : {}),
         ...(input.model ? { model: input.model } : {}),
         ...(input.ticket ? { ticket: input.ticket } : {}),

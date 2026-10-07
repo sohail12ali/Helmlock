@@ -78,6 +78,8 @@ test("args: stream-json, permission mode from the ladder, never default or bypas
     "--verbose",
     "--permission-mode",
     "plan",
+    "--allowedTools",
+    "Bash(hl:*),Bash(hl.cmd:*),Bash(./hl:*)",
     "--model",
     "haiku",
     "--agent",

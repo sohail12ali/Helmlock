@@ -78,7 +78,8 @@ export function hookCommand(src: HarnessSource, o: GenerateOptions, host: "claud
 
 function claudeSettings(src: HarnessSource, o: GenerateOptions): unknown {
   const p = src.toml.permissions;
-  const deny = [...p.deny.flatMap((d) => [`Edit(${bare(d)})`, `Write(${bare(d)})`]), ...p.deny_read.map((d) => `Read(${bare(d)})`)];
+  // Claude: Edit(path) covers every file-editing tool; Write(path) rules are rejected (measured, Claude Code 2.1.289).
+  const deny = [...p.deny.map((d) => `Edit(${bare(d)})`), ...p.deny_read.map((d) => `Read(${bare(d)})`)];
   deny.push(...p.deny_shell.map((s) => `Bash(${shellPrefix(s)}:*)`));
   const permissions: Record<string, string[]> = {};
   if (p.allow.length) permissions.allow = p.allow;
