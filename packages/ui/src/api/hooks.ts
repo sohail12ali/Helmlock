@@ -30,6 +30,7 @@ export const AREA_KEYS: Record<Area, string[]> = {
   runs: ["runs", "overview", "ticket"],
   workspace: ["workspace", "overview", "board"],
   skills: ["skills"],
+  todos: ["todos", "overview"],
 };
 
 export const useWorkspace = () => useQuery({ queryKey: keys.workspace, queryFn: ({ signal }) => api.workspace(signal), staleTime: 60_000 });
