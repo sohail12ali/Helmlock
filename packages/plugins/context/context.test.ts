@@ -191,7 +191,7 @@ test("session digest lists in-flight work, skills by layer and waiting questions
     assert.equal(d.in_flight.length, SESSION_ROWS);
     assert.ok(d.in_flight.every((t) => t.stage !== "backlog" && t.stage !== "done"));
     assert.equal(d.in_flight[0]?.id, "T-007-sa", "blocked tickets come first");
-    assert.deepEqual(Object.keys(d.skills).sort(), ["project", "system", "workspace"]);
+    assert.deepEqual(Object.keys(d.skills).sort(), ["local", "personal", "project", "system", "workspace"]);
     assert.deepEqual(d.skills.workspace, ["glossary"]);
     assert.deepEqual(d.waiting, ["Q-001-sa (T-005-sa): Which carrier codes apply?"]);
     const text = res.text ?? "";
