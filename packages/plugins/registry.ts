@@ -24,4 +24,6 @@ export const catalog: PluginCatalog = {
   settings: { dir: join(here, "settings"), load: () => import("./settings/index.ts") },
   telegram: { dir: join(here, "telegram"), load: () => import("./telegram/index.ts") },
   "approval-queue": { dir: join(here, "approval-queue"), load: () => import("./approval-queue/index.ts") },
+  providers: { dir: join(here, "providers"), load: () => import("./providers/index.ts") },
+  assistant: { dir: join(here, "assistant"), load: () => import("./assistant/index.ts") },
 };

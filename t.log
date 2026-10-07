@@ -1,0 +1,5 @@
+
+> helmlock@ test D:\Workspace\noble-workspace\Helmlock
+> node --test --test-reporter=dot "packages/**/*.test.ts"
+
+..........

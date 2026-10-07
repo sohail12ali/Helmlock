@@ -7,7 +7,7 @@
     "node": ">=24.11.0"
   },
   "scripts": {
-    "test": "node --test --test-reporter=dot \"packages/**/*.test.ts\"",
+    "test": "node --test --test-timeout=60000 --test-reporter=dot \"packages/**/*.test.ts\"",
     "test:e2e": "node --test \"test/**/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json && pnpm --filter @helmlock/ui typecheck",
     "lint": "biome check .",

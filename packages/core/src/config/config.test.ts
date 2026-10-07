@@ -6,7 +6,7 @@ const ws = (extra: Record<string, unknown> = {}) => ({ schema_version: 1, worksp
 
 test("bundle rows come first and record their source", () => {
   const { rows } = composeRows({ workspace: ws() });
-  assert.equal(rows.length, 19);
+  assert.equal(rows.length, 21);
   assert.deepEqual(rows[0], { id: "roster", use: "roster", source: { layer: "bundle", file: "delivery-lite" } });
 });
 

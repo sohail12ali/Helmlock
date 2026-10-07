@@ -27,6 +27,8 @@ export const BUNDLES: Record<string, PluginRow[]> = {
     "settings",
     "telegram",
     "approval-queue",
+    "providers",
+    "assistant",
   ].map((id) => ({ id, use: id })),
 };
 
