@@ -9,9 +9,11 @@
   "scripts": {
     "test": "node --test --test-reporter=dot \"packages/**/*.test.ts\"",
     "test:e2e": "node --test \"test/**/*.test.ts\"",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && pnpm --filter @helmlock/ui typecheck",
     "lint": "biome check .",
-    "hl": "node packages/cli/bin/hl.ts"
+    "hl": "node packages/cli/bin/hl.ts",
+    "test:ui": "pnpm --filter @helmlock/ui test",
+    "build:ui": "pnpm --filter @helmlock/ui build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
