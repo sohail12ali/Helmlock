@@ -4,9 +4,11 @@
 // Milestone 3: POST /api/v1/verbs/<noun>/<verb> runs a console verb through the same registry as the CLI (writes.ts).
 import type { ApiResponse, Runtime, TicketFilter } from "@helmlock/core";
 import { Hono, type Context as HonoContext } from "hono";
+import { mountChatRoutes } from "./chats.ts";
 import { createReadModel, helmlockVersion, localDate, type ReadModel } from "./data.ts";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
+import { mountModelRoutes } from "./models.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import {
   checkWriteRequest,
@@ -122,7 +124,7 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   const api = new Hono();
   api.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
-    const isVerbCall = c.req.method === "POST" && c.req.path.startsWith("/api/v1/verbs/");
+    const isVerbCall = c.req.method === "POST" && (c.req.path.startsWith("/api/v1/verbs/") || /^\/api\/v1\/(chats|models)(\/|$)/.test(c.req.path));
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && !isVerbCall)
       return c.json(
         {
@@ -178,6 +180,11 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   route("/verbs", async () => verbCatalog(runtime));
   route("/todos", async (_m, c) => todoList(runtime, c.req.query("status") || undefined, c.req.query("ticket") || undefined));
   route("/settings", async () => settingsView(runtime));
+
+  // Milestone 4: models and the assistant (each POST runs the same write checks as verb calls).
+  const m4 = { runtime, ready: model, hostOf, log, ...(opts.heartbeatMs ? { heartbeatMs: opts.heartbeatMs } : {}) };
+  mountModelRoutes(api, m4);
+  mountChatRoutes(api, m4);
 
   api.post("/verbs/*", async (c) => {
     try {

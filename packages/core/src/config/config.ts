@@ -25,6 +25,8 @@ export const BUNDLES: Record<string, PluginRow[]> = {
     "scaffold",
     "pages",
     "settings",
+    "providers",
+    "assistant",
   ].map((id) => ({ id, use: id })),
 };
 

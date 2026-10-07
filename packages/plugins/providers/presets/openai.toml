@@ -1,0 +1,12 @@
+id = "openai"
+label = "OpenAI"
+base_url = "https://api.openai.com/v1"
+auth = "required"
+key_env = "OPENAI_API_KEY"
+billing = "api"
+
+[compat]
+developer_role = true
+max_completion_tokens = true
+reasoning_effort = true
+usage_in_stream = true
