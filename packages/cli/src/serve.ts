@@ -68,7 +68,7 @@ export async function serve(io: MainIo, rest: readonly string[], json: boolean, 
     return printFailure({ rule: err.rule ?? "serve", message: err.message, ...(err.fix ? { fix: err.fix } : {}) }, 1, json, out);
   }
   if (json) io.stdout(`${JSON.stringify({ ok: true, data: { url: server.url, port: server.port, root: rt.info.root } })}\n`);
-  else io.stdout(`Helmlock console for ${rt.info.name}: ${server.url}\nRead-only; press Ctrl+C to stop.\n`);
+  else io.stdout(`Helmlock console for ${rt.info.name}: ${server.url}\nPress Ctrl+C to stop.\n`);
   if (args.open) openBrowser(server.url);
 
   await new Promise<void>((resolve) => {
