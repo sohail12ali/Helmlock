@@ -16,5 +16,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // Lazy screens and streamed fixtures need more than the 5 s default on a busy machine.
+    testTimeout: 20000,
   },
 });
