@@ -39,7 +39,7 @@ export async function main(io: MainIo): Promise<number> {
   }
 
   const manifests = readManifests(io.catalog, (l) => io.stderr(`hl: ${l}\n`));
-  const entries: VerbEntry[] = CORE_VERBS.map((id) => ({ id, owner: "core" }));
+  const entries: VerbEntry[] = [...CORE_VERBS, "serve"].map((id) => ({ id, owner: "core" }));
   for (const [pid, m] of manifests) for (const v of m.verbs) entries.push({ id: v, owner: pid });
   const ids = new Set(entries.map((e) => e.id));
   const program = buildTree(entries);
@@ -58,6 +58,16 @@ export async function main(io: MainIo): Promise<number> {
     }
     io.stdout(`${text}\nExit codes: 0 ok, 1 error, 2 blocked by a gate. Agents: run \`hl help agent\`.\n`);
     return 0;
+  }
+
+  // `hl serve` is a long-running command, not a registry verb (milestone 2 console).
+  if (words[0] === "serve") {
+    const { serve, SERVE_HELP } = await import("./serve.ts");
+    if (g.help) {
+      io.stdout(SERVE_HELP);
+      return 0;
+    }
+    return serve(io, g.rest, g.json, out);
   }
 
   const r = resolve(program, ids, words);
