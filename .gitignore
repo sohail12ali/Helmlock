@@ -19,3 +19,6 @@ __pycache__/
 # Node
 node_modules/
 .hl-cache/
+
+# Agent worktrees
+.claude/worktrees/

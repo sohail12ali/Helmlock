@@ -1,0 +1,8 @@
+id = "skills"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["skills"]
+requires = []
+verbs = ["skill list", "skill find"]
+entry = "index.ts"

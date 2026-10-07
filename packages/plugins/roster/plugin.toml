@@ -1,0 +1,8 @@
+id = "roster"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["roster"]
+requires = []
+verbs = []
+entry = "index.ts"

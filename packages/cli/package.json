@@ -1,0 +1,14 @@
+{
+  "name": "@helmlock/cli",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "hl": "./bin/hl.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1",
+    "@helmlock/core": "workspace:^",
+    "@helmlock/plugins": "workspace:^",
+    "commander": "^15.0.0"
+  }
+}

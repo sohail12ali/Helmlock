@@ -1,0 +1,14 @@
+{
+  "name": "@helmlock/plugins",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./registry.ts",
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@helmlock/core": "workspace:^",
+    "smol-toml": "^1.9.0",
+    "zod": "^4.6.5"
+  }
+}

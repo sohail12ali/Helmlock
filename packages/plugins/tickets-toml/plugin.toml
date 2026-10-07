@@ -1,0 +1,8 @@
+id = "tickets-toml"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["tickets", "records", "tasks"]
+requires = ["workflow", "roster", "activity"]
+verbs = ["ticket new", "ticket show", "ticket list", "ticket move", "ticket block", "ticket unblock", "ticket claim", "ticket release", "ticket comment", "decision add", "question add", "question answer", "bug add", "gap add", "blockers", "task add", "task set"]
+entry = "index.ts"
