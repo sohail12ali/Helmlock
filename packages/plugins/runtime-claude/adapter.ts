@@ -2,7 +2,7 @@
 // (MIT, Copyright (c) 2025 Paperclip AI) packages/adapters/claude-local/src/server/execute.ts. See THIRD_PARTY_NOTICES.md.
 import { execFile } from "node:child_process";
 import type { BinaryInfo, RunMode, RunOptions, RuntimeAdapter } from "@helmlock/core";
-import { startProcessRun } from "../runtimes/process-run.ts";
+import { type ManagedRunOptions, startProcessRun } from "../runtimes/process-run.ts";
 import { cleanEnv, resolveCommand } from "../runtimes/spawn.ts";
 import { createClaudeNormalizer } from "./parse.ts";
 
@@ -19,14 +19,21 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Agents change state only through hl, so hl is always allowed (harness.toml permissions.allow). */
 export const HL_ALLOWED_TOOLS = ["Bash(hl:*)", "Bash(hl.cmd:*)", "Bash(./hl:*)"];
 
-export function claudeArgs(o: RunOptions, resume: string | undefined): string[] {
-  const args = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", CLAUDE_PERMISSION_MODE[o.mode]];
+/** With the approval hook, "ask" means the default mode: gated tools reach the hook, which asks a person. */
+export function permissionMode(o: RunOptions & Pick<ManagedRunOptions, "approvalHook">): string {
+  return o.approvalHook && o.mode === "ask" ? "default" : CLAUDE_PERMISSION_MODE[o.mode];
+}
+
+export function claudeArgs(o: RunOptions & Pick<ManagedRunOptions, "approvalHook" | "extraArgs">, resume: string | undefined): string[] {
+  const args = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", permissionMode(o)];
   // Settings allow rules are ignored until a folder is trusted interactively, so pass the hl allow on the command line.
   args.push("--allowedTools", HL_ALLOWED_TOOLS.join(","));
   if (o.model) args.push("--model", o.model);
   if (o.agent) args.push("--agent", o.agent);
   for (const d of o.addDirs ?? []) args.push("--add-dir", d);
   if (resume && UUID.test(resume)) args.push("--resume", resume);
+  // From the run manager: e.g. --settings <runs/hooks/<id>.settings.json> with the PreToolUse approval hook.
+  args.push(...(o.extraArgs ?? []));
   return args;
 }
 
@@ -51,13 +58,14 @@ export function createClaudeAdapter(opts: ClaudeAdapterOptions = {}): RuntimeAda
       );
       return version ? { command, version } : { command };
     },
-    async start(o) {
+    async start(o: ManagedRunOptions) {
       const command = await find();
       if (!command)
         throw Object.assign(new Error("claude CLI not found on PATH"), { rule: "runtime-missing", fix: "install Claude Code or set HL_CLAUDE_BIN" });
       // The added dirs' CLAUDE.md load only with this flag (pre-flight 2026-10-07).
       const env = cleanEnv(baseEnv, { CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1", ...o.env });
       return startProcessRun({
+        ...(o.runId ? { id: o.runId } : {}),
         protect: opts.protect,
         retryOn: ["unknown_session"],
         attempt(n) {
