@@ -1,6 +1,13 @@
-export { BUNDLES, loadConfig } from "./config/config.ts";
+export { ASK_TIMEOUT_MS, type AskFn, createApprovals } from "./approvals/approvals.ts";
+export { BUNDLES, type ComposedRow, ConfigError, composeRows, loadConfig, WORKSPACE_KEYS } from "./config/config.ts";
 export * from "./contracts/index.ts";
 export { createFileLayer } from "./files/file-layer.ts";
 export { resolveWorkspace } from "./files/resolve.ts";
-export { createKernel } from "./kernel/kernel.ts";
+export { createKernel, type FullKernel, type KernelOptions } from "./kernel/kernel.ts";
+export { readManifest, readManifests } from "./runtime/manifests.ts";
 export { createRuntime, type Runtime, type RuntimeOptions, type RunVerbOptions } from "./runtime/runtime.ts";
+export { AGENT_CONTRACT, CORE_VERBS } from "./verbs/core-verbs.ts";
+export type { CheckResult } from "./verbs/doctor.ts";
+export { describeInput, type FieldInfo, liteObject } from "./verbs/input.ts";
+export { createVerbRegistry, defineVerb, errorResult, type VerbRegistry } from "./verbs/registry.ts";
+export { didYouMean, levenshtein } from "./verbs/suggest.ts";
