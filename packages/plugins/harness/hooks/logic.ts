@@ -3,6 +3,7 @@
 // additional_context, Stop decision/followup_message), control-center hooks/pretooluse.py (PreToolUse verdict),
 // and lc-wms remind_log_work.py (when to remind).
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { parse } from "smol-toml";
 import { type Host, type Payload, readText } from "./common.ts";
 
@@ -115,4 +116,71 @@ export function commandOf(p: Payload): string | undefined {
   if (typeof p.command === "string") return p.command;
   const ti = p.tool_input && typeof p.tool_input === "object" ? (p.tool_input as Record<string, unknown>) : {};
   return typeof ti.command === "string" ? ti.command : undefined;
+}
+
+// ---------- pretool, server mode
+/** permissions.deny_shell from every <root>/harness/harness.toml (a union; unreadable layers are skipped). */
+export function denyShellOf(roots: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const r of roots) {
+    const f = join(r, "harness", "harness.toml");
+    if (!existsSync(f)) continue;
+    try {
+      const d = (parse(readText(f)) as { permissions?: { deny_shell?: unknown } }).permissions?.deny_shell;
+      if (Array.isArray(d)) for (const x of d) if (typeof x === "string") out.add(x);
+    } catch {
+      /* skipped */
+    }
+  }
+  return [...out];
+}
+
+export const HOOK_TOKEN_HEADER = "X-Helmlock-Hook-Token";
+
+/**
+ * POST the tool call to the console and wait for a person (control-center hooks/pretooluse.py). Fail-closed: a missing
+ * URL, token or run id, a network error, a timeout, a non-2xx answer or an unreadable body all deny.
+ */
+export async function askServer(
+  p: Payload,
+  o: { url: string | undefined; token: string | undefined; runId: string | undefined; timeoutMs: number },
+): Promise<{ decision: "allow" | "deny"; reason: string }> {
+  const deny = (reason: string) => ({ decision: "deny" as const, reason: `${reason}; denied fail-closed` });
+  if (!o.url || !o.token) return deny("HL_SERVER_URL or HL_HOOK_TOKEN is not set");
+  if (!o.runId) return deny("HL_RUN_ID is not set");
+  const body = {
+    run_id: o.runId,
+    tool_name: typeof p.tool_name === "string" ? p.tool_name : "",
+    tool_input: p.tool_input ?? {},
+    ...(typeof p.tool_use_id === "string" ? { tool_use_id: p.tool_use_id } : {}),
+  };
+  let res: Response;
+  try {
+    res = await fetch(new URL("/api/v1/hooks/pretooluse", o.url), {
+      method: "POST",
+      headers: { "content-type": "application/json", [HOOK_TOKEN_HEADER]: o.token },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(o.timeoutMs),
+    });
+  } catch (e) {
+    return deny(`the Helmlock console is unreachable (${(e as Error).name})`);
+  }
+  let v: unknown;
+  try {
+    v = await res.json();
+  } catch {
+    return deny(`the Helmlock console answered ${res.status} without JSON`);
+  }
+  const env = (v ?? {}) as {
+    ok?: boolean;
+    data?: { decision?: unknown; reason?: unknown };
+    decision?: unknown;
+    reason?: unknown;
+    error?: { message?: string };
+  };
+  if (!res.ok || env.ok === false) return deny(`the Helmlock console refused the hook call (${res.status}: ${env.error?.message ?? "error"})`);
+  const d = env.data ?? env;
+  const reason = typeof d.reason === "string" ? d.reason : "";
+  if (d.decision === "allow") return { decision: "allow", reason };
+  return { decision: "deny", reason: reason || "denied by a person" };
 }

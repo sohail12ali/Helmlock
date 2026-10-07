@@ -1,6 +1,6 @@
 // Turns one agent CLI process into a RunHandle: lines in, normalised RunEvents out, a classified result at the end.
 import { randomBytes } from "node:crypto";
-import type { RunEvent, RunHandle } from "@helmlock/core";
+import type { RunEvent, RunHandle, RunOptions } from "@helmlock/core";
 import { classify, type FailureClass, type TurnEnd } from "./failures.ts";
 import { guardProtected } from "./protect.ts";
 import { EventQueue, type ProcessResult, startProcess } from "./spawn.ts";
@@ -26,6 +26,8 @@ export interface Attempt {
 }
 
 export interface ProcessRunOptions {
+  /** Run id chosen by the caller (the run manager); default a fresh one. */
+  id?: string;
   /** Builds attempt n (0, 1, ...). Return undefined to stop retrying. */
   attempt(n: number, prev?: { failureClass: string; sessionId?: string }): Attempt | undefined;
   /** Failure classes that start the next attempt (e.g. unknown_session -> fresh session). */
@@ -39,6 +41,19 @@ export const newRunId = () => {
   return `run-${d}-${randomBytes(2).toString("hex")}`;
 };
 
+/**
+ * RunOptions plus what the run manager (server-started runs) adds. Not part of the frozen contract: adapters that
+ * do not know a field ignore it.
+ */
+export interface ManagedRunOptions extends RunOptions {
+  /** Use this id for the RunHandle, the run record and HL_RUN_ID. */
+  runId?: string;
+  /** Extra CLI arguments, e.g. `--settings <file>` with the PreToolUse approval hook. */
+  extraArgs?: string[];
+  /** A PreToolUse hook asks a person for gated tools: "ask" mode may then use the host's default permission mode. */
+  approvalHook?: boolean;
+}
+
 const isResultLine = (line: string) => line.startsWith("{") && /"type"\s*:\s*"result"/.test(line);
 
 function classOf(r: ProcessResult): FailureClass | undefined {
@@ -50,7 +65,7 @@ function classOf(r: ProcessResult): FailureClass | undefined {
 }
 
 export async function startProcessRun(o: ProcessRunOptions): Promise<RunHandle> {
-  const id = newRunId();
+  const id = o.id ?? newRunId();
   const events = new EventQueue<RunEvent>();
   const guard = o.protect ? await guardProtected(o.protect.root, o.protect.globs) : undefined;
   let cancelCurrent: (() => Promise<void>) | undefined;

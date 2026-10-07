@@ -3,9 +3,20 @@ import { delimiter, resolve } from "node:path";
 import type { RunEvent, RunOptions, VerbDef, VerbResult } from "@helmlock/core";
 import { z } from "zod";
 import { RUNTIME_ALIASES } from "./registry.ts";
+import { buildRecord, RunTally, writeRunRecord } from "./run-record.ts";
 
 /** Windows names it "Path"; reuse the existing key so the child does not get two. */
 const PATH_KEY = Object.keys(process.env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+
+/** The knowledge repo's hl launcher on PATH, so the agent can call `hl` like the rulebook says. */
+export function baseRunEnv(root: string): Record<string, string> {
+  return { [PATH_KEY]: `${root}${delimiter}${process.env[PATH_KEY] ?? ""}`, HL_WORKSPACE: root };
+}
+
+/** Every workspace folder except the run's own cwd. */
+export function defaultAddDirs(folders: readonly { path: string }[], cwd: string): string[] {
+  return folders.map((f) => f.path).filter((p) => resolve(p) !== cwd);
+}
 
 export const MODES = ["plan", "ask", "auto-review", "force"] as const;
 
@@ -35,24 +46,7 @@ export const RunInput = z.object({
   silence_sec: seconds,
 });
 
-export interface RunRecord {
-  id: string;
-  ticket: string | null;
-  runtime: string;
-  agent: string | null;
-  mode: string;
-  model: string | null;
-  cwd: string;
-  started: string;
-  ended: string;
-  ok: boolean;
-  exit_code: number | null;
-  timed_out: boolean;
-  session_id: string | null;
-  usage: { input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_write_tokens: number; cost_usd: number | null };
-  failure_class: string | null;
-  first_result_line: string;
-}
+export type { RunRecord } from "./run-record.ts";
 
 export interface RunVerbOptions {
   defaultRuntime?: string;
@@ -117,15 +111,14 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
           },
         };
       const cwd = resolve(input.cwd ?? ws.root);
-      const addDirs = input.add_dir.length ? input.add_dir.map((d) => resolve(d)) : ws.folders.map((f) => f.path).filter((p) => resolve(p) !== cwd);
+      const addDirs = input.add_dir.length ? input.add_dir.map((d) => resolve(d)) : defaultAddDirs(ws.folders, cwd);
       let opts: RunOptions = {
         prompt: input.task,
         cwd,
         addDirs,
         mode: input.mode,
         silenceSec: input.silence_sec ?? o.defaultSilenceSec ?? 1800,
-        // The knowledge repo's hl launcher on PATH, so the agent can call `hl` like the rulebook says.
-        env: { [PATH_KEY]: `${ws.root}${delimiter}${process.env[PATH_KEY] ?? ""}`, HL_WORKSPACE: ws.root },
+        env: baseRunEnv(ws.root),
         ...(input.agent ? { agent: input.agent } : {}),
         ...(input.model ? { model: input.model } : {}),
         ...(input.ticket ? { ticket: input.ticket } : {}),
@@ -140,9 +133,7 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
       const started = new Date().toISOString();
       const handle = await adapter.start(opts);
       await v.ctx.emit("run.started", { runId: handle.id, runtime: adapter.id, ...(opts.ticket ? { ticket: opts.ticket } : {}) });
-      const usage = { input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: null as number | null };
-      let result: Extract<RunEvent, { type: "result" }> | undefined;
-      let sessionId: string | undefined;
+      const tally = new RunTally();
       const onSigint = () => void handle.cancel();
       process.once("SIGINT", onSigint);
       try {
@@ -153,54 +144,22 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
             const line = textLine(ev);
             if (line) out(line);
           }
-          if (ev.type === "init" && ev.sessionId) sessionId = ev.sessionId;
-          if (ev.type === "usage") {
-            usage.input_tokens += ev.inputTokens;
-            usage.output_tokens += ev.outputTokens;
-            usage.cache_read_tokens += ev.cacheReadTokens ?? 0;
-            usage.cache_write_tokens += ev.cacheWriteTokens ?? 0;
-            if (ev.costUsd !== undefined) usage.cost_usd = (usage.cost_usd ?? 0) + ev.costUsd;
-          }
-          if (ev.type === "result") result = ev;
+          tally.add(ev);
         }
       } finally {
         process.removeListener("SIGINT", onSigint);
       }
       const done = await handle.done;
-      const record: RunRecord = {
-        id: handle.id,
-        ticket: opts.ticket ?? null,
-        runtime: adapter.id,
-        agent: opts.agent ?? null,
-        mode: opts.mode,
-        model: opts.model ?? null,
-        cwd: opts.cwd,
-        started,
-        ended: new Date().toISOString(),
-        ok: done.ok,
-        exit_code: done.exitCode,
-        timed_out: done.timedOut,
-        session_id: result?.sessionId ?? sessionId ?? null,
-        usage,
-        failure_class: done.ok ? null : (result?.failureClass ?? "unclassified"),
-        first_result_line:
-          (result?.text ?? "")
-            .split(/\r?\n/)
-            .find((l) => l.trim())
-            ?.trim()
-            .slice(0, 300) ?? "",
-      };
-      const files = v.ctx.get("files");
-      if (!(await files.exists("runs/.gitignore"))) await files.writeText("runs/.gitignore", "*\n");
-      const file = `runs/${handle.id}.json`;
-      await files.writeText(file, `${JSON.stringify(record, null, 2)}\n`);
+      const record = buildRecord(handle.id, adapter.id, opts, started, done, tally);
+      const file = await writeRunRecord(v.ctx.get("files"), record);
       await v.ctx.emit("run.finished", { runId: handle.id, runtime: adapter.id, ok: done.ok, ...(opts.ticket ? { ticket: opts.ticket } : {}) });
       if (!done.ok)
         return {
           ok: false,
           code: 1,
-          error: { rule: `run:${record.failure_class}`, message: `run ${handle.id} failed: ${result?.text || record.failure_class}`.slice(0, 500), file },
+          error: { rule: `run:${record.failure_class}`, message: `run ${handle.id} failed: ${tally.result?.text || record.failure_class}`.slice(0, 500), file },
         };
+      const usage = tally.usage;
       const tokens = `${usage.input_tokens + usage.cache_read_tokens + usage.cache_write_tokens} in / ${usage.output_tokens} out`;
       return {
         ok: true,

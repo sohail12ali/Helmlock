@@ -4,9 +4,11 @@
 // Milestone 3: POST /api/v1/verbs/<noun>/<verb> runs a console verb through the same registry as the CLI (writes.ts).
 import type { ApiResponse, Runtime, TicketFilter } from "@helmlock/core";
 import { Hono, type Context as HonoContext } from "hono";
+import { registerApprovalRoutes } from "./approvals.ts";
 import { createReadModel, helmlockVersion, localDate, type ReadModel } from "./data.ts";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
+import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import {
   checkWriteRequest,
@@ -30,6 +32,8 @@ export interface AppOptions {
   /** Heartbeat interval for SSE (tests shorten it). */
   heartbeatMs?: number;
   log?: (line: string) => void;
+  /** Secret for POST /api/v1/hooks/pretooluse (milestone 4); default a fresh random one per server. */
+  hookToken?: string;
 }
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -88,6 +92,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
       ready = (async () => {
         if (runtime.configError) throw runtime.configError;
         await runtime.mountAll();
+        // Milestone 4: a console is attached, so approvals ask a person through the queue instead of denying.
+        if (runtime.ctx.has("approvalQueue")) (runtime.ctx.get("approvalQueue") as { enableRemote?: () => void }).enableRemote?.();
         return createReadModel(runtime.ctx, await helmlockVersion(runtime.info.deliveryRoot));
       })();
       ready.catch(() => {
@@ -122,7 +128,7 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   const api = new Hono();
   api.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
-    const isVerbCall = c.req.method === "POST" && c.req.path.startsWith("/api/v1/verbs/");
+    const isVerbCall = c.req.method === "POST" && /^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/cancel$|approvals\/[^/]+$|hooks\/pretooluse$)/.test(c.req.path);
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && !isVerbCall)
       return c.json(
         {
@@ -167,7 +173,17 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
     if (from > to) throw new ApiError(400, "bad-request", `from ${from} is after to ${to}`);
     return m.worklog(from, to, c.req.query("author") || undefined);
   });
-  route("/runs", (m) => m.runs());
+  const m4 = {
+    runtime,
+    ready: model,
+    log,
+    hostOf,
+    hookToken: opts.hookToken ?? newHookToken(),
+    ...(opts.port ? { port: opts.port } : {}),
+    ...(opts.heartbeatMs ? { heartbeatMs: opts.heartbeatMs } : {}),
+  };
+  registerRunRoutes(api, m4);
+  registerApprovalRoutes(api, m4);
   route("/skills", (m) => m.skills());
   route("/search", (m, c) => {
     const q = (c.req.query("q") ?? "").trim();
