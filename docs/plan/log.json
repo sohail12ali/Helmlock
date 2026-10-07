@@ -1,6 +1,11 @@
 [
  {
   "date": "2026-10-07",
+  "you": "start the writable console with multiple agents",
+  "change": "Built the writable console with three parallel agents: verb-call API through the same registry as the CLI, settings plugin and config set, todos and settings endpoints; ticket actions, board drag, question cards; settings, todos and work pages. Verified live in the browser. Blueprint 28."
+ },
+ {
+  "date": "2026-10-07",
   "you": "Is the project API and UI ready? yes, go ahead with multiple agents",
   "change": "Built the read-only console with three parallel agents: Hono API with live events and hl serve, React console (overview, board, ticket page, file viewers, phone layout), and static ticket pages. Verified in the browser against the demo repo. F151 spike: stay on React. Blueprint 27."
  },
