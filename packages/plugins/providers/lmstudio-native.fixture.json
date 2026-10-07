@@ -1,0 +1,133 @@
+{
+  "models": [
+    {
+      "type": "llm",
+      "publisher": "XHToken",
+      "key": "spark-x2.5-4b",
+      "display_name": "Spark X2.5 4B",
+      "architecture": "spark2_5",
+      "quantization": {
+        "name": "Q4_K_M",
+        "bits_per_weight": 4
+      },
+      "size_bytes": 2600224352,
+      "params_string": "4.1B",
+      "loaded_instances": [],
+      "max_context_length": 1048576,
+      "format": "gguf",
+      "capabilities": {
+        "vision": false,
+        "trained_for_tool_use": true,
+        "reasoning": {
+          "allowed_options": [
+            "off",
+            "on"
+          ],
+          "default": "on"
+        }
+      },
+      "description": null
+    },
+    {
+      "type": "llm",
+      "publisher": "google",
+      "key": "google/gemma-4-12b-qat",
+      "display_name": "Gemma 4 12B QAT",
+      "architecture": "gemma4",
+      "quantization": {
+        "name": "Q4_0",
+        "bits_per_weight": 4
+      },
+      "size_bytes": 7151066820,
+      "params_string": "12B",
+      "loaded_instances": [
+        {
+          "id": "google/gemma-4-12b-qat",
+          "config": {
+            "context_length": 262144,
+            "eval_batch_size": 2048,
+            "physical_batch_size": 512,
+            "parallel": 4,
+            "flash_attention": true,
+            "context_checkpoints": 32,
+            "reasoning_budget_message": "",
+            "speculative_draft_mtp": false,
+            "speculative_draft_simple": false,
+            "speculative_draft_model": "",
+            "speculative_draft_max_tokens": 3,
+            "speculative_draft_min_tokens": 0,
+            "speculative_draft_min_continue_probability": 0,
+            "offload_kv_cache_to_gpu": true
+          }
+        }
+      ],
+      "max_context_length": 262144,
+      "format": "gguf",
+      "capabilities": {
+        "vision": true,
+        "trained_for_tool_use": true,
+        "reasoning": {
+          "allowed_options": [
+            "off",
+            "on"
+          ],
+          "default": "on"
+        }
+      },
+      "description": null,
+      "variants": [
+        "google/gemma-4-12b-qat@q4_0"
+      ],
+      "selected_variant": "google/gemma-4-12b-qat@q4_0"
+    },
+    {
+      "type": "llm",
+      "publisher": "meta",
+      "key": "meta/muse-glimmer",
+      "display_name": "Muse Glimmer",
+      "architecture": "muse-glimmer",
+      "quantization": {
+        "name": "Q4_K_M",
+        "bits_per_weight": 4
+      },
+      "size_bytes": 18157122004,
+      "params_string": "28B",
+      "loaded_instances": [],
+      "max_context_length": 131072,
+      "format": "gguf",
+      "capabilities": {
+        "vision": true,
+        "trained_for_tool_use": true,
+        "reasoning": {
+          "allowed_options": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "default": "high"
+        }
+      },
+      "description": null,
+      "variants": [
+        "meta/muse-glimmer@q4_k_m"
+      ],
+      "selected_variant": "meta/muse-glimmer@q4_k_m"
+    },
+    {
+      "type": "embedding",
+      "publisher": "nomic-ai",
+      "key": "text-embedding-nomic-embed-text-v1.5",
+      "display_name": "Nomic Embed Text v1.5",
+      "quantization": {
+        "name": "Q4_K_M",
+        "bits_per_weight": 4
+      },
+      "size_bytes": 84106624,
+      "params_string": null,
+      "loaded_instances": [],
+      "max_context_length": 2048,
+      "format": "gguf"
+    }
+  ]
+}

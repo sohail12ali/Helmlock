@@ -10,6 +10,7 @@ import type {
   ChatSummary,
   ModelProbe,
   ModelsView,
+  ModelTry,
   RunDetail,
   RunEventLine,
   RunStart,
@@ -65,6 +66,8 @@ export const m4 = {
   answer: (id: string, body: ApprovalAnswer) => post<ApprovalCard>(`/approvals/${enc(id)}`, body),
   models: (s?: AbortSignal) => get<ModelsView>("/models", undefined, s),
   testProvider: (provider: string) => post<ModelProbe>("/models/test", { provider }),
+  /** Probe a provider before saving it (reads the remote server only). */
+  tryProvider: (body: ModelTry) => post<ModelProbe>("/models/try", body),
   chats: (s?: AbortSignal) => get<ChatSummary[]>("/chats", undefined, s),
   createChat: (body: { title?: string; model?: string }) => post<ChatSummary>("/chats", body),
   chat: (id: string, s?: AbortSignal) => get<ChatDetail>(`/chats/${enc(id)}`, undefined, s),

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import type { ApiResponse, AssistantEvent, ChatDetail, ChatSummary, ModelProbe, ModelsView } from "@helmlock/core";
@@ -77,6 +77,44 @@ test("GET /models and POST /models/test", async () => {
   assert.equal(probe.reachable, true);
   assert.deepEqual(probe.models, ["m1"]);
   assert.equal(probe.streaming, true);
+});
+
+test("POST /models/try probes a provider that is not saved: write protection, no files written", async () => {
+  const snapshot = () =>
+    readdirSync(ws.root, { recursive: true, withFileTypes: true })
+      .filter((d) => d.isFile())
+      .map((d) => {
+        const p = join(d.parentPath, d.name);
+        return `${p}:${statSync(p).mtimeMs}`;
+      })
+      .sort();
+  const before = snapshot();
+  const noHeader = await post("/models/try", { base_url: fake.url }, { "content-type": "application/json" });
+  assert.equal(noHeader.status, 403);
+  const foreign = await post("/models/try", { base_url: fake.url }, { ...HEADERS, origin: "http://evil.example" });
+  assert.equal(foreign.status, 403);
+  const missing = await post("/models/try", { preset: "lmstudio" });
+  assert.equal(missing.status, 400);
+  const badFlag = await post("/models/try", { base_url: fake.url, list_only: "yes" });
+  assert.equal(badFlag.status, 400);
+
+  const posts = () => fake.requests.filter((r) => r.method === "POST").length;
+  const sent = posts();
+  const list = dataOf(await post<ModelProbe>("/models/try", { base_url: `${fake.url}/models`, list_only: true }));
+  assert.equal(list.reachable, true);
+  assert.deepEqual(list.models, ["m1"]);
+  assert.deepEqual(list.model_info, [{ id: "m1" }]);
+  assert.equal(list.base_url, fake.url);
+  assert.equal(posts(), sent, "list only sends no prompt");
+
+  const full = dataOf(await post<ModelProbe>("/models/try", { base_url: fake.url, model: "m1" }));
+  assert.equal(full.model, "m1");
+  assert.equal(full.streaming, true);
+  assert.ok(posts() > sent);
+
+  const bad = dataOf(await post<ModelProbe>("/models/try", { base_url: fake.url, key_env: "sk-not-a-name" }));
+  assert.equal(bad.error?.code, "bad_request");
+  assert.deepEqual(snapshot(), before, "the try route writes nothing locally");
 });
 
 test("chat routes: create, send (202), SSE stream and replay, detail, model switch", async () => {

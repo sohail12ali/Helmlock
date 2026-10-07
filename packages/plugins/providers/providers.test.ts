@@ -214,7 +214,16 @@ test("probe: reach, list models, tiny prompt, streaming, tool call; result cache
     const p = direct(ws);
     assert.equal(p.models().find((m) => m.id === "fake/plain")?.capabilities.tool_calls, false);
     const r = await p.probe("fake");
-    assert.deepEqual(r, { provider: "fake", reachable: true, models: ["m1", "plain"], chat: true, streaming: true, tool_calls: true });
+    assert.deepEqual(r, {
+      provider: "fake",
+      reachable: true,
+      models: ["m1", "plain"],
+      model_info: [{ id: "m1" }, { id: "plain" }],
+      model: "plain",
+      chat: true,
+      streaming: true,
+      tool_calls: true,
+    });
     assert.ok(existsSync(join(ws.root, PROBE_DIR, "fake.json")));
     assert.equal(p.models().find((m) => m.id === "fake/plain")?.capabilities.tool_calls, true);
     const missing = await p.probe("nope");

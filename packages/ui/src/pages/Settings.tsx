@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelsTest } from "@/features/chat/ModelsTest";
+import { ProviderForm } from "@/features/setup/ProviderForm";
 import { type ThemePref, useTheme } from "@/lib/theme";
 
 type SectionId = SettingsView["sections"][number]["id"];
@@ -38,6 +39,33 @@ const SOURCE_LABEL: Record<Source, string> = {
 };
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** Settings > Models: add a provider (try before save) next to the per-provider connection test. */
+function ModelsSection() {
+  const [adding, setAdding] = useState(false);
+  return (
+    <div className="flex flex-col gap-3">
+      <ModelsTest />
+      {adding ? (
+        <div className="@container flex flex-col gap-2 rounded-md border px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <p className="flex-1 text-sm font-medium">Add provider</p>
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
+              Close
+            </Button>
+          </div>
+          <ProviderForm />
+        </div>
+      ) : (
+        <div>
+          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+            Add provider
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function toDraft(v: unknown): string {
   if (Array.isArray(v)) return v.map(String).join(", ");
@@ -299,7 +327,7 @@ export function SettingsPage() {
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {s.id === "workspace" && <WorkspaceFacts />}
-                {s.id === "models" && <ModelsTest />}
+                {s.id === "models" && <ModelsSection />}
                 {s.plugins.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{COMING[s.id]}</p>
                 ) : (

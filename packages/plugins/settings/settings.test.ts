@@ -142,6 +142,22 @@ test("provider add appends a provider and model row and sets the default model; 
     assert.match(readFileSync(join(ws.root, "workspace.toml"), "utf8"), /id = "lms\/google\/gemma-4-12b-qat"/);
     const key = await ws.run("provider add", { id: "oa", preset: "openai", key_env: "sk-abc123", model: "gpt" });
     assert.equal(key.ok, false);
+    // What a try-before-save probe found is written on the model row; a server name with "/" keeps the provider prefix.
+    const lm = await ws.run("provider add", {
+      id: "lmstudio",
+      preset: "lmstudio",
+      base_url: "http://192.168.1.14:1234/v1",
+      model: "google/gemma-4-12b-qat",
+      context_window: 262144,
+      tool_calls: true,
+      vision: true,
+    });
+    assert.ok(lm.ok, JSON.stringify(lm));
+    const after = readFileSync(join(ws.root, "workspace.toml"), "utf8");
+    assert.match(after, /id = "lmstudio\/google\/gemma-4-12b-qat"/);
+    assert.match(after, /context_window = 262_?144/);
+    assert.match(after, /tool_calls = true/);
+    assert.match(after, /vision = true/);
   } finally {
     await ws.cleanup();
   }

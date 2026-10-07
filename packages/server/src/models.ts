@@ -1,6 +1,7 @@
-// Milestone 4: GET /api/v1/models (ModelsView) and POST /api/v1/models/test { provider } (ModelProbe, F73).
+// Milestone 4: GET /api/v1/models (ModelsView), POST /api/v1/models/test { provider } (ModelProbe, F73) and
+// POST /api/v1/models/try { base_url, ... } (probe a provider before it is saved; writes nothing).
 // The probe saves what it learned to .hl-cache/models/<provider>.json (local); configured capabilities always win.
-import type { ApiResponse, ModelProbe, ModelsView, Person, ProvidersService, Runtime } from "@helmlock/core";
+import type { ApiResponse, ModelProbe, ModelsView, ModelTry, Person, ProvidersService, Runtime } from "@helmlock/core";
 import type { Hono, Context as HonoContext } from "hono";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { checkWriteRequest } from "./writes.ts";
@@ -85,4 +86,40 @@ export function mountModelRoutes(api: Hono, d: M4RouteDeps): void {
       return failJson(c, e, d.log);
     }
   });
+
+  // Try a provider before saving it: reads the remote server only, writes nothing locally.
+  api.post("/models/try", async (c) => {
+    try {
+      const body = await writeBody(c, d.hostOf);
+      const t = parseTry(body);
+      await d.ready();
+      const { base_url, list_only, model, ...rest } = t;
+      const r: ModelProbe = await service(d.runtime, "providers").probeDraft(
+        { base_url, ...rest },
+        { ...(model ? { model } : {}), ...(list_only ? { listOnly: true } : {}) },
+      );
+      return okJson(c, r);
+    } catch (e) {
+      return failJson(c, e, d.log);
+    }
+  });
+}
+
+function parseTry(body: Record<string, unknown>): ModelTry {
+  const s = (k: string): string | undefined => {
+    const v = body[k];
+    if (v === undefined || v === null || v === "") return undefined;
+    if (typeof v !== "string") throw new ApiError(400, "bad-request", `${k} must be a string`);
+    return v.trim() || undefined;
+  };
+  const base_url = s("base_url");
+  if (!base_url) throw new ApiError(400, "bad-request", "body needs { base_url: <server URL> }");
+  if (body.list_only !== undefined && typeof body.list_only !== "boolean") throw new ApiError(400, "bad-request", "list_only must be true or false");
+  const out: ModelTry = { base_url };
+  for (const k of ["key_env", "preset", "model"] as const) {
+    const v = s(k);
+    if (v) out[k] = v;
+  }
+  if (body.list_only === true) out.list_only = true;
+  return out;
 }
