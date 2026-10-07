@@ -94,7 +94,8 @@ export async function createRuntime(o: RuntimeOptions): Promise<Runtime> {
     const r = rows.get(rowId);
     return r ? manifests.get(r.use) : undefined;
   };
-  const ownerOf = (verbId: string) => [...rows.keys()].find((id) => manifestOf(id)?.verbs.includes(verbId));
+  const ownersOf = (verbId: string) => [...rows.keys()].filter((id) => manifestOf(id)?.verbs.includes(verbId));
+  const ownerOf = (verbId: string) => ownersOf(verbId)[0];
   const settled = new Map<string, MountResult>();
   const cycles: string[] = [];
 
@@ -138,8 +139,8 @@ export async function createRuntime(o: RuntimeOptions): Promise<Runtime> {
   const mountForVerb = async (verbId: string): Promise<MountResult[]> => {
     const out: MountResult[] = [];
     if (!verbs.get(verbId)) {
-      const owner = ownerOf(verbId);
-      if (owner) await mountRow(owner, [], out);
+      // Every plugin that lists the verb mounts with it: one registers it, others (e.g. runtime adapters) serve it.
+      for (const id of ownersOf(verbId)) await mountRow(id, [], out);
     }
     if (verbs.get(verbId)?.writes) for (const id of ALWAYS_FOR_WRITES) if (rows.has(id)) await mountRow(id, [], out);
     return out.map((r) => stateOf(r.id) ?? r);

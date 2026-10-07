@@ -94,7 +94,8 @@ test("writes leave one activity file per person per day", () => {
 test("context, validate, search and skills", () => {
   const c = hl(["context", "T-001-sa"]);
   assert.equal(c.code, 0, c.stderr);
-  assert.equal((c.json.data?.ticket as { stage: string }).stage, "plan");
+  const t = c.json.data?.ticket as { stage: string } | undefined;
+  assert.equal(t?.stage, "plan");
   assert.equal(hl(["validate"]).code, 0);
   assert.equal(hl(["validate", "--changed", "artifacts/T-001-sa/T-001-sa-spec.md"]).code, 0);
   const s = hl(["search", "currencies"]);

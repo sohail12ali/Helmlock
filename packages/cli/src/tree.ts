@@ -25,7 +25,11 @@ export function buildTree(entries: readonly VerbEntry[]): Command {
     .helpCommand(false)
     .helpOption("-h, --help", "help for hl or for one verb (with examples)");
   const nouns = new Map<string, Command>();
+  const seen = new Set<string>();
   for (const e of [...entries].sort((a, b) => a.id.localeCompare(b.id))) {
+    // Several plugins may list one verb (e.g. runtime adapters list "run" so they mount with it).
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
     const [first, second] = e.id.split(" ") as [string, string | undefined];
     const desc = CORE_SUMMARY[e.id] ?? (e.owner === "core" ? "" : `(${e.owner})`);
     if (!second) {

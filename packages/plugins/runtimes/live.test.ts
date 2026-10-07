@@ -29,7 +29,9 @@ function liveRun(name: string, adapter: () => RuntimeAdapter, model?: string) {
       const evs = await drain(h.events);
       const done = await h.done;
       const result = evs.at(-1) as Extract<RunEvent, { type: "result" }>;
-      process.stdout.write(`# ${name} ${info.version ?? ""}: ok=${done.ok} exit=${done.exitCode} result=${JSON.stringify(result.text)} types=${evs.map((e) => e.type).join(",")}\n`);
+      process.stdout.write(
+        `# ${name} ${info.version ?? ""}: ok=${done.ok} exit=${done.exitCode} result=${JSON.stringify(result.text)} types=${evs.map((e) => e.type).join(",")}\n`,
+      );
       assert.equal(done.ok, true, JSON.stringify(result));
       assert.match(result.text, /ALPHA[\s\S]*OMEGA/);
       assert.ok(evs.some((e) => e.type === "init"));
@@ -43,7 +45,10 @@ function liveRun(name: string, adapter: () => RuntimeAdapter, model?: string) {
 liveRun("claude", () => createClaudeAdapter(), "haiku");
 liveRun("cursor", () => createCursorAdapter({ protect: false }));
 
-test("live cursor: cancel() mid-run leaves no process of the tree behind", { skip: (!live || process.platform !== "win32") && "HL_LIVE=1 on Windows", timeout: 120000 }, async () => {
+test("live cursor: cancel() mid-run leaves no process of the tree behind", {
+  skip: (!live || process.platform !== "win32") && "HL_LIVE=1 on Windows",
+  timeout: 120000,
+}, async () => {
   const dir = mkdtempSync(join(tmpdir(), "hl-live-kill-"));
   writeFileSync(join(dir, "notes.md"), "x\n");
   const tag = dir.split(/[\\/]/).at(-1) as string;
@@ -51,7 +56,11 @@ test("live cursor: cancel() mid-run leaves no process of the tree behind", { ski
   const procs = () =>
     execFileSync(
       "powershell",
-      ["-NoProfile", "-Command", `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${tag}*' } | ForEach-Object { "$($_.ProcessId) $($_.Name)" }`],
+      [
+        "-NoProfile",
+        "-Command",
+        `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${tag}*' } | ForEach-Object { "$($_.ProcessId) $($_.Name)" }`,
+      ],
       { encoding: "utf8" },
     )
       .split(/\r?\n/)
