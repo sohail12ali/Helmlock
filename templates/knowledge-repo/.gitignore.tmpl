@@ -1,0 +1,22 @@
+# Who is at this keyboard (one slug), and per-machine settings
+author.local
+*.local.toml
+workspace.local.toml
+.env
+
+# The workspace file you open is your own copy of the committed {{NAME}}.code-workspace.template
+{{NAME}}.code-workspace
+
+# Local only: run transcripts, assistant chats, usage, audio (Blueprint 25 B)
+runs/
+chats/
+usage/
+audio/
+
+# Caches and generated views
+.hl-cache/
+
+# Obsidian per-user state
+.obsidian/workspace*.json
+
+# _work/ is NOT ignored: it is hidden from agents, not from git.

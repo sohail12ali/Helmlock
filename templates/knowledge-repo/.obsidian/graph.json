@@ -1,0 +1,11 @@
+{
+  "search": "-path:archive -path:_work",
+  "showTags": false,
+  "showAttachments": false,
+  "showOrphans": true,
+  "colorGroups": [
+    { "query": "path:artifacts", "color": { "a": 1, "rgb": 3889560 } },
+    { "query": "path:shared/wiki", "color": { "a": 1, "rgb": 2600544 } },
+    { "query": "path:projects", "color": { "a": 1, "rgb": 14701138 } }
+  ]
+}

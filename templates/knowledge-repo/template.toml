@@ -1,0 +1,5 @@
+schema_version = 1
+base = "helmlock-knowledge"
+version = "1"
+created = "{{DATE}}"
+growth = []
