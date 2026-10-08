@@ -60,12 +60,20 @@ export async function serve(io: MainIo, rest: readonly string[], json: boolean, 
     return printFailure({ rule: e.rule ?? "config", message: e.message, ...(e.file ? { file: e.file } : {}), ...(e.fix ? { fix: e.fix } : {}) }, 1, json, out);
   }
   let server: Awaited<ReturnType<typeof startServer>>;
+  const { centerName, recordRecent, userHome } = await import("@helmlock/plugins/scaffold/recent.ts");
+  const home = userHome(io.env);
   try {
-    server = await startServer({ runtime: rt, port: args.port, log: (l) => io.stderr(`hl serve: ${l}\n`) });
+    server = await startServer({ runtime: rt, port: args.port, home, log: (l) => io.stderr(`hl serve: ${l}\n`) });
   } catch (e) {
     await rt.dispose();
     const err = e as Error & { rule?: string; fix?: string };
     return printFailure({ rule: err.rule ?? "serve", message: err.message, ...(err.fix ? { fix: err.fix } : {}) }, 1, json, out);
+  }
+  // The per-user list of knowledge centers the console's switcher shows (~/.helmlock/recent.toml); never fatal.
+  try {
+    recordRecent(home, { name: centerName(rt.info.root, rt.info.name || "knowledge"), root: rt.info.root, port: server.port });
+  } catch (e) {
+    io.stderr(`hl serve: could not update the recent list: ${(e as Error).message}\n`);
   }
   if (json) io.stdout(`${JSON.stringify({ ok: true, data: { url: server.url, port: server.port, root: rt.info.root } })}\n`);
   else io.stdout(`Helmlock console for ${rt.info.name}: ${server.url}\nPress Ctrl+C to stop.\n`);

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelsTest } from "@/features/chat/ModelsTest";
+import { AddProject } from "@/features/projects/AddProject";
 import { readPref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 import { MachineSecret } from "./MachineSecret";
@@ -172,6 +173,15 @@ function StepBody({ step }: { step: Step }) {
       return <ModelStep />;
     case "telegram":
       return <TelegramStep />;
+    case "code":
+      return (
+        <div className="flex flex-col gap-2 text-sm">
+          <p className="text-ink2">
+            Tell this knowledge center where your code lives: one repo folder, or the folders of a .code-workspace file you already use.
+          </p>
+          <AddProject />
+        </div>
+      );
     case "first-ticket":
       return (
         <div className="flex flex-col gap-2 text-sm">
@@ -269,7 +279,7 @@ function Wizard({ steps }: { steps: Step[] }) {
         <CardContent className="@container flex flex-col gap-3">
           {step.detail && <p className="text-sm text-ink2">{step.detail}</p>}
           <StepBody step={step} />
-          {!["agents", "trust"].includes(step.id) && <Action action={step.action} />}
+          {!["agents", "trust", "code"].includes(step.id) && <Action action={step.action} />}
         </CardContent>
       </Card>
       <div className="flex flex-wrap items-center gap-2">

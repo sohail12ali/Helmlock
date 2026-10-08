@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { ReadModel } from "./data.ts";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { HEARTBEAT_MS } from "./events.ts";
+import { projectCwd } from "./projects.ts";
 import { checkWriteRequest } from "./writes.ts";
 
 export interface M4Deps {
@@ -74,6 +75,10 @@ const RunStartBody = z
     ticket: z.string().min(1).optional(),
     mode: z.string().optional(),
     model: z.string().min(1).optional(),
+    project: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]*$/, "a project id")
+      .optional(),
   })
   .strict();
 
@@ -217,6 +222,8 @@ export function registerRunRoutes(api: Hono, d: M4Deps): void {
         throw new ApiError(400, "bad-request", `mode must be plan, ask or auto-review, got ${JSON.stringify(b.mode)}`);
       const person = await currentPerson(runtime);
       if (b.ticket) await runtime.ctx.get("tickets").get(b.ticket); // unknown-ticket -> 404
+      // Milestone 7: the active project's repo folder (a folder of this workspace file only) is the run's cwd.
+      const cwd = b.project ? await projectCwd(runtime, b.project) : undefined;
       const port = d.port?.();
       const serverUrl = port ? `http://127.0.0.1:${port}` : `http://${d.hostOf(c)}`;
       const state = await manager().start({
@@ -229,6 +236,7 @@ export function registerRunRoutes(api: Hono, d: M4Deps): void {
         ...(b.ticket ? { ticket: b.ticket } : {}),
         ...(b.mode ? { mode: b.mode as RunState["mode"] } : {}),
         ...(b.model ? { model: b.model } : {}),
+        ...(cwd ? { cwd } : {}),
       });
       return c.json({ ok: true, data: state } satisfies ApiResponse<RunDetail>, 201);
     }),

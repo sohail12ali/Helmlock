@@ -185,6 +185,16 @@ export async function setupStatus(runtime: Runtime, o: { home?: string; env?: No
     ...(tgDone ? {} : { action: "Settings > Telegram" }),
   });
 
+  // Milestone 7: connect your code (at least one projects/<id>/project.toml), before the first ticket.
+  const projects = await readProjects(ctx);
+  steps.push({
+    id: "code",
+    label: "Connect your code",
+    done: projects.length > 0,
+    detail: projects.length ? `${projects.length} project(s): ${projects.map((p) => p.id).join(", ")}` : "no projects yet",
+    ...(projects.length ? {} : { action: "Add project: a repo folder, or import a .code-workspace file (hl project add)" }),
+  });
+
   const count = (await ctx.get("tickets").list()).length;
   steps.push({
     id: "first-ticket",

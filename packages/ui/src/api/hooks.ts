@@ -38,13 +38,13 @@ type Area = ChangeEvent["areas"][number];
 
 /** Which query roots each change area makes stale. */
 export const AREA_KEYS: Record<Area, string[]> = {
-  tickets: ["board", "tickets", "ticket", "artifact", "overview", "search"],
+  tickets: ["board", "tickets", "ticket", "artifact", "overview", "search", "projects"],
   records: ["ticket", "artifact", "board", "tickets", "overview", "search"],
   tasks: ["ticket", "artifact", "board", "tickets", "overview"],
   worklog: ["worklog", "overview"],
   activity: ["activity", "overview"],
   runs: ["runs", "overview", "ticket"],
-  workspace: ["workspace", "overview", "board", "people", "overrides"],
+  workspace: ["workspace", "overview", "board", "people", "overrides", "projects"],
   skills: ["skills", "overrides"],
   todos: ["todos", "overview"],
   approvals: ["approvals", "overview"],

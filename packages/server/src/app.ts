@@ -13,6 +13,7 @@ import { registerKnowledgeRoutes } from "./knowledge.ts";
 import { mountModelRoutes } from "./models.ts";
 import { overridesRoute } from "./overrides.ts";
 import { peopleView } from "./people.ts";
+import { registerProjectRoutes } from "./projects.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import {
@@ -39,6 +40,8 @@ export interface AppOptions {
   log?: (line: string) => void;
   /** Secret for POST /api/v1/hooks/pretooluse (milestone 4); default a fresh random one per server. */
   hookToken?: string;
+  /** Per-user home holding .helmlock/recent.toml for GET /centers (milestone 7); default HL_USER_HOME or the OS home. */
+  home?: string;
 }
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -215,6 +218,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   mountChatRoutes(api, m4);
   // Milestone 5: knowledge, inbox state and the first-run checklist.
   registerKnowledgeRoutes(api, m4);
+  // Milestone 7: projects (switcher) and the other knowledge centers on this machine.
+  registerProjectRoutes(api, { ...m4, ...(opts.home ? { home: opts.home } : {}) });
 
   api.post("/verbs/*", async (c) => {
     try {
