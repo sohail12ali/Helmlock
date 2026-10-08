@@ -3,7 +3,7 @@
 // with diff and merge on temp git repos.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { after, before, test } from "node:test";
@@ -313,7 +313,7 @@ test("worktree: hl/<ticket> outside the repo, diff while live, a wip commit at t
     const s = await m.start({ prompt: "build", role: "builder", ticket: "T-001-sa", worktree: true, cwd: repo, actor });
     const wtPath = join(ws.root, ".hl-cache", "worktrees", resolve(repo).split(/[\\/]/).pop() as string, "T-001-sa");
     assert.equal(resolve(runs[0]?.opts.cwd as string), resolve(wtPath));
-    assert.deepEqual(m.get(s.id)?.worktree, { path: wtPath, branch: "hl/T-001-sa", repo: resolve(repo) });
+    assert.deepEqual(m.get(s.id)?.worktree, { path: wtPath, branch: "hl/T-001-sa", repo: realpathSync.native(repo) });
     writeFileSync(join(wtPath, "new.ts"), "a\nb\nc\n");
     writeFileSync(join(wtPath, "README.md"), "one\nTWO\n");
     const liveDiff = await m.diff(s.id);

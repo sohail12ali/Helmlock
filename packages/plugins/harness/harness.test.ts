@@ -123,12 +123,14 @@ test("a delivery repo outside the synced root gets absolute hook paths; no mcp m
     rmSync(join(root, "AGENTS.md"));
     writeFileSync(join(root, "harness/harness.toml"), readFileSync(join(root, "harness/harness.toml"), "utf8").replace(/\[\[mcp\]\][\s\S]*$/, ""));
     const src = loadSource(root);
-    const files = generate(src, { deliveryRoot: "D:/delivery" });
+    // An absolute path on this platform, outside the synced root.
+    const delivery = process.platform === "win32" ? "D:/delivery" : "/opt/delivery";
+    const files = generate(src, { deliveryRoot: delivery });
     assert.ok(!files.some((f) => f.path.endsWith("mcp.json")));
     const settings = JSON.parse(files.find((f) => f.path === ".claude/settings.json")?.content ?? "{}");
-    assert.match(
+    assert.equal(
       settings.hooks.Stop[0].hooks[0].command,
-      /^node "D:\/delivery\/packages\/plugins\/harness\/hooks\/stop\.ts" --host claude --policy harness\/harness\.toml -- log show$/,
+      `node "${delivery}/packages/plugins/harness/hooks/stop.ts" --host claude --policy harness/harness.toml -- log show`,
     );
     assert.match(files.find((f) => f.path === "AGENTS.md")?.content ?? "", /^<!-- hl:generated:start -->\n/);
     assert.deepEqual(hlArgs('hl log-work - "two words"'), ["log-work", "-", "two words"]);

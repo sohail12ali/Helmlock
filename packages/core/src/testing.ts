@@ -32,7 +32,8 @@ export async function createTestWorkspace(o: { catalog: PluginCatalog; fixture?:
     run: (verb, input = {}, opts) => runtime.run(verb, input, opts),
     async cleanup() {
       await runtime.dispose();
-      rmSync(root, { recursive: true, force: true });
+      // Windows can hold a just-closed folder for a moment (EPERM/EBUSY): retry rather than fail the test.
+      rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     },
   };
 }

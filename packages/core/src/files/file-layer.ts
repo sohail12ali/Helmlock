@@ -113,7 +113,9 @@ export function createFileLayer(root: string): FileLayer {
 
   /** Lexical normalisation only (no symlink resolution): anything that resolves outside root is refused. */
   const abs = (rel: string) => {
-    const p = resolve(base, rel);
+    // A backslash separates on every platform: knowledge repos move between Windows and Linux, so "..\x" must be
+    // refused the same everywhere (and a file name holding a backslash would break on Windows anyway).
+    const p = resolve(base, rel.replace(/\\/g, "/"));
     const r = relative(base, p);
     if (r === ".." || r.startsWith(`..${sep}`) || isAbsolute(r)) throw new PathOutsideWorkspaceError(rel);
     return p;
