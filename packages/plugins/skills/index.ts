@@ -1,13 +1,26 @@
-// Skills index (F88, F89, Blueprint 13): scans .claude/skills/*/SKILL.md in three layers and ranks by a query.
-// system = the delivery repo, workspace = the knowledge repo, project = product folders from the
-// .code-workspace plus overlays at projects/<id>/.claude/skills. Same-named skills are all returned.
+// Skills index (F88, F89, Blueprints 13 and 31): scans SKILL.md folders in every layer and ranks by a query.
+// system = the delivery repo's .claude/skills; workspace = the knowledge repo's harness/skills plus hand-made
+// .claude/skills (generated copies are skipped); personal = people/<author>/skills; local = .hl-local/skills;
+// project = product folders from the .code-workspace plus overlays at projects/<id>/.claude/skills.
+// Same-named skills are all returned (F89); each says which layer wins (local > personal > workspace > system).
 import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import type { Context, LayerName, PluginModule, SkillEntry, SkillsService, VerbDef } from "@helmlock/core";
 import { z } from "zod";
+import { isGeneratedSkill, LOCAL_DIR, resolveItems } from "../harness/layers.ts";
 
-export const LAYER_ORDER: readonly LayerName[] = ["system", "workspace", "project"];
+export const LAYER_ORDER: readonly LayerName[] = ["system", "workspace", "personal", "local", "project"];
+
+/** A listed skill with its standing among same-named skills (system to local; project skills stand alone). */
+export type RankedSkill = SkillEntry & {
+  /** True when this copy is the one the host loads in the knowledge repo (or it has no rival). */
+  winner?: boolean;
+  /** Layers this copy hides. */
+  overrides?: LayerName[];
+  /** The layer that hides this copy. */
+  overridden_by?: LayerName;
+};
 
 /** Frontmatter subset: `key: value`, quoted values, and `>` / `|` block scalars. No dependency. */
 export function parseFrontmatter(text: string): Record<string, string> {
@@ -39,6 +52,8 @@ interface Root {
   /** Folder name (workspace folder or project id) shown with the skill. */
   folder: string;
   dir: string;
+  /** The skills folder under dir; default .claude/skills. */
+  skills?: string;
 }
 
 /** The skill roots, from the resolved workspace and workspace.toml layers (paths come from the .code-workspace only). */
@@ -46,10 +61,14 @@ export function skillRoots(ctx: Context): Root[] {
   const w = ctx.get("workspace");
   const byName = new Map<string, LayerName>();
   if (ctx.has("config")) for (const l of ctx.get("config").workspace.layers) byName.set(l.folder, l.layer);
+  const wsFolder = w.folders.find((f) => resolve(f.path) === resolve(w.root))?.name ?? "workspace";
   const roots: Root[] = [
     { layer: "system", folder: "system", dir: w.deliveryRoot },
-    { layer: "workspace", folder: w.folders.find((f) => resolve(f.path) === resolve(w.root))?.name ?? "workspace", dir: w.root },
+    { layer: "workspace", folder: wsFolder, dir: w.root, skills: join(w.root, "harness", "skills") },
+    { layer: "workspace", folder: wsFolder, dir: w.root },
   ];
+  if (w.author) roots.push({ layer: "personal", folder: w.author, dir: w.root, skills: join(w.root, "people", w.author, "skills") });
+  roots.push({ layer: "local", folder: "local", dir: w.root, skills: join(w.root, LOCAL_DIR, "skills") });
   for (const f of w.folders) {
     const layer = byName.get(f.name) ?? (f.layer === "product" ? "project" : f.layer);
     if (layer === "project") roots.push({ layer, folder: f.name, dir: f.path });
@@ -57,8 +76,7 @@ export function skillRoots(ctx: Context): Root[] {
   return roots;
 }
 
-async function scanDir(base: string, layer: LayerName, folder: string, root: string): Promise<SkillEntry[]> {
-  const skillsDir = join(base, ".claude", "skills");
+async function scanDir(skillsDir: string, layer: LayerName, folder: string, root: string): Promise<SkillEntry[]> {
   let names: string[];
   try {
     names = (await readdir(skillsDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
@@ -68,7 +86,7 @@ async function scanDir(base: string, layer: LayerName, folder: string, root: str
   const out: SkillEntry[] = [];
   for (const n of names.sort()) {
     const file = join(skillsDir, n, "SKILL.md");
-    if (!existsSync(file)) continue;
+    if (!existsSync(file) || isGeneratedSkill(join(skillsDir, n))) continue;
     const fm = parseFrontmatter(await readFile(file, "utf8"));
     const rel = relative(root, file).replace(/\\/g, "/");
     out.push({ name: fm.name || n, description: fm.description ?? "", layer, folder, path: rel });
@@ -77,17 +95,18 @@ async function scanDir(base: string, layer: LayerName, folder: string, root: str
 }
 
 export function createSkills(ctx: Context): SkillsService {
-  const list = async (): Promise<SkillEntry[]> => {
-    const root = ctx.get("workspace").root;
+  const list = async (): Promise<RankedSkill[]> => {
+    const w = ctx.get("workspace");
+    const root = w.root;
     const seen = new Set<string>();
-    const out: SkillEntry[] = [];
-    const add = async (dir: string, layer: LayerName, folder: string) => {
-      const key = resolve(dir).toLowerCase();
+    const out: RankedSkill[] = [];
+    const add = async (dir: string, layer: LayerName, folder: string, skills = join(dir, ".claude", "skills")) => {
+      const key = resolve(skills).toLowerCase();
       if (seen.has(key)) return;
       seen.add(key);
-      out.push(...(await scanDir(dir, layer, folder, root)));
+      out.push(...(await scanDir(skills, layer, folder, root)));
     };
-    for (const r of skillRoots(ctx)) await add(r.dir, r.layer, r.folder);
+    for (const r of skillRoots(ctx)) await add(r.dir, r.layer, r.folder, r.skills);
     // Project overlays in the knowledge repo (F87).
     const projects = join(root, "projects");
     const ids = await readdir(projects, { withFileTypes: true }).then(
@@ -95,12 +114,12 @@ export function createSkills(ctx: Context): SkillsService {
       () => [] as string[],
     );
     for (const id of ids.sort()) await add(join(projects, id), "project", id);
-    return out;
+    return rank(out, root, w.deliveryRoot, w.author);
   };
 
   return {
     list,
-    async find(query) {
+    async find(query): Promise<(RankedSkill & { score: number })[]> {
       const q = query.toLowerCase().trim();
       const qWords = new Set(q.match(/[a-z0-9]+/g) ?? []);
       if (!qWords.size) return [];
@@ -126,15 +145,34 @@ export function createSkills(ctx: Context): SkillsService {
   };
 }
 
+/** Mark the winner among same-named skills of the system, workspace, personal and local layers (harness/layers.ts). */
+function rank(items: RankedSkill[], root: string, deliveryRoot: string, author: string | undefined): RankedSkill[] {
+  let resolved: ReturnType<typeof resolveItems>;
+  try {
+    resolved = resolveItems(root, deliveryRoot, author).filter((r) => r.kind === "skill");
+  } catch {
+    return items;
+  }
+  const key = (p: string) => p.replace(/\/SKILL\.md$/, "").toLowerCase();
+  const byPath = new Map<string, { winner: boolean; overrides?: LayerName[]; overridden_by?: LayerName }>();
+  for (const r of resolved) {
+    byPath.set(key(r.winner.path), { winner: true, ...(r.hidden.length ? { overrides: r.hidden.map((h) => h.layer) } : {}) });
+    for (const h of r.hidden) byPath.set(key(h.path), { winner: false, overridden_by: r.winner.layer });
+  }
+  return items.map((s) => (s.layer === "project" ? s : { ...s, ...(byPath.get(key(s.path)) ?? {}) }));
+}
+
 const verb = <I extends z.ZodType>(d: VerbDef<I>): VerbDef => d as unknown as VerbDef;
-const row = (s: SkillEntry & { score?: number }) =>
-  `${s.score === undefined ? "" : `${s.score.toFixed(2)} `}${`${s.layer}${s.layer === "project" ? `:${s.folder}` : ""}`.padEnd(18)} ${s.name.padEnd(20)} ${s.description}`;
+const standing = (s: RankedSkill) =>
+  s.overrides?.length ? `  (overrides ${s.overrides.join(", ")})` : s.overridden_by ? `  (hidden by ${s.overridden_by})` : "";
+const row = (s: RankedSkill & { score?: number }) =>
+  `${s.score === undefined ? "" : `${s.score.toFixed(2)} `}${`${s.layer}${s.layer === "project" ? `:${s.folder}` : ""}`.padEnd(18)} ${s.name.padEnd(20)} ${s.description}${standing(s)}`;
 
 function verbs(): VerbDef[] {
   return [
     verb({
       id: "skill list",
-      summary: "List skills in the system, workspace and project layers. Same-named skills are all shown.",
+      summary: "List skills in the system, workspace, personal, local and project layers. Same-named skills are all shown, with the layer that wins.",
       examples: ["hl skill list", "hl skill list --json", "hl skill list --same-name"],
       input: z.object({ same_name: z.preprocess((v) => v === true || v === "true", z.boolean()).optional() }),
       writes: false,

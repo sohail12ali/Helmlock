@@ -2,6 +2,7 @@
 import { delimiter, resolve } from "node:path";
 import type { RunEvent, RunOptions, VerbDef, VerbResult } from "@helmlock/core";
 import { z } from "zod";
+import { agentNotice } from "../harness/layers.ts";
 import { RUNTIME_ALIASES } from "./registry.ts";
 import { buildRecord, RunTally, stampResponsible, writeRunRecord } from "./run-record.ts";
 
@@ -130,6 +131,9 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
         return { ok: false, code: 1, error: { rule: "bad-mode", message: `mode ${opts.mode} is not on the ladder` } };
       if (v.dryRun) return { ok: true, data: { runtime: adapter.id, options: opts }, text: `would run ${adapter.id} in ${opts.mode} mode in ${opts.cwd}` };
 
+      // .claude/agents holds the layer winners after `hl harness sync` (Blueprint 31): say so when it is behind.
+      const notice = opts.agent ? agentNotice(ws.root, ws.deliveryRoot, ws.author, opts.agent) : undefined;
+      if (notice) err(`${notice}\n`);
       const started = new Date().toISOString();
       const handle = await adapter.start(opts);
       await v.ctx.emit("run.started", { runId: handle.id, runtime: adapter.id, ...(opts.ticket ? { ticket: opts.ticket } : {}) });

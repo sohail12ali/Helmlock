@@ -4,5 +4,5 @@ version = "0.1.0"
 requires_core = ">=1 <2"
 provides = ["harness"]
 requires = []
-verbs = ["harness sync", "harness lint"]
+verbs = ["harness sync", "harness lint", "overrides"]
 entry = "index.ts"

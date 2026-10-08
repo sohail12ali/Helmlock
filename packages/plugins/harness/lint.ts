@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import type { Finding } from "@helmlock/core";
 import { FrontmatterError, frontmatter, type Yaml } from "./frontmatter.ts";
+import { agentFiles, isGeneratedAgent, isGeneratedSkill, LOCAL_DIR, skillFolders } from "./layers.ts";
 
 export const DESC_MIN = 40;
 export const DESC_MAX = 300;
@@ -106,7 +107,42 @@ export function skillFormat(name: string, body: string, o: Required<LintOptions>
   return out;
 }
 
-export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
+/**
+ * Skill and agent source folders under a root besides .claude/: the workspace (harness/), every person's
+ * (people/<slug>/) and this machine's (.hl-local/) layers. Missing ones are skipped.
+ */
+export function layerSourceDirs(root: string): { skills: string[]; agents: string[] } {
+  const bases = [join(root, "harness")];
+  const people = join(root, "people");
+  if (isDir(people))
+    for (const e of readdirSync(people, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)))
+      if (e.isDirectory()) bases.push(join(people, e.name));
+  bases.push(join(root, LOCAL_DIR));
+  return { skills: bases.map((b) => join(b, "skills")).filter(isDir), agents: bases.map((b) => join(b, "agents")).filter(isDir) };
+}
+
+/** Skill names and aliases of the delivery repo, so a knowledge repo's sources may name system skills. */
+function systemCommands(deliveryRoot: string): Set<string> {
+  const out = new Set<string>();
+  for (const s of skillFolders(join(deliveryRoot, ".claude", "skills"))) {
+    out.add(s.name);
+    try {
+      const { data } = frontmatter(read(join(s.abs, "SKILL.md")));
+      const meta = data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata) ? (data.metadata as Record<string, Yaml>) : {};
+      if (Array.isArray(meta.aliases)) for (const a of meta.aliases) out.add(String(a).replace(/^\//, ""));
+    } catch {
+      /* linted in the delivery repo */
+    }
+  }
+  return out;
+}
+
+/**
+ * Lint the prompt-facing harness under root: .claude/skills and .claude/agents (generated copies skipped) plus the
+ * layer sources (harness/, people/<slug>/, .hl-local/). With a deliveryRoot other than root (a knowledge repo), the
+ * system skills count as known /commands; they are linted in the delivery repo itself.
+ */
+export function lintHarness(root: string, opts: LintOptions = {}, layers: { deliveryRoot?: string } = {}): Finding[] {
   const o: Required<LintOptions> = { ...HELMLOCK_LINT, ...opts };
   const findings: Finding[] = [];
   const add = (level: Finding["level"], rule: string, file: string, message: string) => findings.push({ level, rule: `lint:${rule}`, file, message });
@@ -118,20 +154,31 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
   const aliases = new Set<string>();
 
   // ---- skills
-  const skillDirs = isDir(skillsDir)
-    ? readdirSync(skillsDir, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name)
-        .filter((n) => !o.notSkills.includes(n) || !existsSync(join(skillsDir, n, "SKILL.md")))
-        .sort()
-    : [];
-  for (const name of skillDirs) {
-    const f = join(skillsDir, name, "SKILL.md");
+  const sources = layerSourceDirs(root);
+  // Every skill folder: .claude/skills (not generated copies) first, then the layer sources.
+  const skillDirs: { name: string; dir: string }[] = [];
+  for (const base of [skillsDir, ...sources.skills]) {
+    if (!isDir(base)) continue;
+    const own = base === skillsDir;
+    for (const e of readdirSync(base, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .sort((x, y) => x.name.localeCompare(y.name))) {
+      const dir = join(base, e.name);
+      if (own && o.notSkills.includes(e.name) && existsSync(join(dir, "SKILL.md"))) continue;
+      if (isGeneratedSkill(dir)) continue;
+      skillDirs.push({ name: e.name, dir });
+    }
+  }
+  const folderOf = new Map<string, string[]>();
+  const isVendored = (name: string, dir: string) => vendored.has(name) && dir === join(skillsDir, name);
+  for (const { name, dir } of skillDirs) {
+    const f = join(dir, "SKILL.md");
     const where = rel(root, f);
     if (!existsSync(f)) {
-      if (!o.notSkills.includes(name)) add("error", "not-a-skill", rel(root, join(skillsDir, name)), "folder under .claude/skills has no SKILL.md");
+      if (!o.notSkills.includes(name)) add("error", "not-a-skill", rel(root, dir), `folder under ${rel(root, join(dir, ".."))} has no SKILL.md`);
       continue;
     }
+    folderOf.set(name, [...(folderOf.get(name) ?? []), dir]);
     let data: Record<string, Yaml>;
     let body: string;
     const raw = read(f);
@@ -147,7 +194,7 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
     if (Array.isArray(al)) for (const a of al) aliases.add(String(a).replace(/^\//, ""));
     if (str(data.name) !== name) add("error", "skill-name", where, `name ${JSON.stringify(data.name ?? null)} does not match its directory`);
     const desc = str(data.description);
-    const own = !vendored.has(name);
+    const own = !isVendored(name, dir);
     if (!desc) add("error", "description", where, "description is missing");
     else if (own) {
       if (desc.length < DESC_MIN || desc.length > DESC_MAX)
@@ -178,15 +225,9 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
   }
 
   // ---- agents
-  const agentFiles = isDir(agentsDir)
-    ? readdirSync(agentsDir)
-        .filter((n) => n.endsWith(".md"))
-        .sort()
-        .map((n) => join(agentsDir, n))
-        // Generated copies of system agents are linted in the delivery repo, where their skills live.
-        .filter((f) => !read(f).includes("GENERATED by hl harness sync"))
-    : [];
-  for (const f of agentFiles) {
+  // Generated copies are linted where their source lives (the delivery repo for system agents).
+  const agentList = [agentsDir, ...sources.agents].flatMap((d) => agentFiles(d).map((x) => x.abs)).filter((f) => !isGeneratedAgent(f));
+  for (const f of agentList) {
     const where = rel(root, f);
     const raw = read(f);
     let data: Record<string, Yaml>;
@@ -207,11 +248,13 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
   for (const p of o.promptFiles) if (existsSync(join(root, p))) prompt.push(join(root, p));
   const rulesDir = join(root, "harness", "rules");
   if (isDir(rulesDir)) for (const n of readdirSync(rulesDir).sort()) if (n.endsWith(".md")) prompt.push(join(rulesDir, n));
-  prompt.push(...agentFiles);
-  for (const name of skillDirs)
-    if (!vendored.has(name)) prompt.push(...mdFiles(join(skillsDir, name), (p) => rel(join(skillsDir, name), p).split("/").includes("evals")));
+  prompt.push(...agentList);
+  for (const { name, dir } of skillDirs)
+    if (!isVendored(name, dir) && existsSync(join(dir, "SKILL.md"))) prompt.push(...mdFiles(dir, (p) => rel(dir, p).split("/").includes("evals")));
   const builtins = new Set([...BUILTIN_CMDS, ...o.builtins]);
-  const commandOk = (n: string) => front.has(n) || aliases.has(n) || builtins.has(n) || (o.notSkills.includes(n) && existsSync(join(skillsDir, n, "SKILL.md")));
+  const system = layers.deliveryRoot && relative(root, layers.deliveryRoot) !== "" ? systemCommands(layers.deliveryRoot) : new Set<string>();
+  const commandOk = (n: string) =>
+    front.has(n) || aliases.has(n) || builtins.has(n) || system.has(n) || (o.notSkills.includes(n) && existsSync(join(skillsDir, n, "SKILL.md")));
   for (const f of prompt) {
     const where = rel(root, f);
     const text = read(f);
@@ -233,7 +276,12 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
   const manifest = ["CLAUDE.md", "AGENTS.md"].map((n) => (existsSync(join(root, n)) ? read(join(root, n)) : "")).join("\n");
   for (const [name, data] of front)
     if (data["disable-model-invocation"] && !manifest.includes(name))
-      add("error", "hidden-skill", rel(root, join(skillsDir, name)), "hidden from skill discovery and not named in CLAUDE.md or AGENTS.md");
+      add(
+        "error",
+        "hidden-skill",
+        rel(root, folderOf.get(name)?.[0] ?? join(skillsDir, name)),
+        "hidden from skill discovery and not named in CLAUDE.md or AGENTS.md",
+      );
 
   // ---- hooks pointing at scripts that are gone
   findings.push(...lintHooks(root));
@@ -241,9 +289,9 @@ export function lintHarness(root: string, opts: LintOptions = {}): Finding[] {
   // ---- orphans (warn)
   const texts = prompt.map((f) => [f, read(f)] as const);
   for (const name of front.keys()) {
-    const own = join(skillsDir, name);
-    if (!texts.some(([f, t]) => !f.startsWith(own + sep) && t.includes(name)))
-      add("warn", "orphan", `.claude/skills/${name}`, "nothing references it — reachable by description only");
+    const own = folderOf.get(name) ?? [join(skillsDir, name)];
+    if (!texts.some(([f, t]) => !own.some((d) => f.startsWith(d + sep)) && t.includes(name)))
+      add("warn", "orphan", rel(root, own[0] as string), "nothing references it — reachable by description only");
   }
   return findings;
 }

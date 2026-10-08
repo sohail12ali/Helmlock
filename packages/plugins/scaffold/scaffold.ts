@@ -148,7 +148,20 @@ export function planInit(o: InitOptions, date: string): { target: string; delive
 /** The pre-commit hook: `hl validate` on staged ticket folders and `hl harness sync --check`. */
 export const HOOK_REL = ".githooks/pre-commit";
 
-export const REQUIRED_DIRS = ["artifacts", "archive", "logs", "activity", "projects", "shared/wiki", "shared/templates", "todos", "harness", ".obsidian"];
+export const REQUIRED_DIRS = [
+  "artifacts",
+  "archive",
+  "logs",
+  "activity",
+  "projects",
+  "shared/wiki",
+  "shared/templates",
+  "todos",
+  "harness",
+  "harness/agents",
+  "harness/skills",
+  ".obsidian",
+];
 
 /** Post-scaffold validator: required folders and files exist and the state files parse. Returns problems (empty = ok). */
 export function validateScaffold(root: string, name: string): string[] {

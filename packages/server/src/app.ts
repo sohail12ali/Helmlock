@@ -11,6 +11,7 @@ import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
 import { registerKnowledgeRoutes } from "./knowledge.ts";
 import { mountModelRoutes } from "./models.ts";
+import { overridesRoute } from "./overrides.ts";
 import { peopleView } from "./people.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
@@ -207,6 +208,7 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   );
   route("/people", async () => peopleView(runtime));
   route("/settings", async () => settingsView(runtime));
+  route("/overrides", () => overridesRoute(runtime));
 
   // Milestone 4: models and the assistant (each POST runs the same write checks as verb calls).
   mountModelRoutes(api, m4);
