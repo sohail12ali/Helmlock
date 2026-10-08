@@ -2,13 +2,15 @@ import type { ArtifactRef, QuestionRecord, TicketCard, TicketDetail } from "@hel
 import { AlertTriangle, ExternalLink, FileText } from "lucide-react";
 import { Link } from "react-router";
 import { useTicket } from "@/api/hooks";
-import { CommentBox, QuestionCard, QuestionForm } from "@/components/actions/RecordActions";
+import { QuestionCard, QuestionForm } from "@/components/actions/RecordActions";
 import { TicketControls } from "@/components/actions/TicketControls";
 import { EmptyState, ErrorState, Loading, Mono, StatusChip } from "@/components/common";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { capitalize, fmtBytes, fmtDateTime } from "@/lib/format";
+import { NextStepBar } from "@/features/thread/NextStep";
+import { TicketThreadView } from "@/features/thread/TicketThread";
+import { capitalize, fmtBytes } from "@/lib/format";
 
 export function TicketChips({ card }: { card: TicketCard }) {
   return (
@@ -81,6 +83,7 @@ export function TicketDrawer({ id, stageLabel }: { id: string; stageLabel: (id: 
       </div>
       <TicketChips card={d.card} />
       <TicketControls detail={d} stageLabel={stageLabel} />
+      <NextStepBar ticket={d.card.id} />
       <Tabs defaultValue="details">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
@@ -131,23 +134,8 @@ export function TicketDrawer({ id, stageLabel }: { id: string; stageLabel: (id: 
             </div>
           </details>
         </TabsContent>
-        <TabsContent value="thread" className="flex flex-col gap-2">
-          {d.comments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No comments yet.</p>
-          ) : (
-            <ol className="flex flex-col gap-2">
-              {d.comments.map((c) => (
-                <li key={c.ts + c.author} className="rounded-md border bg-card p-2 text-sm">
-                  <div className="mb-0.5 flex gap-2 text-xs text-muted-foreground">
-                    <Mono>{c.author}</Mono>
-                    <span>{fmtDateTime(c.ts)}</span>
-                  </div>
-                  <p className="whitespace-pre-wrap">{c.text}</p>
-                </li>
-              ))}
-            </ol>
-          )}
-          <CommentBox ticket={d.card.id} />
+        <TabsContent value="thread">
+          <TicketThreadView ticket={d.card.id} showNext={false} />
         </TabsContent>
         <TabsContent value="files">
           <FileList ticket={d.card.id} artifacts={d.artifacts} />

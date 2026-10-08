@@ -48,3 +48,25 @@ export function useDropLane(ref: RefObject<HTMLElement | null>, stage: string, o
   }, [ref, stage]);
   return over;
 }
+
+/** Makes any element (a crew role card) a drop target for ticket cards. Returns whether a card hovers over it. */
+export function useDropTicket(ref: RefObject<HTMLElement | null>, onDropTicket: (id: string) => void, enabled = true): boolean {
+  const [over, setOver] = useState(false);
+  const cb = useRef(onDropTicket);
+  cb.current = onDropTicket;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) return;
+    return dropTargetForElements({
+      element: el,
+      canDrop: ({ source }) => isCard(source.data),
+      onDragEnter: () => setOver(true),
+      onDragLeave: () => setOver(false),
+      onDrop: ({ source }) => {
+        setOver(false);
+        if (isCard(source.data)) cb.current(source.data.id);
+      },
+    });
+  }, [ref, enabled]);
+  return over;
+}

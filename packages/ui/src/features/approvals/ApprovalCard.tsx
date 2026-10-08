@@ -69,7 +69,7 @@ export function ApprovalCard({ card, className, showSource = true }: { card: Car
         <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
           {who(c) && <span>Asked by {who(c)}</span>}
           {c.run_id && (
-            <Link className="font-mono text-primary hover:underline" to={`/agents/runs/${encodeURIComponent(c.run_id)}`}>
+            <Link className="font-mono text-primary hover:underline" to={`/runs/${encodeURIComponent(c.run_id)}`}>
               run {c.run_id}
             </Link>
           )}

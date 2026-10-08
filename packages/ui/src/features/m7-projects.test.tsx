@@ -165,21 +165,6 @@ describe("project switcher", () => {
     expect(screen.getByTestId("todos-project-note")).toHaveTextContent("wms");
   });
 
-  it("the active project is the default for a new run (the server resolves its repo folder)", async () => {
-    const spy = mockFetch((u, init) =>
-      init?.method === "POST" && u.pathname === "/api/v1/runs"
-        ? json({ ok: true, data: { id: "r-9", runtime: "claude-code", mode: "plan", status: "running", started: "x" } }, 201)
-        : undefined,
-    );
-    renderAt("/agents?project=wms");
-    const select = (await screen.findByLabelText("Project")) as HTMLSelectElement;
-    await waitFor(() => expect(select.value).toBe("wms"));
-    fireEvent.change(screen.getByLabelText("Task"), { target: { value: "read the code" } });
-    fireEvent.click(screen.getByRole("button", { name: /Start run/ }));
-    await waitFor(() => expect(posts(spy, "/runs")).toHaveLength(1));
-    expect(posts(spy, "/runs")[0]).toMatchObject({ task: "read the code", project: "wms" });
-  });
-
   it("the knowledge center menu lists the other centers: a running one links, a stopped one shows the command", async () => {
     const centers: CentersView = {
       current: { name: "Test", console_name: "Test Console", root: fx.workspace.root },

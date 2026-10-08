@@ -18,7 +18,7 @@ export const GO_KEYS: Record<string, { path: string; label: string }> = {
   t: { path: "/tickets", label: "Tickets" },
   d: { path: "/todos", label: "Todos" },
   w: { path: "/work", label: "Work" },
-  a: { path: "/agents", label: "Agents and chat" },
+  c: { path: "/crew", label: "Crew" },
   k: { path: "/knowledge", label: "Knowledge" },
   p: { path: "/people", label: "People" },
   s: { path: "/settings", label: "Settings" },
