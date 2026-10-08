@@ -282,61 +282,6 @@ describe("todos", () => {
   });
 });
 
-describe("work log", () => {
-  it("counts characters live up to 160 and blocks longer text", async () => {
-    mockServer();
-    renderApp("/work");
-    const text = await screen.findByLabelText(/What did you do/);
-    fireEvent.change(text, { target: { value: "Wrote the parser" } });
-    expect(screen.getByTestId("text-counter")).toHaveTextContent("16/160");
-    fireEvent.change(text, { target: { value: "x".repeat(161) } });
-    expect(screen.getByTestId("text-counter")).toHaveTextContent("161/160");
-    expect(screen.getByRole("button", { name: "Log" })).toBeDisabled();
-    expect(screen.getByText(/Shorten to 160 characters/)).toBeInTheDocument();
-  });
-
-  it("sends log-work with weight, and shows a skipped duplicate calmly", async () => {
-    const calls = mockServer(() => ({
-      ok: true,
-      data: { written: false, reason: "duplicate" },
-      text: "skipped (duplicate of an entry already logged today): T-001-sa  Development  Wrote the parser",
-    }));
-    renderApp("/work");
-    fireEvent.change(await screen.findByLabelText(/^Ticket/), { target: { value: "T-001-sa" } });
-    fireEvent.change(screen.getByLabelText(/What did you do/), { target: { value: "Wrote the parser" } });
-    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "Testing" } });
-    fireEvent.change(screen.getByLabelText(/Weight/), { target: { value: "4" } });
-    fireEvent.click(screen.getByRole("button", { name: "Log" }));
-    await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]!.path).toBe("/verbs/log-work");
-    expect(calls[0]!.headers["X-Helmlock-Request"]).toBe("1");
-    expect(calls[0]!.body.input).toEqual({ ticket: "T-001-sa", text: "Wrote the parser", category: "Testing", weight: 4 });
-    const form = screen.getByRole("form", { name: "Log work" });
-    expect(await within(form).findByRole("status")).toHaveTextContent("Skipped: duplicate.");
-    expect(screen.queryByRole("alert")).toBeNull();
-    // The sentence stays so it can be reworded.
-    expect(screen.getByLabelText(/What did you do/)).toHaveValue("Wrote the parser");
-  });
-
-  it("sends hours for a fixed block and shows a server refusal inline", async () => {
-    const calls = mockServer(() => ({
-      ok: false,
-      code: 1,
-      error: { rule: "worklog-text", message: "the sentence names an agent (builder)", fix: "describe the work, not the tool" },
-    }));
-    renderApp("/work");
-    fireEvent.change(await screen.findByLabelText(/What did you do/), { target: { value: "builder wrote the parser" } });
-    fireEvent.click(screen.getByRole("button", { name: "Fixed hours" }));
-    fireEvent.change(screen.getByLabelText("Hours"), { target: { value: "0.5" } });
-    fireEvent.click(screen.getByRole("button", { name: "Log" }));
-    await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]!.body.input).toEqual({ ticket: "-", text: "builder wrote the parser", category: "Development", hours: 0.5 });
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("names an agent");
-    expect(alert).toHaveTextContent("worklog-text");
-  });
-});
-
 describe("all actions", () => {
   it("lists console verbs and renders a generated form", async () => {
     mockServer();

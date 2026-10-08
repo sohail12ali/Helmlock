@@ -16,6 +16,7 @@ import { ApprovalsBadge } from "@/features/approvals/PendingApprovals";
 import { AddProjectHost } from "@/features/projects/AddProject";
 import { useActiveProject, useProjectUrlSync } from "@/features/projects/active";
 import { CenterSwitcher, ProjectChip, ProjectsNav } from "@/features/projects/Switcher";
+import { WorkNavBadge } from "@/features/work/NavBadge";
 import { useGlobalKeys } from "@/lib/keys";
 import { NARROW, PHONE, useMediaQuery } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
@@ -75,6 +76,7 @@ function SideNav({ collapsed, needsYou, unread, onNavigate }: { collapsed: boole
               {needsYou}
             </span>
           )}
+          {!collapsed && n.id === "work" && <WorkNavBadge />}
           {!collapsed && n.id === "inbox" && !!unread && (
             <span className="ml-auto rounded-full bg-primary px-1.5 font-mono text-[11px] text-primary-foreground" title="Unread in the inbox">
               {unread}

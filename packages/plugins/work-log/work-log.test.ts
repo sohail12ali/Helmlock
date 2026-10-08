@@ -138,9 +138,10 @@ test("range allocates each day with the configured day_hours and reads lc-wms da
       await rt.run("log-work", { ticket: "T-015-sa", text: "Reviewed the record schemas", weight: 1, date: DATE });
       const rows = await rt.ctx.get("worklog").range(DATE, DATE, "sam");
       assert.equal(rows.length, 3);
+      // Billable tickets share the 6 h floor; Internal is counted on top of it.
       assert.equal(
         rows.reduce((s, r) => s + r.hours_alloc, 0),
-        6,
+        6.5,
       );
       assert.equal(rows.find((r) => r.ticket === "Internal")?.hours_alloc, 0.5);
 
@@ -148,10 +149,14 @@ test("range allocates each day with the configured day_hours and reads lc-wms da
       cpSync(join(FIXTURES, "s4-logs"), join(ws.root, "logs/2026-10"), { recursive: true });
       const legacy = await rt.ctx.get("worklog").range("2026-10-01", "2026-10-06");
       assert.deepEqual([...new Set(legacy.map((r) => r.author))].sort(), ["om-prakash", "sohail-ali"]);
-      for (const d of ["2026-10-02", "2026-10-06"]) {
+      // 2026-10-02 has two Internal lines of weight 2 (0.5 h each, on top) and WLC-978 sharing the floor.
+      for (const [d, h] of [
+        ["2026-10-02", 7],
+        ["2026-10-06", 6],
+      ] as const) {
         assert.equal(
           legacy.filter((r) => r.date === d).reduce((s, r) => s + r.hours_alloc, 0),
-          6,
+          h,
         );
       }
       const day = await rt.ctx.get("worklog").day("2026-10-06", "sohail-ali");
@@ -161,7 +166,7 @@ test("range allocates each day with the configured day_hours and reads lc-wms da
       const show = await rt.run("log show", { week: true, date: DATE });
       assert.ok(show.ok);
       assert.deepEqual(weekOf(DATE), { from: "2026-10-05", to: "2026-10-11" });
-      assert.equal((show.data as { total: number }).total, 6);
+      assert.equal((show.data as { total: number }).total, 6.5);
     } finally {
       await rt.dispose();
     }

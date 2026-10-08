@@ -198,6 +198,10 @@ export const CONSOLE_VERBS = [
   "project import",
   // Milestone 8: crew roles (engine and model per role).
   "crew set",
+  // Work page: edit or remove one line of your own day file, and state how long the day was.
+  "log edit",
+  "log remove",
+  "log day-hours",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 
@@ -614,3 +618,138 @@ export interface MachineEnvView {
 }
 /** POST /api/v1/engines/test {} -> EngineView[]: drop the cached engine tests and run them again. */
 export type EngineTestResult = EngineView[];
+// ---------- Work page (work log rebuild): allocation stays server-side and identical to `hl log show` ----------
+
+/** One line of a day file with its allocated hours. */
+export interface WorkEntryView {
+  /** Position in the day file (0-based). */
+  index: number;
+  /** Stable id, or "#<position, 1-based>" for lines written before ids existed. Both work as `log edit <date> <entry>`. */
+  id: string;
+  ticket: string;
+  category: string;
+  text: string;
+  weight?: number;
+  /** Pinned hours, when the line states them. */
+  hours?: number;
+  hours_alloc: number;
+  pinned: boolean;
+  logged: string;
+  source?: string;
+}
+
+/** One author's day: entries, allocation and the timesheet grouping (ticket, then category). */
+export interface WorkDaySheet {
+  date: string;
+  author: string;
+  name: string;
+  file: string;
+  /** Hash of the day file as read: send it back as `hash` to `log edit|remove|day-hours` for a stale-write check. */
+  hash: string;
+  /** Stated day length ([day] day_hours), when the person gave one. */
+  day_hours?: number;
+  floor: number;
+  total: number;
+  billable: number;
+  internal: number;
+  pinned: number;
+  length: number;
+  shortfall: number;
+  overtime: number;
+  inferred_length: boolean;
+  entries: WorkEntryView[];
+  tickets: { ticket: string; hours: number; pinned: boolean; categories: { category: string; hours: number; lines: string[] }[] }[];
+  categories: { category: string; hours: number }[];
+}
+
+/** GET /api/v1/worklog/day?date=&author= (author omitted: everyone with a file that day). */
+export interface WorkDayView {
+  date: string;
+  floor: number;
+  sheets: WorkDaySheet[];
+}
+
+/** GET /api/v1/worklog/range?start=&end=&author= : rollups for the week grid and the month view. */
+export interface WorkRangeView {
+  start: string;
+  end: string;
+  author: string | null;
+  total: number;
+  days_logged: number;
+  files: number;
+  span_days: number;
+  by_day: { key: string; hours: number }[];
+  by_ticket: { key: string; hours: number }[];
+  by_category: { key: string; hours: number }[];
+  by_author: { key: string; hours: number }[];
+  /** One row per author per day with a file. */
+  days: { date: string; author: string; total: number; day_hours?: number; shortfall: number; overtime: number; inferred_length: boolean }[];
+  /** Hours per (date, author, ticket). */
+  cells: { date: string; author: string; ticket: string; hours: number }[];
+}
+
+/** A quick-pick button of the quick add bar (work-log setting quick_picks). */
+export interface WorkQuickPick {
+  label: string;
+  ticket: string;
+  category: string;
+  hours?: number;
+}
+
+/** GET /api/v1/worklog/config */
+export interface WorkConfigView {
+  floor: number;
+  categories: string[];
+  quick_picks: WorkQuickPick[];
+  internal_ticket: string;
+  max_text: number;
+  me: { id: string; name: string } | null;
+  /** People with at least one day file, plus me. */
+  authors: { id: string; name: string }[];
+}
+
+/** GET /api/v1/worklog/evidence?date=&author= : when the first and last visible things happened. Suggests, never writes. */
+export interface WorkEvidence {
+  date: string;
+  author: string;
+  commits: number;
+  repos: string[];
+  files: number;
+  runs: number;
+  run_hours: number;
+  /** HH:MM, the author's own wall clock. */
+  first?: string;
+  last?: string;
+  span_hours: number;
+  floor: number;
+  declared?: number;
+  /** The span rounded to the quarter and clamped to floor..16; absent when there is nothing to go on. */
+  suggested?: number;
+  worth_asking: boolean;
+  reasons: string[];
+  caveat: string;
+}
+
+/** GET /api/v1/worklog/suggestions?date= : finished runs and ticket moves of the current person with no log line yet. */
+export interface WorkSuggestion {
+  key: string;
+  kind: "run" | "ticket-move";
+  ticket?: string;
+  /** A first draft of the sentence (first sentence of the outcome summary). Nothing is written until confirmed. */
+  text: string;
+  source?: string;
+  at: string;
+  detail: string;
+}
+export interface WorkSuggestions {
+  date: string;
+  author: string | null;
+  items: WorkSuggestion[];
+}
+
+/** GET /api/v1/worklog/search?q=&author= : terms ANDed; ticket: cat: who: date: src: text: narrow; -term excludes. */
+export interface WorkSearchResult {
+  query: string;
+  total: number;
+  hits: (WorkEntryView & { date: string; author: string })[];
+}

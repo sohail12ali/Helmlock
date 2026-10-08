@@ -1,238 +1,277 @@
-// Work log (F6b, F93, Blueprint 14): today and this week with allocated hours, and a quick add through `log-work`.
-// One plain sentence; the tool owns author, file, dedupe and hours. A skipped duplicate is a normal result.
-import type { WorkLogLine } from "@helmlock/core/contracts";
+// Work (F6b, F93, Blueprint 14), rebuilt as a mixture of control-center (panels, chips, bars, stacked category bar,
+// tight density) and lc-wms (weights and pinned hours on an 8 h floor, overtime and shortfall, day-length evidence,
+// drafts from finished runs, field search, quick picks). Allocation stays on the server, identical to `hl log show`.
+import type { WorkSearchResult, WorkSuggestion } from "@helmlock/core/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon, ClockIcon, SearchIcon } from "lucide-react";
+import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
 import { api } from "@/api/client";
 import { keys } from "@/api/hooks";
-import { INVALIDATE } from "@/api/write-hooks";
-import { EmptyState, ErrorState, Loading, Mono, PageHeader, TicketLink } from "@/components/common";
-import { Field, Select } from "@/components/forms/controls";
-import { useVerbRun } from "@/components/forms/useVerbRun";
-import { VerbResult } from "@/components/forms/VerbResult";
+import { useWorkConfig, useWorkDay, useWorkRange, useWorkSearch } from "@/api/work";
+import { ErrorState, Mono, PageHeader, TicketLink } from "@/components/common";
+import { Select } from "@/components/forms/controls";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { isoLocal, weekStart } from "@/lib/dates";
-import { cn } from "@/lib/utils";
+import { CatDot, Chip, Empty, Panel, Seg, Skeleton } from "@/features/work/bits";
+import { AuthorCard } from "@/features/work/DayView";
+import { type Prefill, QuickAdd } from "@/features/work/QuickAdd";
+import { RangeSummary } from "@/features/work/RangeView";
+import { SuggestionsPanel } from "@/features/work/Suggestions";
+import { TimesheetPanel } from "@/features/work/Timesheet";
+import { addDays, addMonths, DEFAULT_CATEGORIES, fmtH, iso, mondayOf, monthEnd, monthStart, previousWorkday } from "@/features/work/text";
+import { WeekGrid } from "@/features/work/WeekView";
 
-export const MAX_TEXT = 160;
-export const CATEGORIES = ["Development", "Code Review", "Testing", "Design", "Documentation", "Internal"] as const;
-const fmtH = (h: number) => `${Number(h.toFixed(2))}h`;
+export { MAX_TEXT } from "@/features/work/text";
+export const CATEGORIES = DEFAULT_CATEGORIES;
 
-function LogForm() {
-  const uid = useId();
-  const [ticket, setTicket] = useState("-");
-  const [text, setText] = useState("");
-  const [category, setCategory] = useState<string>("Development");
-  const [mode, setMode] = useState<"weight" | "hours">("weight");
-  const [weight, setWeight] = useState("3");
-  const [hours, setHours] = useState("");
-  const v = useVerbRun("log-work", INVALIDATE.worklog);
-  const len = text.trim().length;
-  const over = len > MAX_TEXT;
-  const ready = len > 0 && !over && ticket.trim() !== "" && (mode === "weight" || Number(hours) > 0);
+type View = "day" | "week" | "month" | "range";
+const VIEWS: { id: View; label: string }[] = [
+  { id: "day", label: "Day" },
+  { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
+  { id: "range", label: "Range" },
+];
 
-  const send = async (dryRun: boolean) => {
-    const input: Record<string, unknown> = { ticket: ticket.trim() || "-", text: text.trim(), category };
-    if (mode === "weight") input.weight = Number(weight);
-    else input.hours = Number(hours);
-    const r = await v.run(input, dryRun);
-    if (!dryRun && r.ok) {
-      const d = r.data as { written?: boolean } | undefined;
-      if (d?.written !== false) setText("");
-    }
-  };
-
+function SearchResults({ data, names, onOpen }: { data: WorkSearchResult; names: Record<string, string>; onOpen: (date: string, author: string) => void }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Log work</CardTitle>
-        <span className="text-xs text-muted-foreground">one plain sentence for the timesheet</span>
-      </CardHeader>
-      <CardContent>
-        <form
-          aria-label="Log work"
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (ready) void send(false);
-          }}
-        >
-          <div className="grid gap-2 sm:grid-cols-[9rem_1fr]">
-            <Field label="Ticket" htmlFor={`${uid}-ticket`} required hint='a ticket id, a special key such as Internal, or "-"'>
-              <Input id={`${uid}-ticket`} className="font-mono" value={ticket} onChange={(e) => setTicket(e.target.value)} />
-            </Field>
-            <Field
-              label="What did you do"
-              htmlFor={`${uid}-text`}
-              required
-              hint={
-                <span className="flex flex-wrap justify-between gap-2">
-                  <span>No agent or skill names. The tool owns author and dedupe.</span>
-                  <span aria-live="polite" data-testid="text-counter" className={cn("font-mono", over && "font-medium text-destructive")}>
-                    {len}/{MAX_TEXT}
-                  </span>
-                </span>
-              }
-            >
-              <Input
-                id={`${uid}-text`}
-                value={text}
-                aria-invalid={over || undefined}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Chose TOML for records and wrote the format map"
-              />
-            </Field>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="Category" htmlFor={`${uid}-category`} className="w-40">
-              <Select id={`${uid}-category`} value={category} onChange={(e) => setCategory(e.target.value)}>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <fieldset className="flex flex-col gap-1">
-              <legend className="mb-1 text-xs font-medium text-ink2">Time</legend>
-              <div className="flex gap-1">
-                <Button size="sm" variant={mode === "weight" ? "secondary" : "outline"} aria-pressed={mode === "weight"} onClick={() => setMode("weight")}>
-                  Share of day
-                </Button>
-                <Button size="sm" variant={mode === "hours" ? "secondary" : "outline"} aria-pressed={mode === "hours"} onClick={() => setMode("hours")}>
-                  Fixed hours
-                </Button>
-              </div>
-            </fieldset>
-            {mode === "weight" ? (
-              <Field label="Weight (1 to 5)" htmlFor={`${uid}-weight`} className="w-28">
-                <Select id={`${uid}-weight`} value={weight} onChange={(e) => setWeight(e.target.value)}>
-                  {[1, 2, 3, 4, 5].map((w) => (
-                    <option key={w} value={w}>
-                      {w}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ) : (
-              <Field label="Hours" htmlFor={`${uid}-hours`} className="w-28">
-                <Input id={`${uid}-hours`} type="number" min={0.25} max={24} step={0.25} value={hours} onChange={(e) => setHours(e.target.value)} />
-              </Field>
-            )}
-            <div className="ml-auto flex gap-2">
-              <Button size="default" variant="outline" disabled={!ready || v.pending} onClick={() => void send(true)}>
-                Preview
-              </Button>
-              <Button type="submit" disabled={!ready || v.pending}>
-                Log
-              </Button>
-            </div>
-          </div>
-          {over && (
-            <p className="text-xs text-destructive" role="alert">
-              Shorten to {MAX_TEXT} characters: one plain sentence.
+    <Panel title="Search results" right={<Chip tone="accent">{data.total}</Chip>}>
+      {!data.hits.length ? (
+        <Empty icon={SearchIcon} title="No matching lines" hint="Terms are ANDed. Narrow with ticket: cat: who: date: src: text: and exclude with -term." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs" aria-label="Search results">
+            <thead>
+              <tr className="border-b text-left text-[11px] tracking-wide text-muted-foreground uppercase">
+                <th className="py-1 pr-2 font-semibold">Date</th>
+                <th className="py-1 pr-2 font-semibold">Who</th>
+                <th className="py-1 pr-2 font-semibold">Ticket</th>
+                <th className="py-1 pr-2 font-semibold">Work</th>
+                <th className="py-1 text-right font-semibold">Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.hits.map((h) => (
+                <tr key={`${h.date}-${h.author}-${h.id}`} className="border-b last:border-0 hover:bg-sunk/50">
+                  <td className="py-1 pr-2">
+                    <button type="button" className="font-mono text-primary hover:underline" onClick={() => onOpen(h.date, h.author)}>
+                      {h.date}
+                    </button>
+                  </td>
+                  <td className="py-1 pr-2">{names[h.author] ?? h.author}</td>
+                  <td className="py-1 pr-2">{/^T-\d/.test(h.ticket) ? <TicketLink id={h.ticket} /> : <Mono>{h.ticket}</Mono>}</td>
+                  <td className="py-1 pr-2">
+                    <span className="inline-flex items-start gap-1.5">
+                      <CatDot category={h.category} className="mt-1" />
+                      {h.text}
+                    </span>
+                  </td>
+                  <td className="py-1 text-right tabular-nums">{fmtH(h.hours_alloc)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {data.total > data.hits.length && (
+            <p className="pt-1 text-muted-foreground">
+              Showing {data.hits.length} of {data.total}.
             </p>
           )}
-          <VerbResult result={v.last?.result} preview={v.last?.preview} />
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </Panel>
   );
 }
 
-function LogTable({ rows, label, showDate }: { rows: WorkLogLine[]; label: string; showDate?: boolean }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm" aria-label={label}>
-        <thead className="text-left text-xs text-muted-foreground">
-          <tr className="border-b">
-            {showDate && <th className="py-1.5 pr-3 font-medium">Date</th>}
-            <th className="py-1.5 pr-3 font-medium">Author</th>
-            <th className="py-1.5 pr-3 font-medium">Ticket</th>
-            <th className="py-1.5 pr-3 font-medium">Category</th>
-            <th className="py-1.5 pr-3 font-medium">Work</th>
-            <th className="py-1.5 text-right font-medium">Hours</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((w) => (
-            <tr key={`${w.date}-${w.author}-${w.ticket}-${w.text}`} className="border-b last:border-0">
-              {showDate && (
-                <td className="py-1.5 pr-3">
-                  <Mono>{w.date}</Mono>
-                </td>
-              )}
-              <td className="py-1.5 pr-3">
-                <Mono>{w.author}</Mono>
-              </td>
-              <td className="py-1.5 pr-3">{/^T-/.test(w.ticket) ? <TicketLink id={w.ticket} /> : <Mono>{w.ticket}</Mono>}</td>
-              <td className="py-1.5 pr-3">{w.category}</td>
-              <td className="py-1.5 pr-3">{w.text}</td>
-              <td className="py-1.5 text-right">
-                <Mono>{fmtH(w.hours_alloc)}</Mono>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+export function WorkPage({ now = new Date() }: { now?: Date }) {
+  const today = iso(now);
+  const [view, setView] = useState<View>("day");
+  const [date, setDate] = useState(today);
+  const [rangeStart, setRangeStart] = useState(addDays(today, -13));
+  const [rangeEnd, setRangeEnd] = useState(today);
+  const [who, setWho] = useState("me");
+  const [search, setSearch] = useState("");
+  const [prefill, setPrefill] = useState<Prefill>();
+  const q = useDeferredValue(search.trim());
 
-export function WorkPage() {
-  const from = weekStart();
-  const today = isoLocal(new Date());
-  const q = useQuery({ queryKey: keys.worklog({ from }), queryFn: ({ signal }) => api.worklog({ from }, signal) });
-  const rows = q.data ?? [];
-  const todays = rows.filter((w) => w.date === today);
-  const earlier = rows.filter((w) => w.date !== today).sort((a, b) => b.date.localeCompare(a.date));
-  const sum = (xs: WorkLogLine[]) => xs.reduce((n, w) => n + w.hours_alloc, 0);
+  const cfg = useWorkConfig();
+  const me = cfg.data?.me?.id ?? null;
+  const author = who === "" ? undefined : who;
+  const names = useMemo(() => Object.fromEntries((cfg.data?.authors ?? []).map((a) => [a.id, a.name])), [cfg.data]);
+
+  const span =
+    view === "week"
+      ? { start: mondayOf(date), end: addDays(mondayOf(date), 6) }
+      : view === "month"
+        ? { start: monthStart(date), end: monthEnd(date) }
+        : { start: rangeStart, end: rangeEnd };
+  const day = useWorkDay(date, author);
+  const range = useWorkRange(span.start, span.end, author, view !== "day" && span.start <= span.end);
+  const found = useWorkSearch(q, author);
+  const yesterday = useWorkDay(previousWorkday(date), "me", !!me);
+  const recent = useWorkRange(addDays(today, -14), today, "me", !!me);
+  const tickets = useQuery({ queryKey: keys.tickets(), queryFn: ({ signal }) => api.tickets(undefined, signal) });
+
+  const ticketOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; title?: string }[] = [];
+    const titles = Object.fromEntries((tickets.data ?? []).map((t) => [t.id, t.title]));
+    for (const c of [...(recent.data?.cells ?? [])].reverse()) {
+      if (seen.has(c.ticket)) continue;
+      seen.add(c.ticket);
+      out.push({ id: c.ticket, ...(titles[c.ticket] ? { title: titles[c.ticket] } : {}) });
+    }
+    for (const t of tickets.data ?? []) {
+      if (t.stage === "done" || seen.has(t.id)) continue;
+      seen.add(t.id);
+      out.push({ id: t.id, title: t.title });
+    }
+    return out;
+  }, [recent.data, tickets.data]);
+
+  const step = (n: number) => {
+    if (view === "day") setDate(addDays(date, n));
+    else if (view === "week") setDate(addDays(date, 7 * n));
+    else if (view === "month") setDate(addMonths(date, n));
+    else {
+      const len = Math.round((new Date(`${rangeEnd}T12:00:00`).getTime() - new Date(`${rangeStart}T12:00:00`).getTime()) / 86_400_000) + 1;
+      setRangeStart(addDays(rangeStart, n * len));
+      setRangeEnd(addDays(rangeEnd, n * len));
+    }
+  };
+  const openDay = (d: string, a?: string) => {
+    setDate(d);
+    if (a) setWho(a === me ? "me" : a);
+    setView("day");
+    setSearch("");
+  };
+  const logSuggestion = (s: WorkSuggestion) =>
+    setPrefill({ ...(s.ticket ? { ticket: s.ticket } : {}), text: s.text, ...(s.source ? { source: s.source } : {}) });
+
+  const categories = cfg.data?.categories ?? [...DEFAULT_CATEGORIES];
+  const sheets = day.data?.sheets ?? [];
+
+  let main: ReactNode;
+  if (q) {
+    main = found.isPending ? (
+      <Skeleton />
+    ) : found.isError ? (
+      <ErrorState error={found.error} />
+    ) : (
+      <SearchResults data={found.data} names={names} onOpen={openDay} />
+    );
+  } else if (view === "day") {
+    main = day.isPending ? (
+      <Panel title="Loading">
+        <Skeleton />
+      </Panel>
+    ) : day.isError ? (
+      <ErrorState error={day.error} />
+    ) : !sheets.length ? (
+      <Panel title={`Work on ${date}`}>
+        <Empty
+          icon={ClockIcon}
+          title={`No work logged on ${date}`}
+          hint="Add a line above, or log a suggested entry. Weighted lines share the day; pinned hours stand."
+        />
+      </Panel>
+    ) : (
+      <div className="flex flex-col gap-3">
+        {sheets.map((s) => (
+          <AuthorCard key={s.author} sheet={s} mine={s.author === me} categories={categories} />
+        ))}
+      </div>
+    );
+  } else {
+    main = range.isPending ? (
+      <Panel title="Loading">
+        <Skeleton />
+      </Panel>
+    ) : range.isError ? (
+      <ErrorState error={range.error} />
+    ) : view === "week" ? (
+      <Panel title={`Week of ${span.start}`} right={<Chip tone="accent">{fmtH(range.data.total)}</Chip>}>
+        <WeekGrid range={range.data} mode={author ? "tickets" : "people"} today={today} names={names} onOpen={openDay} />
+      </Panel>
+    ) : (
+      <RangeSummary range={range.data} names={names} />
+    );
+  }
+
   return (
     <PageLayout id="work">
       <PageHeader title="Work">
-        <span className="text-xs text-muted-foreground">
-          week from <Mono>{from}</Mono> · <Mono>{fmtH(sum(rows))}</Mono>
-        </span>
-      </PageHeader>
-      <div className="grid w-full gap-3">
-        <LogForm />
-        {q.isPending ? (
-          <Loading />
-        ) : q.isError ? (
-          <ErrorState error={q.error} />
-        ) : (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Today</CardTitle>
-                <Mono className="text-xs text-muted-foreground">{fmtH(sum(todays))}</Mono>
-              </CardHeader>
-              <CardContent>
-                {todays.length === 0 ? (
-                  <EmptyState title="Nothing logged today." hint="Log one sentence above when you finish a piece of work." />
-                ) : (
-                  <LogTable rows={todays} label="Today's work log" />
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Earlier this week</CardTitle>
-                <Mono className="text-xs text-muted-foreground">{fmtH(sum(earlier))}</Mono>
-              </CardHeader>
-              <CardContent>
-                {earlier.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No earlier entries this week.</p>
-                ) : (
-                  <LogTable rows={earlier} label="This week's work log" showDate />
-                )}
-              </CardContent>
-            </Card>
-          </>
+        {day.data && (
+          <span className="text-xs text-muted-foreground">
+            {date} · <Mono>{fmtH(sheets.reduce((s, x) => s + x.total, 0))}</Mono>
+          </span>
         )}
+      </PageHeader>
+      <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2" role="toolbar" aria-label="Work view">
+          <Seg label="View" value={view} options={VIEWS} onChange={setView} />
+          <div className="flex items-center gap-1">
+            <Button size="icon-sm" variant="outline" aria-label="Previous" onClick={() => step(-1)}>
+              <ChevronLeftIcon />
+            </Button>
+            {view === "range" ? (
+              <>
+                <Input aria-label="Range start" type="date" className="h-7 w-36 text-xs" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input aria-label="Range end" type="date" className="h-7 w-36 text-xs" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
+              </>
+            ) : (
+              <Input aria-label="Date" type="date" className="h-7 w-36 text-xs" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+            )}
+            <Button size="icon-sm" variant="outline" aria-label="Next" onClick={() => step(1)}>
+              <ChevronRightIcon />
+            </Button>
+            {date !== today && view !== "range" && (
+              <Button size="sm" variant="outline" onClick={() => setDate(today)}>
+                Today
+              </Button>
+            )}
+          </div>
+          <Select aria-label="Author" className="h-7 w-auto min-w-32 text-xs" value={who} onChange={(e) => setWho(e.target.value)}>
+            <option value="me">Me</option>
+            <option value="">Everyone</option>
+            {(cfg.data?.authors ?? [])
+              .filter((a) => a.id !== me)
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+          </Select>
+          <div className="relative min-w-48 flex-1 sm:max-w-sm">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search the work log"
+              type="search"
+              className="h-7 pl-7 text-xs"
+              placeholder="Search: ticket: cat: who: date: src: -exclude"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <QuickAdd date={date} categories={categories} quickPicks={cfg.data?.quick_picks ?? []} tickets={ticketOptions} {...(prefill ? { prefill } : {})} />
+
+        <div className="grid min-w-0 gap-3 @5xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="flex min-w-0 flex-col gap-3">
+            {!q && me && <SuggestionsPanel date={date} onLog={logSuggestion} />}
+            {main}
+          </div>
+          <div className="min-w-0">
+            <TimesheetPanel
+              date={date}
+              sheets={sheets}
+              me={me}
+              {...(yesterday.data?.sheets[0] ? { mineYesterday: yesterday.data.sheets[0] } : {})}
+              tickets={tickets.data ?? []}
+            />
+          </div>
+        </div>
       </div>
     </PageLayout>
   );

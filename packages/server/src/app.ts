@@ -19,6 +19,7 @@ import { registerProjectRoutes } from "./projects.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import { registerThreadRoutes } from "./thread.ts";
+import { registerWorklogRoutes } from "./worklog.ts";
 import {
   checkWriteRequest,
   createWriteQueue,
@@ -231,6 +232,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   registerThreadRoutes(api, m4);
   // Settings page: plugins loaded here, the .env names, and a fresh engine test.
   registerDiagnosticsRoutes(api, m4);
+  // Work page: day sheets, rollups, search, evidence and suggested entries.
+  registerWorklogRoutes(api, m4);
 
   api.post("/verbs/*", async (c) => {
     try {
