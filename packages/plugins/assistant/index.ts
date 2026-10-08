@@ -5,6 +5,7 @@ import { createAssistant } from "./assistant.ts";
 import { chatShareVerb } from "./share.ts";
 
 export * from "./assistant.ts";
+export * from "./plan.ts";
 export * from "./share.ts";
 export * from "./store.ts";
 export * from "./tools.ts";
@@ -14,7 +15,10 @@ const plugin: PluginModule = {
   name: "assistant",
   requires: ["files", "workspace", "verbs", "providers"],
   async apply(ctx) {
-    ctx.provide("assistant", createAssistant(ctx));
+    const assistant = createAssistant(ctx);
+    ctx.provide("assistant", assistant);
+    // Plan cards: the next approved step on a ticket starts when the run before it reports done.
+    await ctx.effect(() => ctx.on("run.finished", (e) => assistant.plans.runFinished(e.runId)));
     const share = chatShareVerb();
     await ctx.effect(() => ctx.get("verbs").register(share));
   },

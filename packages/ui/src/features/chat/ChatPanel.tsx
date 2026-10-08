@@ -17,6 +17,7 @@ import { fmtDateTime, fmtTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Composer } from "./Composer";
 import { ModelPicker } from "./ModelPicker";
+import { PlanCard } from "./PlanCard";
 
 const CURRENT_KEY = "hl.chat.current";
 function loadCurrent(): string | undefined {
@@ -58,8 +59,19 @@ function ToolLine({ m }: { m: ChatMessageData }) {
   );
 }
 
-function Message({ m, streaming }: { m: ChatMessageData; streaming?: boolean }) {
+function Message({
+  m,
+  streaming,
+  chatId,
+  onPlan,
+}: {
+  m: ChatMessageData;
+  streaming?: boolean;
+  chatId: string;
+  onPlan: (m: ChatMessageData, revised: boolean) => void;
+}) {
   if (m.role === "tool" || m.tool) return <ToolLine m={m} />;
+  if (m.plan) return <PlanCard chatId={chatId} message={m} onChange={onPlan} />;
   // A model often sends an empty assistant turn right before a tool call: nothing to show.
   if (m.role === "assistant" && !m.text.trim() && !streaming) return null;
   const me = m.role === "user";
@@ -159,6 +171,17 @@ export function ChatThread({ chatId, models }: { chatId: string; models: ModelsV
     }
   };
 
+  // A decided plan card: keep the server's copy; a revision starts a new assistant turn on the stream.
+  const onPlan = (m: ChatMessageData, revised: boolean) => {
+    setLocal((cur) => {
+      const messages = new Map(cur.messages);
+      messages.set(m.id, m);
+      return { ...cur, messages };
+    });
+    if (revised) setBusy(true);
+    void qc.invalidateQueries({ queryKey: keys.chat(chatId) });
+  };
+
   const messages = useMemo(() => {
     const out: ChatMessageData[] = [];
     const seen = new Set<string>();
@@ -215,7 +238,7 @@ export function ChatThread({ chatId, models }: { chatId: string; models: ModelsV
         <ol className="flex flex-col gap-2.5">
           {messages.map((m) => (
             <li key={m.id}>
-              <Message m={m} streaming={local.streamingId === m.id} />
+              <Message m={m} streaming={local.streamingId === m.id} chatId={chatId} onPlan={onPlan} />
             </li>
           ))}
           {cards.map((c) => (
