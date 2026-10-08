@@ -22,6 +22,7 @@ export const BUNDLES: Record<string, PluginRow[]> = {
     "runtimes",
     "runtime-claude",
     "runtime-cursor",
+    "runtime-loop",
     "scaffold",
     "pages",
     "settings",

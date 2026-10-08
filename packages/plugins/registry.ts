@@ -19,6 +19,7 @@ export const catalog: PluginCatalog = {
   runtimes: { dir: join(here, "runtimes"), load: () => import("./runtimes/index.ts") },
   "runtime-claude": { dir: join(here, "runtime-claude"), load: () => import("./runtime-claude/index.ts") },
   "runtime-cursor": { dir: join(here, "runtime-cursor"), load: () => import("./runtime-cursor/index.ts") },
+  "runtime-loop": { dir: join(here, "runtime-loop"), load: () => import("./runtime-loop/index.ts") },
   scaffold: { dir: join(here, "scaffold"), load: () => import("./scaffold/index.ts") },
   pages: { dir: join(here, "pages"), load: () => import("./pages/index.ts") },
   settings: { dir: join(here, "settings"), load: () => import("./settings/index.ts") },

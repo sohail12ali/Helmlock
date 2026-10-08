@@ -1,0 +1,22 @@
+id = "runtime-loop"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = []
+requires = ["runtimes"]
+verbs = ["run"]
+entry = "index.ts"
+
+[settings.max_steps]
+type = "number"
+label = "Loop step limit"
+hint = "Model requests per turn before the Helmlock loop stops a run (default 60)."
+scope = "workspace"
+section = "agents"
+
+[settings.timeout_sec]
+type = "number"
+label = "Loop run time limit (seconds)"
+hint = "Wall time of one Helmlock loop run (default 3600)."
+scope = "workspace"
+section = "agents"
