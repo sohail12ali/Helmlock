@@ -1,0 +1,11 @@
+{
+  "skills": ["do"],
+  "query": "/do T-021-sa needs the new status field in the api project and a matching column on the web project screen, then both verified against the acceptance criteria.",
+  "expected_behavior": [
+    "Decomposes before dispatching: the goal needs 2 or more agents, projects and stages",
+    "Settles the shared contract (field name, type, API shape) in the parent before the fan-out",
+    "Dispatches the two independent project tasks in one message as one wave, with the verify task in a later wave after both",
+    "Marks a task done only after re-checking its DONE itself",
+    "Prints the ledger at wave start and end only, and does not report done while any task is queued or failed"
+  ]
+}

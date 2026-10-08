@@ -1,0 +1,19 @@
+# Workspace layer of the agent harness: additions to the system layer (the delivery repo's
+# harness/harness.toml, same keys). `hl harness sync` merges both and writes the host config.
+schema_version = 1
+
+[permissions]
+# Path globs agents may never edit, shell prefixes that ask a person first, paths never read.
+deny = []
+ask = []
+deny_read = ["author.local", "*.local.toml", ".env", "_work/**"]
+
+# Add a hook (events: session_start, post_edit, stop), for example:
+# [[hooks]]
+# event = "post_edit"
+# matcher = "Edit|Write"
+# command = "hl validate --changed"
+
+[ignore]
+# Hidden from indexing and agents on both hosts.
+globs = ["runs/**", "chats/**", "usage/**", "audio/**", ".hl-cache/**"]

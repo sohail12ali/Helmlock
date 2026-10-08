@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/* Dark mode is a class on <html>, set from localStorage or prefers-color-scheme (F83). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Two palettes only: "Console Light" and "Console Dark" from docs/plan/themes.json (control-center style). */
+:root {
+  --bg: #f6f7f9;
+  --sunk: #eceef2;
+  --surface: #ffffff;
+  --line: #e2e6ec;
+  --ink: #16181d;
+  --ink2: #4a5160;
+  --ink3: #858c9a;
+  --accent: #2563eb;
+  --accent-ink: #ffffff;
+  --accent-soft: #eaf2fe;
+  --ok: #12924f;
+  --warn: #b8730a;
+  --danger: #d81f2a;
+  --radius: 10px;
+  /* Work log category palette (control-center): fixed, never cycled; a 7th series folds into --cat-other. */
+  --cat-1: #2481d7;
+  --cat-2: #d1571f;
+  --cat-3: #178f63;
+  --cat-4: #4a3aa7;
+  --cat-5: #c4527d;
+  --cat-6: #8a6a08;
+  --cat-other: #6b7280;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #121214;
+  --sunk: #0d0d0f;
+  --surface: #1b1b1f;
+  --line: #2a2a30;
+  --ink: #e8e9ed;
+  --ink2: #a6a9b3;
+  --ink3: #6f7380;
+  --accent: #4d9bea;
+  --accent-ink: #0d1520;
+  --accent-soft: #16273a;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --cat-1: #4d9bea;
+  --cat-2: #e8813f;
+  --cat-3: #35c07d;
+  --cat-4: #9b8bf5;
+  --cat-5: #e77aa5;
+  --cat-6: #c9a227;
+  --cat-other: #8b919c;
+  color-scheme: dark;
+}
+
+/* shadcn token names mapped onto the console tokens. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-sunk: var(--sunk);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--accent);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-ink);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--ink);
+  --color-muted: var(--sunk);
+  --color-muted-foreground: var(--ink3);
+  --color-secondary: var(--sunk);
+  --color-secondary-foreground: var(--ink2);
+  --color-ink2: var(--ink2);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-destructive: var(--danger);
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+  --color-cat-other: var(--cat-other);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 1px;
+  }
+}
+
+/* F109: only transform and opacity animate. */
+@keyframes hl-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes hl-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes hl-slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes hl-pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes hl-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@utility animate-fade-in {
+  animation: hl-fade-in 120ms ease-out;
+}
+@utility animate-slide-in-right {
+  animation: hl-slide-in-right 160ms ease-out;
+}
+@utility animate-slide-in-left {
+  animation: hl-slide-in-left 160ms ease-out;
+}
+@utility animate-pop-in {
+  animation: hl-pop-in 120ms ease-out;
+}
+@utility animate-live {
+  animation: hl-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Rendered markdown (artifact viewer). Kept here so agents never author CSS per page. */
+.md {
+  line-height: 1.6;
+  color: var(--color-foreground);
+}
+.md h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0.2em 0 0.6em;
+}
+.md h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.2em 0 0.4em;
+}
+.md h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1em 0 0.3em;
+}
+.md p,
+.md ul,
+.md ol,
+.md pre,
+.md table,
+.md blockquote {
+  margin: 0 0 0.8em;
+}
+.md ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.md ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+}
+.md a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.md code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-sunk);
+  border-radius: 4px;
+  padding: 0 0.3em;
+}
+.md pre {
+  background: var(--color-sunk);
+  border-radius: var(--radius-md);
+  padding: 0.75em;
+  overflow-x: auto;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+}
+.md table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.md th,
+.md td {
+  border: 1px solid var(--color-border);
+  padding: 0.3em 0.6em;
+  text-align: left;
+}
+.md blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.8em;
+  color: var(--color-muted-foreground);
+}

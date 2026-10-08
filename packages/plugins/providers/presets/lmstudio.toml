@@ -1,0 +1,11 @@
+id = "lmstudio"
+label = "LM Studio (local)"
+base_url = "http://localhost:1234/v1"
+auth = "optional"
+billing = "local"
+
+[compat]
+developer_role = false
+max_completion_tokens = false
+reasoning_effort = false
+usage_in_stream = true

@@ -1,0 +1,9 @@
+id = "lifecycle"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = []
+requires = ["tickets", "workflow"]
+# "context" is listed so this plugin mounts with `hl context --session` and adds the archive-eligible line.
+verbs = ["ticket close", "ticket archive", "ticket restore", "retention suggest", "context"]
+entry = "index.ts"

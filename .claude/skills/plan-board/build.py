@@ -3,12 +3,12 @@
 
 Run from the project root. Stdlib only.
 
-    python .claude/skills/plan/build.py                 build docs/plan.html
-    python .claude/skills/plan/build.py --init          copy starter/ to docs/plan/ if missing, then build
-    python .claude/skills/plan/build.py --check         validate only (errors and quality warnings)
-    python .claude/skills/plan/build.py --status        compact digest: progress, what is ready to decide, open questions
-    python .claude/skills/plan/build.py --apply [FILE]  save picks from the page: pasted text or the .json from Save .json ('-' reads stdin; no FILE finds docs/plan/picks.json or the newest Downloads/plan-picks*.json)
-    python .claude/skills/plan/build.py --reopen F24 ..  remove the saved decision from those cards
+    python .claude/skills/plan-board/build.py                 build docs/plan.html
+    python .claude/skills/plan-board/build.py --init          copy starter/ to docs/plan/ if missing, then build
+    python .claude/skills/plan-board/build.py --check         validate only (errors and quality warnings)
+    python .claude/skills/plan-board/build.py --status        compact digest: progress, what is ready to decide, open questions
+    python .claude/skills/plan-board/build.py --apply [FILE]  save picks from the page: pasted text or the .json from Save .json ('-' reads stdin; no FILE finds docs/plan/picks.json or the newest Downloads/plan-picks*.json)
+    python .claude/skills/plan-board/build.py --reopen F24 ..  remove the saved decision from those cards
 
 The generated HTML is for humans. Agents edit the source files and use --status instead of reading the page.
 """

@@ -1,0 +1,7 @@
+schema_version = 1
+id = "D-009-sa"
+ticket = "T-002-sa"
+title = "Store cards in SQL"
+status = "accepted"
+date = "2026-10-01T09:00:00.000Z"
+author = "sam"

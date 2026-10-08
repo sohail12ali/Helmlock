@@ -1,0 +1,197 @@
+// Pure generator: harness source -> the host files for Claude Code and the Cursor CLI.
+// Each hook is emitted to exactly one place per host (Claude: .claude/settings.json; Cursor: .cursor/hooks.json).
+// JSON files Claude reads carry a top-level "//" GENERATED key (verified: Claude Code accepts it); Cursor's JSON
+// files carry no inline key and are stamped in the sidecar .claude/harness.lock instead.
+import { createHash } from "node:crypto";
+import { isAbsolute, join, relative } from "node:path";
+import type { HarnessSource, HookEvent } from "./source.ts";
+
+export const BLOCK_START = "<!-- hl:generated:start -->";
+export const BLOCK_END = "<!-- hl:generated:end -->";
+export const LOCK_FILE = ".claude/harness.lock";
+export const HOOKS_REL = "packages/plugins/harness/hooks";
+
+export interface GeneratedFile {
+  path: string;
+  content: string;
+}
+
+export interface GenerateOptions {
+  /** Delivery repo root (holds packages/plugins/harness/hooks). */
+  deliveryRoot: string;
+  /** Current AGENTS.md text, if any; text outside the markers is kept. */
+  agentsMd?: string;
+  /**
+   * Generated agents (.claude/agents/<name>.md), already stamped: the layer winners (layers.ts). Claude Code loads
+   * skills from --add-dir folders but not agents (measured, 2.1.289), so a knowledge repo gets copies. They are
+   * per machine (personal and local layers), so they stay out of the committed lock.
+   */
+  agents?: { name: string; content: string }[];
+}
+
+export { stampAgent } from "./layers.ts";
+
+const SCRIPT: Record<HookEvent | "pre_shell", string> = {
+  session_start: "session-start.ts",
+  post_edit: "post-edit.ts",
+  stop: "stop.ts",
+  pre_shell: "pretool.ts",
+};
+const CLAUDE_EVENT: Record<HookEvent, string> = { session_start: "SessionStart", post_edit: "PostToolUse", stop: "Stop" };
+const CURSOR_EVENT: Record<HookEvent, string> = { session_start: "sessionStart", post_edit: "afterFileEdit", stop: "stop" };
+
+const json = (v: unknown) => `${JSON.stringify(v, null, 2)}\n`;
+const slash = (p: string) => p.replace(/\\/g, "/");
+const quote = (a: string) => (/^[\w./:=@%+-]+$/.test(a) ? a : `"${a.replace(/"/g, '\\"')}"`);
+
+/** Strip a host wrapper someone may have written in the source: Edit(x) / Bash(git push:*). */
+const bare = (p: string) => p.replace(/^(?:Edit|Write|Read)\((.*)\)$/, "$1");
+const shellPrefix = (p: string) => p.replace(/^(?:Bash|Shell)\((.*?)(?::\*)?\)$/, "$1");
+
+export function shortHash(src: HarnessSource): string {
+  return src.hash.slice(0, 12);
+}
+
+/** `hl context --session` -> ["context", "--session"]. */
+export function hlArgs(command: string): string[] {
+  const words = command.trim().match(/"[^"]*"|\S+/g) ?? [];
+  const out = words.map((w) => w.replace(/^"(.*)"$/, "$1"));
+  return out[0] === "hl" ? out.slice(1) : out;
+}
+
+export function hookCommand(src: HarnessSource, o: GenerateOptions, host: "claude" | "cursor", event: HookEvent | "pre_shell", hl: string[]): string {
+  const dir = join(o.deliveryRoot, HOOKS_REL);
+  const r = relative(src.root, dir);
+  // Same drive: relative to the project (Claude via $CLAUDE_PROJECT_DIR, Cursor runs hooks from the project root);
+  // another drive: the absolute path, quoted.
+  const sameDrive = r !== "" && !isAbsolute(r);
+  const script = sameDrive
+    ? host === "claude"
+      ? `$CLAUDE_PROJECT_DIR/${slash(r)}/${SCRIPT[event]}`
+      : `${slash(r)}/${SCRIPT[event]}`
+    : `${slash(dir)}/${SCRIPT[event]}`;
+  const parts = [`node "${script}"`, "--host", host];
+  if (event === "stop" || event === "pre_shell") {
+    // Merged source: the system policy first (relative to the project when on the same drive), then the workspace's.
+    if (src.systemRoot) {
+      const sys = join(src.systemRoot, "harness", "harness.toml");
+      const rs = relative(src.root, sys);
+      parts.push("--policy", quote(isAbsolute(rs) ? slash(sys) : slash(rs)));
+    }
+    parts.push("--policy", "harness/harness.toml");
+  }
+  if (hl.length) parts.push("--", ...hl.map(quote));
+  return parts.join(" ");
+}
+
+function claudeSettings(src: HarnessSource, o: GenerateOptions): unknown {
+  const p = src.toml.permissions;
+  // Claude: Edit(path) covers every file-editing tool; Write(path) rules are rejected (measured, Claude Code 2.1.289).
+  const deny = [...p.deny.map((d) => `Edit(${bare(d)})`), ...p.deny_read.map((d) => `Read(${bare(d)})`)];
+  deny.push(...p.deny_shell.map((s) => `Bash(${shellPrefix(s)}:*)`));
+  const permissions: Record<string, string[]> = {};
+  if (p.allow.length) permissions.allow = p.allow;
+  permissions.deny = deny;
+  permissions.ask = p.ask.map((a) => `Bash(${shellPrefix(a)}:*)`);
+  const hooks: Record<string, unknown[]> = {};
+  for (const h of src.toml.hooks) {
+    const entry: Record<string, unknown> = {
+      type: "command",
+      command: hookCommand(src, o, "claude", h.event, hlArgs(h.command)),
+      timeout: h.timeout ?? (h.event === "post_edit" ? 15 : 30),
+    };
+    const group: Record<string, unknown> = {};
+    if (h.event === "post_edit") group.matcher = h.matcher ?? "Edit|Write|MultiEdit";
+    else if (h.matcher) group.matcher = h.matcher;
+    group.hooks = [entry];
+    const key = CLAUDE_EVENT[h.event];
+    hooks[key] = [...(hooks[key] ?? []), group];
+  }
+  return {
+    "//": `GENERATED by hl harness sync ${shortHash(src)}. Edit harness/harness.toml, then run hl harness sync.`,
+    permissions,
+    hooks,
+  };
+}
+
+function cursorHooks(src: HarnessSource, o: GenerateOptions): unknown {
+  const hooks: Record<string, { command: string }[]> = {};
+  for (const h of src.toml.hooks) {
+    const key = CURSOR_EVENT[h.event];
+    hooks[key] = [...(hooks[key] ?? []), { command: hookCommand(src, o, "cursor", h.event, hlArgs(h.command)) }];
+  }
+  const p = src.toml.permissions;
+  // Opt-in (harness.toml [cursor] shell_hook = true): on Windows the Cursor CLI runs its PowerShell-shaped hook line
+  // through bash when Git Bash is the shell, and a failing beforeShellExecution hook blocks every command (measured,
+  // Cursor 2026.07.23). Helmlock's protected-path check after each run covers the gap.
+  const shellHook = (src.toml as { cursor?: { shell_hook?: boolean } }).cursor?.shell_hook === true;
+  if (shellHook && (p.ask.length || p.deny_shell.length)) hooks.beforeShellExecution = [{ command: hookCommand(src, o, "cursor", "pre_shell", []) }];
+  return { version: 1, hooks };
+}
+
+function cursorCli(src: HarnessSource): unknown {
+  const p = src.toml.permissions;
+  return {
+    permissions: {
+      allow: p.allow.map((a) => (/^Bash\(/.test(a) ? `Shell(${shellPrefix(a)})` : a)),
+      deny: [...p.deny.map((d) => `Write(${bare(d)})`), ...p.deny_read.map((d) => `Read(${bare(d)})`), ...p.deny_shell.map((s) => `Shell(${shellPrefix(s)})`)],
+    },
+  };
+}
+
+function mcpServers(src: HarnessSource): unknown {
+  const servers: Record<string, unknown> = {};
+  for (const m of src.toml.mcp) servers[m.name] = { command: m.command, args: m.args, ...(m.env ? { env: m.env } : {}) };
+  return servers;
+}
+
+export function rulesText(src: HarnessSource): string {
+  const t = src.rules.map((r) => r.text).join("\n");
+  return t && !t.endsWith("\n") ? `${t}\n` : t;
+}
+
+export function agentsBlock(src: HarnessSource): string {
+  return `${BLOCK_START}\n<!-- GENERATED by hl harness sync ${shortHash(src)}; edit harness/rules/*.md -->\n${rulesText(src)}${BLOCK_END}`;
+}
+
+export function mergeAgentsMd(current: string | undefined, block: string): string {
+  if (current === undefined || !current.trim()) return `${block}\n`;
+  const text = current.replace(/\r\n/g, "\n");
+  const a = text.indexOf(BLOCK_START);
+  const b = text.indexOf(BLOCK_END);
+  if (a >= 0 && b > a) return text.slice(0, a) + block + text.slice(b + BLOCK_END.length);
+  return `${text.replace(/\n*$/, "\n\n")}${block}\n`;
+}
+
+export function generate(src: HarnessSource, o: GenerateOptions): GeneratedFile[] {
+  const stamp = shortHash(src);
+  const files: GeneratedFile[] = [{ path: ".claude/settings.json", content: json(claudeSettings(src, o)) }];
+  if (src.toml.mcp.length) files.push({ path: ".mcp.json", content: json({ "//": `GENERATED by hl harness sync ${stamp}`, mcpServers: mcpServers(src) }) });
+  files.push({ path: ".cursor/hooks.json", content: json(cursorHooks(src, o)) });
+  files.push({ path: ".cursor/cli.json", content: json(cursorCli(src)) });
+  if (src.toml.mcp.length) files.push({ path: ".cursor/mcp.json", content: json({ mcpServers: mcpServers(src) }) });
+  files.push({
+    path: ".cursor/rules/helmlock.mdc",
+    // Cursor does not follow @ imports: in a knowledge repo the system AGENTS.md text goes in whole, then the rules.
+    content: `---\ndescription: Helmlock rulebook (generated from harness/rules/*.md)\nalwaysApply: true\n---\n<!-- GENERATED by hl harness sync ${stamp}; edit harness/rules/*.md -->\n${src.systemAgents ? `${src.systemAgents}\n` : ""}${rulesText(src)}`,
+  });
+  files.push({
+    path: ".cursorignore",
+    content: `# GENERATED by hl harness sync ${stamp}; edit [ignore] in harness/harness.toml\n${src.toml.ignore.globs.map((g) => `${g}\n`).join("")}`,
+  });
+  files.push({ path: "AGENTS.md", content: mergeAgentsMd(o.agentsMd, agentsBlock(src)) });
+  const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+  const lock = [
+    `# GENERATED by hl harness sync ${stamp}. Sidecar stamp for generated files that carry no inline marker.`,
+    "# Do not edit; run `hl harness sync` (or `hl harness sync --check` to verify).",
+    `source = "${src.hash}"`,
+    "",
+    "[files]",
+    // AGENTS.md: only the generated block is ours; hand-written text around it may change freely.
+    ...files.map((f) => `"${f.path}" = "${sha(f.path === "AGENTS.md" ? agentsBlock(src) : f.content)}"`),
+    "",
+  ].join("\n");
+  files.push({ path: LOCK_FILE, content: lock });
+  for (const a of o.agents ?? []) files.push({ path: `.claude/agents/${a.name}.md`, content: a.content });
+  return files;
+}

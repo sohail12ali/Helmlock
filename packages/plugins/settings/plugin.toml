@@ -1,0 +1,8 @@
+id = "settings"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = []
+requires = []
+verbs = ["config set", "provider add", "provider remove", "model add", "model remove", "model default", "model list", "secret set", "secret status", "setup"]
+entry = "index.ts"

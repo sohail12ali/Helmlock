@@ -1,0 +1,8 @@
+id = "search"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["search"]
+requires = []
+verbs = ["search"]
+entry = "index.ts"

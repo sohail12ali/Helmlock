@@ -1,232 +1,277 @@
 [
- {
-  "date": "2026-10-07",
-  "you": "accept all",
-  "change": "Applied Blueprint 25: changes A to J and the later-than-v1 marks on 30 cards; CLAUDE.md updated."
- },
- {
-  "date": "2026-10-07",
-  "you": "once again I want you to go through with each and see if any decision should be changed",
-  "change": "Reread all 181 decisions for \"would I still pick this\". Proposed 10 changes (A to J), a v1 against later cut and one risk to measure (Blueprint 25). Nothing changed yet."
- },
- {
-  "date": "2026-10-07",
-  "you": "keep yours for F43 and accept all questions",
-  "change": "Kept F43 (workspace plugin folders). Closed the last 10 open questions as recommended and recorded them as a settled entry. CLAUDE.md gains names, platform and non-goals. Nothing is open."
- },
- {
-  "date": "2026-10-07",
-  "you": "I think all the questions answers was saved in a file because you are asking things again",
-  "change": "Read docs/plan/plan-picks.json (saved from the page): it held picks for 24 cards, no question answers. 21 matched what was saved. Applied F41 (four extra slots) and F2b (no separate graphs type) from the file. F43 differs (file: kb, saved: kbplus); asked."
- },
- {
-  "date": "2026-10-07",
-  "you": "yes, do the pass",
-  "change": "Closed 14 open questions that decisions already answer (each with a one-line answer). Reworded the Node install question to match Blueprint 24 and the CLAUDE.md test as a verification step. 10 remain: names, remote access, OS, Telegram token, non-goals, Node install, vision model, two verifications and the kanban library."
- },
- {
-  "date": "2026-10-07",
-  "you": "accept all",
-  "change": "Decided F43 (built-ins in the delivery repo; the knowledge repo enables them and may declare its own plugin folders; recommendation moved from kb to kbplus because workspace packs must live there), F19 (read-only console after milestone 1) and F151 (React spike first). All 181 decisions are saved. Blueprint 8 brought in line: TypeScript example, no delivery path in workspace.toml, plugin folders, no theme plugin. CLAUDE.md updated."
- },
- {
-  "date": "2026-10-07",
-  "you": "accept all",
-  "change": "Decided the 15 remaining Core and plugins cards as recommended (F41, F44 to F48, F71, F102 to F108, F150). The phase is complete. Open: F43, F19, F151."
- },
- {
-  "date": "2026-10-07",
-  "you": "accept both",
-  "change": "Decided F101 (one plugin form: name, requires, config schema, apply with disposers) and F42 (two tiers: declarative packs and TypeScript code plugins). Checked the 13 remaining Core and plugins recommendations against the decided cards: none conflicts."
- },
- {
-  "date": "2026-10-07",
-  "you": "go with the plugin container",
-  "change": "Decided F40: a plugin container kernel (about 500 lines: context tree, services with requires, scoped effects, events). File layer, verb registry and approval gate are required built-ins. Updated Blueprint 8 (also fixed 6 roles and 14 skills, removed the dropped theme slot), the architecture flow, the settled entry and CLAUDE.md. Next: F101 and F42."
- },
- {
-  "date": "2026-10-07",
-  "you": "accept all",
-  "change": "Applied all Blueprint 24 fixes to 42 cards, closed the 7 consistency questions, updated Blueprints 9, 14 and 24, the dispatcher flow and CLAUDE.md. Next: F40."
- },
- {
-  "date": "2026-10-07",
-  "you": "We have added the decisions and need to verify if any decision does not contradict any other.",
-  "change": "Read all 160 decided cards and the settled entries side by side. Found 6 real contradictions, 9 tensions and 8 small gaps (Blueprint 24). Added 7 open questions with recommendations. No decision changed yet."
- },
- {
-  "date": "2026-10-07",
-  "you": "Do the same for the delivery model section.",
-  "change": "Locked the remaining 34 cards. A ticket is one folder with six default lanes and blocked as a flag. Records are one file each, with generated Obsidian notes. Work logs are one TOML file per person per day. New tickets use the proposed tree; existing lc-wms tickets stay until an optional migrate. SQL forward and rollback scripts share a number. Closing writes a short digest; archive and delete are confirmed verbs, never a timer."
- },
- {
-  "date": "2026-10-07",
-  "you": "Do the same for the assistant, models and channels section.",
-  "change": "Locked the remaining 23 cards. One OpenAI chat-completions layer with presets, a connection probe, and per-role models. The assistant is L3: chat, search, and verbs with confirmation. Telegram long-polls with an allowlist. Voice is a mic button in the console plus a refine step. Clipboard and screenshots ask first and are not available from Telegram. No desktop helper, no voice notes, and no daily digest in v1."
- },
- {
-  "date": "2026-10-07",
-  "you": "Do the same for the Console and views section.",
-  "change": "Locked the remaining 29 cards. React with Tailwind and shadcn/ui, a resizable shell, and phone, tablet, and desktop widths. Ticket pages are files and are also served live. Overview, tickets, todos, work, agents, knowledge, and settings. Inbox is derived from the files. No scheduler in v1. Comments on a spec stay in git review. Light or dark follows the system."
- },
- {
-  "date": "2026-10-07",
-  "you": "Complete the agents, skills and CLI section. Ask me only where you need my input.",
-  "change": "Locked the remaining 33 cards in that section from the lc-wms base and the rules already set. Six agents, no orchestrator. One runtime adapter for Claude Code, Cursor, and OpenAI-compatible models. ACT/ASK with fail-closed approvals. Skills thin except spec and challenge. Fourteen system skills. CLI is noun then verb, launched from the knowledge repo, and works with no server. Runs start only when a person or the dispatcher starts them; a wake with no new input does nothing. Agents use the logins of the person running them. Cursor is a runtime with a mode ladder, not cloud agents."
- },
- {
-  "date": "2026-10-07",
-  "you": "For the two-repo workspace, use the same JSON structure as the VS Code workspace file. Opening it loads the projects, the console, and the system, in VS Code, Cursor, Antigravity, or any other IDE.",
-  "change": "Section 3 decided from that rule: F3c folders are the product repos, F138 one workspace file per knowledge center, F27 scaffold copies the template, F1a setup ends by opening the file, F1b includes registering a project folder, F139 F141 F142 template growth and promote, F23 console name on the UI, CLI, and pages. F43 still waits on F40. Folder roles are assumed: the file's own folder is the knowledge repo, the folder named system is the delivery repo, every other folder is a project."
- },
- {
-  "date": "2026-10-07",
-  "you": "For finding the repo we will use the VS Code workspace files (Helmlock.code-workspace and Helmlock.code-workspace.template).",
-  "change": "F22 and F21 decided: the committed template and the .code-workspace you open are how repos are found. hl reads folders and does not rewrite the file. workspace.toml no longer stores repo paths. .env (F39) only names the default knowledge workspace."
- },
- {
-  "date": "2026-10-07",
-  "you": "Select the must-use options and the obvious recommendations. Ask me only when a choice is actually mine. Write the selections into the plan.",
-  "change": "Locked 14 cards that a decided rule or the stack already requires: F34 React, F39 gitignored .env, F20 either per user or per product, F2a one folder per ticket, F115 shared knowledge area, F116 reference is not a skill, F13a one verb registry, F57 CLI for state, F59 deny plus validate hooks and a hash check, F88 generated skill index, F110 CLI works with no server, F135 one generated harness, F38 token guard rails, F11a one OpenAI-compatible provider layer. Left F40, F22 and F113 open for you."
- },
- {
-  "date": "2026-10-07",
-  "you": "Control the plan page and start saving the picks.",
-  "change": "Served the plan and saved 11 picks from the page, then locked them: F24 TOML plus JSONL, F33 agents read compact source, F25 writing rules, F26 prefixed ticket filenames, F0c web console plus CLI plus Telegram, F49 three formats, F144 pnpm workspace, F145 Zod in core, F146 run TypeScript source on Node 24, F147 dependency rules, F3a delivery versus knowledge split."
- },
- {
-  "date": "2026-10-07",
-  "you": "Go with TypeScript everywhere; rewrite is fine; dependencies allowed; editable themes can go; tag the options that must be used.",
-  "change": "F0a decided: TypeScript everywhere. Removed the editable-theme cards (F79, F80). Re-pointed viewer, UI library, design system and storage cards to React, Tailwind and shadcn/ui. New cards F144 to F151 (monorepo, schema contract, shipping, dependency policy, plugin languages, ticket navigation, widget libraries, front-end spike). New \"Must use\" tag on options that decided rules or the stack require; Blueprint 23 summarises the stack and the two independent reviews."
- },
- {
-  "date": "2026-10-07",
-  "you": "Runtime and language stack: what do deepseek-harness and paperclip use, how do we cut tokens, and what stack gives an interactive UI that is easy to change?",
-  "change": "F0a: corrected the TypeScript facts (Node 24 runs .ts directly), added the token evidence (control-center UI 682 KB against this viewer 81 KB) and UI size rules to the recommendation; Blueprint 15 gained a section on where tokens go. Recommendation stays Python with a structured plain-JS UI."
- },
- {
-  "date": "2026-10-06",
-  "you": "(continuing the knowledge-center picture) graphs and nodes per project.",
-  "change": "Surveyed the lc-wms data graph, the control-center Vault graph and paperclip llm-wiki. New F140 (project knowledge graph: lite typed nodes), mockup of the project graph, and Blueprint 22 tying delivery center, knowledge centers, template growth, projects and graphs together."
- },
- {
-  "date": "2026-10-06",
-  "you": "Like Paperclip running a whole company with many projects, but with one control delivery center and many knowledge centers; each knowledge center has a template that keeps growing, holds multiple projects, and keeps their knowledge, graphs and nodes.",
-  "change": "Recorded as a settled direction. New cards F138 (many knowledge centers and the console), F139 (a template that keeps growing), F141 (template packs), F142 (sharing what one workspace learned), F143 (a project as the unit of knowledge); a canvas; three new questions with recommendations. The project graph (F140) waits for the lc-wms graph survey."
- },
- {
-  "date": "2026-10-06",
-  "you": "We will use Cursor as well. Cursor CLI integration is a must, as with Claude CLI.",
-  "change": "F31 decided: both. New F135 (generated host config), F136 (Cursor runtime adapter, best of both of your forks), F137 (hooks and approvals). Blueprint 21 with the CLI facts, config mapping and the problems found in control-center and lc-wms."
- },
- {
-  "date": "2026-10-06",
-  "you": "I opened Paperclip at 127.0.0.1:3100/NOB: check how it works, play around, and see what we can use (agents calling skills, multiple named agents, login, skills, MCPs, connectors).",
-  "change": "Explored it read-only (dashboard, agents, instructions, skills, runtime, tools, permissions, runs, costs, connectors, task thread, inbox, routines). New research note, cards F132 to F134, a mockup of agents and runs, and notes on F57 F98 F78 F84 F1a F96 F11f F65. Key finding: a self-wake loop burned about 84M tokens in dozens of no-op runs."
- },
- {
-  "date": "2026-10-06",
-  "you": "Is native JavaScript and CSS too expensive in tokens? Would Bootstrap or another UI library cost less? Give an opinion.",
-  "change": "Measured the same screen part in six approaches (own classes 149 tokens, Pico 133, Web Awesome 147, Bootstrap 251, Tailwind 481, our data DSL 66) and the one-time CSS cost (this plan viewer about 5.7k tokens, control-center about 28.8k). New F131 with a weigh-it-yourself panel and Blueprint 20."
- },
- {
-  "date": "2026-10-06",
-  "you": "We need a solid plan to compress information and files, archive tickets, and delete tickets and information as we grow, because too many files confuse the LLM. Explore the options.",
-  "change": "Surveyed archive, compaction and retention in all four repos. New cards F124 to F129 (tiers, closure digest, hiding from the LLM, retention triggers, safe deletion, compacting logs and chats), Blueprint 19 and a lifecycle canvas."
- },
- {
-  "date": "2026-10-06",
-  "you": "The assistant is a small tool: ask something, find a file, use the clipboard, capture and process images, and listen to a long spoken thought and give back a refined version for an agent, with a plan for when the voice is not heard correctly.",
-  "change": "New cards F118 to F123 (assistant tasks, dictation refiner, speech engine, recognition robustness, clipboard and screenshot privacy, where the assistant lives) and two mockups (dictation refiner, assistant tools)."
- },
- {
-  "date": "2026-10-06",
-  "you": "For agents and skills use the lc-wms config (very good, tried, refined by me); a .env in the delivery console (not committed) can plug in projects, the CLI shows where things live.",
-  "change": "F117 decided: lc-wms is the base. Blueprint 18 sorts every lc-wms skill into system (14, merged), workspace and project layers, with control-center improvements. F5a, F15, F16, F5f updated. F39 uses a gitignored .env plus hl where. New canvas: a vertical slice."
- },
- {
-  "date": "2026-10-06",
-  "you": "Frame how we break work into tasks (phases, layers, vertical slicing), the folder structure created in a ticket including SQL and rollback scripts, plan and decision files, TOML trackers, test cases and Python test scripts, and where shared information and useful non-skill material live. Explore the existing ticket structures first.",
-  "change": "Studied both repos ticket structures (real tickets WLC-973, 975, 980; control-center T-017). New cards F111 to F116, Blueprint 16 (ticket folder, slicing, database scripts, tests) and Blueprint 17 (shared knowledge). F5g schema gate detail added."
- },
- {
-  "date": "2026-10-06",
-  "you": "Improve the runtime and language stack decision: more options, pros and cons, more detail; consider a fancy animated UI, performance and response time, and whether Python scripts are easy to run when the CLI is not running.",
-  "change": "F0a rewritten: six options (Python plain, Python with built UI, TypeScript on Node, Bun, Go, Rust with Tauri), each with facts, pros, cons, scores and when to choose it; a Weigh-it-yourself panel and facts rows in Compare. Measured CLI startup and a small server on this machine (Blueprint 15). New F109 (motion and performance budget) and F110 (CLI versus server). F34 gets a Svelte option."
- },
- {
-  "date": "2026-10-06",
-  "you": "The plugin idea comes from deepseek-harness \"Everything is a plugin\"; consider their approach.",
-  "change": "Researched their kernel, plugin form, services, hook pipelines, config composition, conventions and pain points. F40 rewritten with a new recommended option (container kernel), cards F101 to F108, F45 F14 F42 notes, Blueprint 8 refinement, a plugin kernel canvas and a research note."
- },
- {
-  "date": "2026-10-06",
-  "you": "Check the Paperclip GitHub README for more features and what we can add.",
-  "change": "Read the README (matches the local copy). New cards F94 to F100: goal context, ticket thread and run history, review and approval stages, unattended runs, connections and identity, agent quality loop, document comments. Added try mode, agent-led setup and starter packs to onboarding and packs. New research note."
- },
- {
-  "date": "2026-10-06",
-  "you": "If two layers have the same skill, show both, with descriptions, so the user can tell which is which.",
-  "change": "F89 decided: show every same-named skill with its layer and description; no silent override. Blueprint 13, F86 and F88 wording and the Skills across three layers canvas updated; the override question is closed."
- },
- {
-  "date": "2026-10-06",
-  "you": "Keep the per-person work logging from lc-wms and control-center. Add three layers of CLAUDE.md and skills (control center, knowledge center, projects), each with its own; Claude needs a registry or scan so a do-style skill can find and run them, including agents.",
-  "change": "Work log kept (F6a reworded, F93 rules, F1b identity). F86 decided: three layers. New F87 to F92 (project layer location, discovery index, overrides, CLAUDE.md combination, session-start injection, agents inside a project). Blueprints 13 and 14, a Three layers canvas."
- },
- {
-  "date": "2026-10-06",
-  "you": "UI like control-center with multiple configurable themes (fonts and styles too, custom themes), a flexible responsive layout with drag to resize and expand; add small UI mockups to the plan, drawing on all four repos; refine later.",
-  "change": "New UI design section: 10 wireframe mockups (overview, board, ticket page, chat, inbox, knowledge, settings, onboarding, phone, Telegram) that follow the chosen theme and width; a Theme lab (8 themes including control-center ones, live editor, theme.toml export); a Layout lab (drag to resize, collapse, swap). Cards F79 to F85. F51 folded into F79 and F80."
- },
- {
-  "date": "2026-10-06",
-  "you": "From the research: what does paperclip do better, what features does it provide, and which should we add? Same for deepseek-harness, which can use any LLM (Ollama, LM Studio, any OpenAI-style) through one configurable layer.",
-  "change": "Gap analysis in Research. Added cards F63 to F71 (paperclip: doctor, run supervision, low-trust input, skill tests, blocked semantics, audit trail, inbox, UX rules, pack sharing) and F72 to F78 (provider presets, test and probe, context window, errors and retries, model roles, models without tools, usage). Rewrote F11a as one provider layer. Blueprint 12."
- },
- {
-  "date": "2026-10-06",
-  "you": "The planning style works well; improve the plan skill from our experience so every planning is done like this.",
-  "change": "Rewrote the skill: loop, card quality bar, pitfalls. build.py gained --status, --apply (picks saved in the source), --reopen, cycle and quality checks. Decided cards now persist in the plan files. Filled missing whys and fixed two cross-phase dependencies."
- },
- {
-  "date": "2026-10-06",
-  "you": "The CLI must be a good experience and integrated with the agents through the main CLAUDE.md: should agents invoke the CLI or modify files themselves? No databases, files only, so we can share with teams. Use the Obsidian pattern, which only graphs markdown.",
-  "change": "Decided: files only (F0b removed). New cards F52 to F53 (Obsidian), F55 to F60 (CLI and agent contract), F61 to F62 (ids and records for teams). F26 flipped to prefixed file names because of Obsidian links. Blueprints 10 and 11 and two canvases added."
- },
- {
-  "date": "2026-10-06",
-  "you": "Design everything as plugins so any aspect (CLI, agents, voice, assistant, tickets, statuses) is replaceable and configurable, with a core. Also find the sweet spot for markdown, TOML, YAML, HTML, CSS and JSON across the knowledge system and the delivery console.",
-  "change": "New Core and plugins phase (F40 to F48), format map card F49 with measured sizes, flow syntax F50, theme F51, Blueprints 8 and 9, plugin-pattern research, a Core and plugins canvas."
- },
- {
-  "date": "2026-10-06",
-  "you": "The delivery console must not hold any knowledge-center information: the knowledge center picks the delivery system and projects. The plan page is a mess; build a good UI that orders the tasks and shows value and trade-offs of each option.",
-  "change": "Rebuilt the plan as data files + a shared viewer + a build script (decisions in 7 phases with dependencies, impact, trade-offs, compare view, Decide-next ranking). Independence rule recorded; F3b removed, F3a/F22 revised, F39 added; Two-repo canvas redrawn."
- },
- {
-  "date": "2026-10-06",
-  "you": "Use CLAUDE.md and Claude skills; pick the best artifact format; HTML costs tokens so use a light template for visuals; give a recommendation.",
-  "change": "Decisions on Claude Code host and token economy; Blueprint 6; cards F33 to F38."
- },
- {
-  "date": "2026-10-06",
-  "you": "Draw the two-repo system; artifacts as TOML or YAML with a blueprint; console scaffolds the knowledge repo; plans generate HTML with a page per ticket; define agents and skills; first milestone is the agent system.",
-  "change": "Three canvases, research on formats and scaffolds, blueprints, cards F20 to F32."
- },
- {
-  "date": "2026-10-06",
-  "you": "Build a lite agentic delivery system from the four reference repos with 11 named features and a deep selectable plan.",
-  "change": "Four repos researched, option cards, reference learnings, first canvas."
- },
- {
-  "date": "2026-10-06",
-  "you": "Add a canvas where the flow is drawn.",
-  "change": "Flow canvas added."
- },
- {
-  "date": "2026-10-06",
-  "you": "Set up CLAUDE.md, git and a planning skill that keeps a live HTML of the conversation.",
-  "change": "Done."
- }
+  {
+    "date": "2026-10-08",
+    "you": "no agents and skills on Settings; the agents and chat experience is bad: use both CLI agents (as Paperclip) and any model with our own harness (as deepseek-harness); study all four repos and come up with something new",
+    "change": "Removed the overrides card from Settings. Researched all four repos (research 12) and proposed Crew and engines (Blueprint 33, mockups 15 and 16, cards F152 to F157)."
+  },
+  {
+    "date": "2026-10-08",
+    "you": "onboarding does not mark Telegram done; set up the repo/workspace and projects first and show which is active (like Paperclip); connect several models at once and switch",
+    "change": "Built with three parallel agents: machine secrets in the gitignored .env (paste token/key, no restart), several models per provider with default and switching, and a project switcher with a Connect your code setup step. Blueprint 32."
+  },
+  {
+    "date": "2026-10-08",
+    "you": "yes, build the multi-person scopes with multiple agents; keep going and tell me when it is done",
+    "change": "Built people and storage scopes with three parallel agents (people and data, agent/skill layers, UI). Verified live. Blueprint 31 updated."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "This can be used by multiple person and we should give options to store things shared or local; see lc config and control center for users info and personal vs shared agents, tasks, todos",
+    "change": "Researched the three reference repos; proposed storage scopes and per-kind options in Blueprint 31; open question with recommendation. Also fixed: run transcripts persist, full-width pages, provider add model ids, assistant grounding; LM Studio connected."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "keep going and tell me when it's done",
+    "change": "Fast-forwarded setup/initial, synced the knowledge repo agents, and completed v1 with three parallel agents: notes and index, close/archive/restore/retention, inbox state, knowledge page, setup wizard, CI, hooks, README, and the remaining gaps. Blueprint 30."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "yes, do both with multiple agents",
+    "change": "Fast-forwarded setup/initial to the writable console. Built agents and chat with four parallel agents: approval queue and runs from the console with a Claude approval bridge, provider layer and assistant, Telegram, and the console UI. Verified a real run with an approval card in the browser. Fixed: system agents copied into knowledge repos. Blueprint 29."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "start the writable console with multiple agents",
+    "change": "Built the writable console with three parallel agents: verb-call API through the same registry as the CLI, settings plugin and config set, todos and settings endpoints; ticket actions, board drag, question cards; settings, todos and work pages. Verified live in the browser. Blueprint 28."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Is the project API and UI ready? yes, go ahead with multiple agents",
+    "change": "Built the read-only console with three parallel agents: Hono API with live events and hl serve, React console (overview, board, ticket page, file viewers, phone layout), and static ticket pages. Verified in the browser against the demo repo. F151 spike: stay on React. Blueprint 27."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "go through the plan and create your style plan to start the implementations run multiple agents for implementations I need this fast; keep working end to end and keep me posted",
+    "change": "Built milestone 1 with seven parallel agents after a wave 0 of frozen contracts: kernel, file layer, CLI, tickets and workflow, work log and knowledge services, harness and Claude/Cursor runtimes, scaffold, and the 6 agents and 14 skills. Integrated on m1/integrate with unit and end-to-end tests. Pre-flight findings in research 11; as-built in Blueprint 26. Plan viewer skill renamed to plan-board."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "accept all",
+    "change": "Applied Blueprint 25: changes A to J and the later-than-v1 marks on 30 cards; CLAUDE.md updated."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "once again I want you to go through with each and see if any decision should be changed",
+    "change": "Reread all 181 decisions for \"would I still pick this\". Proposed 10 changes (A to J), a v1 against later cut and one risk to measure (Blueprint 25). Nothing changed yet."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "keep yours for F43 and accept all questions",
+    "change": "Kept F43 (workspace plugin folders). Closed the last 10 open questions as recommended and recorded them as a settled entry. CLAUDE.md gains names, platform and non-goals. Nothing is open."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "I think all the questions answers was saved in a file because you are asking things again",
+    "change": "Read docs/plan/plan-picks.json (saved from the page): it held picks for 24 cards, no question answers. 21 matched what was saved. Applied F41 (four extra slots) and F2b (no separate graphs type) from the file. F43 differs (file: kb, saved: kbplus); asked."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "yes, do the pass",
+    "change": "Closed 14 open questions that decisions already answer (each with a one-line answer). Reworded the Node install question to match Blueprint 24 and the CLAUDE.md test as a verification step. 10 remain: names, remote access, OS, Telegram token, non-goals, Node install, vision model, two verifications and the kanban library."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "accept all",
+    "change": "Decided F43 (built-ins in the delivery repo; the knowledge repo enables them and may declare its own plugin folders; recommendation moved from kb to kbplus because workspace packs must live there), F19 (read-only console after milestone 1) and F151 (React spike first). All 181 decisions are saved. Blueprint 8 brought in line: TypeScript example, no delivery path in workspace.toml, plugin folders, no theme plugin. CLAUDE.md updated."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "accept all",
+    "change": "Decided the 15 remaining Core and plugins cards as recommended (F41, F44 to F48, F71, F102 to F108, F150). The phase is complete. Open: F43, F19, F151."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "accept both",
+    "change": "Decided F101 (one plugin form: name, requires, config schema, apply with disposers) and F42 (two tiers: declarative packs and TypeScript code plugins). Checked the 13 remaining Core and plugins recommendations against the decided cards: none conflicts."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "go with the plugin container",
+    "change": "Decided F40: a plugin container kernel (about 500 lines: context tree, services with requires, scoped effects, events). File layer, verb registry and approval gate are required built-ins. Updated Blueprint 8 (also fixed 6 roles and 14 skills, removed the dropped theme slot), the architecture flow, the settled entry and CLAUDE.md. Next: F101 and F42."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "accept all",
+    "change": "Applied all Blueprint 24 fixes to 42 cards, closed the 7 consistency questions, updated Blueprints 9, 14 and 24, the dispatcher flow and CLAUDE.md. Next: F40."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "We have added the decisions and need to verify if any decision does not contradict any other.",
+    "change": "Read all 160 decided cards and the settled entries side by side. Found 6 real contradictions, 9 tensions and 8 small gaps (Blueprint 24). Added 7 open questions with recommendations. No decision changed yet."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Do the same for the delivery model section.",
+    "change": "Locked the remaining 34 cards. A ticket is one folder with six default lanes and blocked as a flag. Records are one file each, with generated Obsidian notes. Work logs are one TOML file per person per day. New tickets use the proposed tree; existing lc-wms tickets stay until an optional migrate. SQL forward and rollback scripts share a number. Closing writes a short digest; archive and delete are confirmed verbs, never a timer."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Do the same for the assistant, models and channels section.",
+    "change": "Locked the remaining 23 cards. One OpenAI chat-completions layer with presets, a connection probe, and per-role models. The assistant is L3: chat, search, and verbs with confirmation. Telegram long-polls with an allowlist. Voice is a mic button in the console plus a refine step. Clipboard and screenshots ask first and are not available from Telegram. No desktop helper, no voice notes, and no daily digest in v1."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Do the same for the Console and views section.",
+    "change": "Locked the remaining 29 cards. React with Tailwind and shadcn/ui, a resizable shell, and phone, tablet, and desktop widths. Ticket pages are files and are also served live. Overview, tickets, todos, work, agents, knowledge, and settings. Inbox is derived from the files. No scheduler in v1. Comments on a spec stay in git review. Light or dark follows the system."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Complete the agents, skills and CLI section. Ask me only where you need my input.",
+    "change": "Locked the remaining 33 cards in that section from the lc-wms base and the rules already set. Six agents, no orchestrator. One runtime adapter for Claude Code, Cursor, and OpenAI-compatible models. ACT/ASK with fail-closed approvals. Skills thin except spec and challenge. Fourteen system skills. CLI is noun then verb, launched from the knowledge repo, and works with no server. Runs start only when a person or the dispatcher starts them; a wake with no new input does nothing. Agents use the logins of the person running them. Cursor is a runtime with a mode ladder, not cloud agents."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "For the two-repo workspace, use the same JSON structure as the VS Code workspace file. Opening it loads the projects, the console, and the system, in VS Code, Cursor, Antigravity, or any other IDE.",
+    "change": "Section 3 decided from that rule: F3c folders are the product repos, F138 one workspace file per knowledge center, F27 scaffold copies the template, F1a setup ends by opening the file, F1b includes registering a project folder, F139 F141 F142 template growth and promote, F23 console name on the UI, CLI, and pages. F43 still waits on F40. Folder roles are assumed: the file's own folder is the knowledge repo, the folder named system is the delivery repo, every other folder is a project."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "For finding the repo we will use the VS Code workspace files (Helmlock.code-workspace and Helmlock.code-workspace.template).",
+    "change": "F22 and F21 decided: the committed template and the .code-workspace you open are how repos are found. hl reads folders and does not rewrite the file. workspace.toml no longer stores repo paths. .env (F39) only names the default knowledge workspace."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Select the must-use options and the obvious recommendations. Ask me only when a choice is actually mine. Write the selections into the plan.",
+    "change": "Locked 14 cards that a decided rule or the stack already requires: F34 React, F39 gitignored .env, F20 either per user or per product, F2a one folder per ticket, F115 shared knowledge area, F116 reference is not a skill, F13a one verb registry, F57 CLI for state, F59 deny plus validate hooks and a hash check, F88 generated skill index, F110 CLI works with no server, F135 one generated harness, F38 token guard rails, F11a one OpenAI-compatible provider layer. Left F40, F22 and F113 open for you."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Control the plan page and start saving the picks.",
+    "change": "Served the plan and saved 11 picks from the page, then locked them: F24 TOML plus JSONL, F33 agents read compact source, F25 writing rules, F26 prefixed ticket filenames, F0c web console plus CLI plus Telegram, F49 three formats, F144 pnpm workspace, F145 Zod in core, F146 run TypeScript source on Node 24, F147 dependency rules, F3a delivery versus knowledge split."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Go with TypeScript everywhere; rewrite is fine; dependencies allowed; editable themes can go; tag the options that must be used.",
+    "change": "F0a decided: TypeScript everywhere. Removed the editable-theme cards (F79, F80). Re-pointed viewer, UI library, design system and storage cards to React, Tailwind and shadcn/ui. New cards F144 to F151 (monorepo, schema contract, shipping, dependency policy, plugin languages, ticket navigation, widget libraries, front-end spike). New \"Must use\" tag on options that decided rules or the stack require; Blueprint 23 summarises the stack and the two independent reviews."
+  },
+  {
+    "date": "2026-10-07",
+    "you": "Runtime and language stack: what do deepseek-harness and paperclip use, how do we cut tokens, and what stack gives an interactive UI that is easy to change?",
+    "change": "F0a: corrected the TypeScript facts (Node 24 runs .ts directly), added the token evidence (control-center UI 682 KB against this viewer 81 KB) and UI size rules to the recommendation; Blueprint 15 gained a section on where tokens go. Recommendation stays Python with a structured plain-JS UI."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "(continuing the knowledge-center picture) graphs and nodes per project.",
+    "change": "Surveyed the lc-wms data graph, the control-center Vault graph and paperclip llm-wiki. New F140 (project knowledge graph: lite typed nodes), mockup of the project graph, and Blueprint 22 tying delivery center, knowledge centers, template growth, projects and graphs together."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Like Paperclip running a whole company with many projects, but with one control delivery center and many knowledge centers; each knowledge center has a template that keeps growing, holds multiple projects, and keeps their knowledge, graphs and nodes.",
+    "change": "Recorded as a settled direction. New cards F138 (many knowledge centers and the console), F139 (a template that keeps growing), F141 (template packs), F142 (sharing what one workspace learned), F143 (a project as the unit of knowledge); a canvas; three new questions with recommendations. The project graph (F140) waits for the lc-wms graph survey."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "We will use Cursor as well. Cursor CLI integration is a must, as with Claude CLI.",
+    "change": "F31 decided: both. New F135 (generated host config), F136 (Cursor runtime adapter, best of both of your forks), F137 (hooks and approvals). Blueprint 21 with the CLI facts, config mapping and the problems found in control-center and lc-wms."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "I opened Paperclip at 127.0.0.1:3100/NOB: check how it works, play around, and see what we can use (agents calling skills, multiple named agents, login, skills, MCPs, connectors).",
+    "change": "Explored it read-only (dashboard, agents, instructions, skills, runtime, tools, permissions, runs, costs, connectors, task thread, inbox, routines). New research note, cards F132 to F134, a mockup of agents and runs, and notes on F57 F98 F78 F84 F1a F96 F11f F65. Key finding: a self-wake loop burned about 84M tokens in dozens of no-op runs."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Is native JavaScript and CSS too expensive in tokens? Would Bootstrap or another UI library cost less? Give an opinion.",
+    "change": "Measured the same screen part in six approaches (own classes 149 tokens, Pico 133, Web Awesome 147, Bootstrap 251, Tailwind 481, our data DSL 66) and the one-time CSS cost (this plan viewer about 5.7k tokens, control-center about 28.8k). New F131 with a weigh-it-yourself panel and Blueprint 20."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "We need a solid plan to compress information and files, archive tickets, and delete tickets and information as we grow, because too many files confuse the LLM. Explore the options.",
+    "change": "Surveyed archive, compaction and retention in all four repos. New cards F124 to F129 (tiers, closure digest, hiding from the LLM, retention triggers, safe deletion, compacting logs and chats), Blueprint 19 and a lifecycle canvas."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "The assistant is a small tool: ask something, find a file, use the clipboard, capture and process images, and listen to a long spoken thought and give back a refined version for an agent, with a plan for when the voice is not heard correctly.",
+    "change": "New cards F118 to F123 (assistant tasks, dictation refiner, speech engine, recognition robustness, clipboard and screenshot privacy, where the assistant lives) and two mockups (dictation refiner, assistant tools)."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "For agents and skills use the lc-wms config (very good, tried, refined by me); a .env in the delivery console (not committed) can plug in projects, the CLI shows where things live.",
+    "change": "F117 decided: lc-wms is the base. Blueprint 18 sorts every lc-wms skill into system (14, merged), workspace and project layers, with control-center improvements. F5a, F15, F16, F5f updated. F39 uses a gitignored .env plus hl where. New canvas: a vertical slice."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Frame how we break work into tasks (phases, layers, vertical slicing), the folder structure created in a ticket including SQL and rollback scripts, plan and decision files, TOML trackers, test cases and Python test scripts, and where shared information and useful non-skill material live. Explore the existing ticket structures first.",
+    "change": "Studied both repos ticket structures (real tickets WLC-973, 975, 980; control-center T-017). New cards F111 to F116, Blueprint 16 (ticket folder, slicing, database scripts, tests) and Blueprint 17 (shared knowledge). F5g schema gate detail added."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Improve the runtime and language stack decision: more options, pros and cons, more detail; consider a fancy animated UI, performance and response time, and whether Python scripts are easy to run when the CLI is not running.",
+    "change": "F0a rewritten: six options (Python plain, Python with built UI, TypeScript on Node, Bun, Go, Rust with Tauri), each with facts, pros, cons, scores and when to choose it; a Weigh-it-yourself panel and facts rows in Compare. Measured CLI startup and a small server on this machine (Blueprint 15). New F109 (motion and performance budget) and F110 (CLI versus server). F34 gets a Svelte option."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "The plugin idea comes from deepseek-harness \"Everything is a plugin\"; consider their approach.",
+    "change": "Researched their kernel, plugin form, services, hook pipelines, config composition, conventions and pain points. F40 rewritten with a new recommended option (container kernel), cards F101 to F108, F45 F14 F42 notes, Blueprint 8 refinement, a plugin kernel canvas and a research note."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Check the Paperclip GitHub README for more features and what we can add.",
+    "change": "Read the README (matches the local copy). New cards F94 to F100: goal context, ticket thread and run history, review and approval stages, unattended runs, connections and identity, agent quality loop, document comments. Added try mode, agent-led setup and starter packs to onboarding and packs. New research note."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "If two layers have the same skill, show both, with descriptions, so the user can tell which is which.",
+    "change": "F89 decided: show every same-named skill with its layer and description; no silent override. Blueprint 13, F86 and F88 wording and the Skills across three layers canvas updated; the override question is closed."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Keep the per-person work logging from lc-wms and control-center. Add three layers of CLAUDE.md and skills (control center, knowledge center, projects), each with its own; Claude needs a registry or scan so a do-style skill can find and run them, including agents.",
+    "change": "Work log kept (F6a reworded, F93 rules, F1b identity). F86 decided: three layers. New F87 to F92 (project layer location, discovery index, overrides, CLAUDE.md combination, session-start injection, agents inside a project). Blueprints 13 and 14, a Three layers canvas."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "UI like control-center with multiple configurable themes (fonts and styles too, custom themes), a flexible responsive layout with drag to resize and expand; add small UI mockups to the plan, drawing on all four repos; refine later.",
+    "change": "New UI design section: 10 wireframe mockups (overview, board, ticket page, chat, inbox, knowledge, settings, onboarding, phone, Telegram) that follow the chosen theme and width; a Theme lab (8 themes including control-center ones, live editor, theme.toml export); a Layout lab (drag to resize, collapse, swap). Cards F79 to F85. F51 folded into F79 and F80."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "From the research: what does paperclip do better, what features does it provide, and which should we add? Same for deepseek-harness, which can use any LLM (Ollama, LM Studio, any OpenAI-style) through one configurable layer.",
+    "change": "Gap analysis in Research. Added cards F63 to F71 (paperclip: doctor, run supervision, low-trust input, skill tests, blocked semantics, audit trail, inbox, UX rules, pack sharing) and F72 to F78 (provider presets, test and probe, context window, errors and retries, model roles, models without tools, usage). Rewrote F11a as one provider layer. Blueprint 12."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "The planning style works well; improve the plan skill from our experience so every planning is done like this.",
+    "change": "Rewrote the skill: loop, card quality bar, pitfalls. build.py gained --status, --apply (picks saved in the source), --reopen, cycle and quality checks. Decided cards now persist in the plan files. Filled missing whys and fixed two cross-phase dependencies."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "The CLI must be a good experience and integrated with the agents through the main CLAUDE.md: should agents invoke the CLI or modify files themselves? No databases, files only, so we can share with teams. Use the Obsidian pattern, which only graphs markdown.",
+    "change": "Decided: files only (F0b removed). New cards F52 to F53 (Obsidian), F55 to F60 (CLI and agent contract), F61 to F62 (ids and records for teams). F26 flipped to prefixed file names because of Obsidian links. Blueprints 10 and 11 and two canvases added."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Design everything as plugins so any aspect (CLI, agents, voice, assistant, tickets, statuses) is replaceable and configurable, with a core. Also find the sweet spot for markdown, TOML, YAML, HTML, CSS and JSON across the knowledge system and the delivery console.",
+    "change": "New Core and plugins phase (F40 to F48), format map card F49 with measured sizes, flow syntax F50, theme F51, Blueprints 8 and 9, plugin-pattern research, a Core and plugins canvas."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "The delivery console must not hold any knowledge-center information: the knowledge center picks the delivery system and projects. The plan page is a mess; build a good UI that orders the tasks and shows value and trade-offs of each option.",
+    "change": "Rebuilt the plan as data files + a shared viewer + a build script (decisions in 7 phases with dependencies, impact, trade-offs, compare view, Decide-next ranking). Independence rule recorded; F3b removed, F3a/F22 revised, F39 added; Two-repo canvas redrawn."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Use CLAUDE.md and Claude skills; pick the best artifact format; HTML costs tokens so use a light template for visuals; give a recommendation.",
+    "change": "Decisions on Claude Code host and token economy; Blueprint 6; cards F33 to F38."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Draw the two-repo system; artifacts as TOML or YAML with a blueprint; console scaffolds the knowledge repo; plans generate HTML with a page per ticket; define agents and skills; first milestone is the agent system.",
+    "change": "Three canvases, research on formats and scaffolds, blueprints, cards F20 to F32."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Build a lite agentic delivery system from the four reference repos with 11 named features and a deep selectable plan.",
+    "change": "Four repos researched, option cards, reference learnings, first canvas."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Add a canvas where the flow is drawn.",
+    "change": "Flow canvas added."
+  },
+  {
+    "date": "2026-10-06",
+    "you": "Set up CLAUDE.md, git and a planning skill that keeps a live HTML of the conversation.",
+    "change": "Done."
+  }
 ]

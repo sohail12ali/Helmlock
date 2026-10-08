@@ -1,0 +1,12 @@
+# Any other OpenAI-compatible server: give base_url (and key_env when it needs a key) in the provider row.
+id = "custom"
+label = "Custom (OpenAI-compatible)"
+base_url = ""
+auth = "optional"
+billing = "api"
+
+[compat]
+developer_role = false
+max_completion_tokens = false
+reasoning_effort = false
+usage_in_stream = true

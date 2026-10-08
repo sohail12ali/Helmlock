@@ -1,0 +1,11 @@
+id = "ollama"
+label = "Ollama (local)"
+base_url = "http://localhost:11434/v1"
+auth = "optional"
+billing = "local"
+
+[compat]
+developer_role = false
+max_completion_tokens = false
+reasoning_effort = false
+usage_in_stream = true

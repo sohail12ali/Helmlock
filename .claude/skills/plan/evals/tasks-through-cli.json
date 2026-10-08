@@ -1,0 +1,10 @@
+{
+  "skills": ["plan"],
+  "query": "/plan T-082-sa slice (size M, schema approved, spec has AC-1 to AC-4).",
+  "expected_behavior": [
+    "Cuts vertical slices riskiest first and fills the Slices table with depends",
+    "Adds every task with hl task add T-082-sa ... --slice --layer --ac --estimate; never writes tasks.toml by hand",
+    "Each task covers one layer and cites at least one AC; test data and environment work are named test or env tasks",
+    "Runs hl validate T-082-sa and clears every AC-with-no-task and task-with-no-AC warning before reporting"
+  ]
+}

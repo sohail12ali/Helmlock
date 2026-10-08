@@ -1,0 +1,7 @@
+{
+  "folders": [
+    { "name": "knowledge", "path": "." },
+    { "name": "system", "path": "../helmlock" }
+  ],
+  "settings": {}
+}

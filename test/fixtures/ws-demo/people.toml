@@ -1,0 +1,7 @@
+schema_version = 1
+
+[[person]]
+id = "sam"
+name = "Sam Abbott"
+initials = "sa"
+email = "sam@example.com"

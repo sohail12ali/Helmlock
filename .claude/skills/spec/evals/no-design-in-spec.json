@@ -1,0 +1,10 @@
+{
+  "skills": ["spec"],
+  "query": "/spec T-061-sa draft: support agents need to record why an account was locked. Add a lock_reason varchar(200) column to the accounts table in the spec and list the services we will change.",
+  "expected_behavior": [
+    "Fills Current state and feasibility from today's code: how accounts are locked now, the component and data involved (cited), current status values with meanings, and a verdict",
+    "Writes the data need in words in Data touched (for example 'we must record why an account was locked'): no column name, type, schema or list of services to change",
+    "Explains that the field design is the planner's job in /plan design, and records the suggested column as input for the planner with hl decision add or hl question add, not as a rule",
+    "Writes business rules and Given/When/Then ACs about behaviour, not about the schema"
+  ]
+}

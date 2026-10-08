@@ -1,0 +1,41 @@
+# Crew: who is doing what
+@from paperclip (agents as teammates), lc-wms (six roles), control-center (capabilities shown honestly)
+> 1 One card per role: engine and model, what it is doing now, its queue. A failed engine test shows here before you start anything.
+> 2 Drag a ticket onto a role to hand it over, or use Next step on the ticket.
+> 3 Needs you collects approvals, questions and outcomes waiting for review across all runs.
+app
+  top
+    brand "Helmlock"
+    crumb "Crew"
+    sp
+    chip "2 of 2 live runs"
+  body
+    side
+      nav "Overview" "Inbox 2" "Tickets" "Crew*" "Todos" "Knowledge" "Settings"
+    main
+      row
+        card "Analyst" n=1
+          text "[~OpenRouter] [qwen3-coder]"
+          muted "Idle, last: T-016 spec, done"
+        card "Planner"
+          text "[~Claude Code] [sonnet]"
+          muted "Queue: T-016"
+        card "Builder" n=2
+          text "[~Claude Code] [opus]"
+          text "[~running] T-014 slice 2, 4 min, 2 files"
+          spark
+      row
+        card "Verifier"
+          text "[~Cursor] [auto]"
+          text "[~running] T-012 tests"
+        card "Fixer"
+          text "[~LM Studio] [gemma-4]"
+          muted "Idle"
+        card "Deployer"
+          text "[!Codex] [not installed]"
+          muted "Engine test failed: codex is not on PATH"
+    right
+      card "Needs you" n=3
+        list "!Allow pnpm db:migrate (T-014)" "!Question from analyst (T-016)" "Review outcome: T-012 verified"
+      card "Tickets to hand over"
+        list "T-016 plan" "T-017 spec"

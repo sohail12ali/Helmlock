@@ -1,0 +1,49 @@
+# Ticket folder layout: artifacts/{T}/  (Blueprint 16; ported from lc-wms ticket-layout.toml).
+# The SQL folders (db/, ticket-scripts/) are not here: they belong to the software-delivery pack (B25 G).
+#
+#   files     exact names allowed in the folder ({T} = ticket id)
+#   patterns  globs allowed in the folder (* and ?)
+#   dirs      allowed subfolders: a list (each name is a table below) or a table name -> rule ("*" = anything inside)
+#
+# Folders are lazy: one exists only once it holds a file. Unknown entries are warnings.
+
+version = 1
+
+binary_ext = [".docx", ".doc", ".xlsx", ".xls", ".pptx", ".pdf", ".msg", ".eml", ".zip"]
+binary_dirs = ["source"]
+
+[root]
+files = ["ticket.toml", "tasks.toml", "comments.jsonl", "{T}-spec.md", "{T}-plan.md", "{T}-release-notes.md", "{T}-digest.md"]
+dirs = ["decisions", "questions", "bugs", "gaps", "architecture", "test-cases", "tests", "source", "investigations"]
+
+[decisions]
+patterns = ["D-*.toml"]
+
+[questions]
+patterns = ["Q-*.toml"]
+
+[bugs]
+patterns = ["B-*.toml"]
+
+[gaps]
+patterns = ["G-*.toml"]
+
+[architecture]
+patterns = ["{T}-*.md", "{T}-*.html", "brief.html", "*.mmd", "*.svg", "*.png"]
+dirs = { diagrams = "*" }
+
+[test-cases]
+patterns = ["{T}-*.md"]
+dirs = { evidence = "*" }
+
+[tests]
+patterns = ["*"]
+dirs = { "*" = "*" }
+
+[source]
+patterns = ["*"]
+dirs = { "*" = "*" }
+
+[investigations]
+patterns = ["*"]
+dirs = { "*" = "*" }

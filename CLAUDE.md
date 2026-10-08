@@ -1,17 +1,23 @@
 # Helmlock
 
-Project is in the **idea stage**. No code yet. The goal right now is to shape the idea with the user, then decide what to build and how.
+This repo is the **delivery repo** (`helmlock`): the TypeScript system (`packages/`), the system agents and skills (`.claude/`), the rulebook (`AGENTS.md`), the harness source (`harness/`) and the knowledge-repo template (`templates/`). The plan that shaped it lives in `docs/plan/`. Milestone 1 (the agent system without the console) is being built.
 
 ## Working style
 
 - The user dictates by voice, so expect rough, run-on phrasing. Interpret intent and confirm anything ambiguous.
-- Do not jump to implementation. Capture and refine the idea first.
 - Keep replies short. Put the detail in the plan HTML.
 - Every question to the user comes with my recommendation and why. Never ask without one.
 
+## Developing helmlock
+
+- Node 24.11+, pnpm 9. `pnpm install`, then `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm test:e2e`. Run the CLI with `node packages/cli/bin/hl.ts <noun> <verb>`.
+- Code runs from TypeScript source with Node type stripping: no enums, namespaces, parameter properties or decorators; `import type` for types; `.ts` extensions in relative imports.
+- Interfaces between parts live in `packages/core/src/contracts/`; the verb list in `docs/build/m1-verbs.md`. Plugins live one per folder in `packages/plugins/`, each with a `plugin.toml`.
+- `AGENTS.md` and `.claude/agents`, `.claude/skills` (except `plan-board`) are the system layer that knowledge repos load; they are product content, not instructions for developing this repo.
+
 ## Planning workflow
 
-Use the `/plan` skill (`.claude/skills/plan/SKILL.md`). The plan lives as small source files in `docs/plan/` and is built into `docs/plan.html`. Start with `python .claude/skills/plan/build.py --status`, edit only the source files you need, rebuild, never read or edit `docs/plan.html`. Update after every meaningful exchange; never start a fresh plan.
+Use the `/plan-board` skill (`.claude/skills/plan-board/SKILL.md`). The plan lives as small source files in `docs/plan/` and is built into `docs/plan.html`. Start with `python .claude/skills/plan-board/build.py --status`, edit only the source files you need, rebuild, never read or edit `docs/plan.html`. Update after every meaningful exchange; never start a fresh plan.
 
 ## Decided design rules
 

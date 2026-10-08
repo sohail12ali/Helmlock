@@ -1,0 +1,37 @@
+# System layer fixture (delivery repo) for the two-layer merge tests.
+schema_version = 1
+
+[permissions]
+deny = ["artifacts/**/ticket.toml", "logs/**"]
+deny_read = [".env", "_work/**"]
+ask = ["git push"]
+deny_shell = ["rm -rf"]
+
+[[hooks]]
+event = "session_start"
+command = "hl context --session"
+
+[[hooks]]
+event = "post_edit"
+matcher = "Edit|Write"
+command = "hl validate --changed"
+
+[[hooks]]
+event = "stop"
+command = "hl log show"
+text = "Log it once with /log-work."
+
+[ignore]
+globs = ["archive/", "_work/"]
+
+[modes]
+ladder = ["plan", "ask", "auto-review", "force"]
+default = "plan"
+
+[[mcp]]
+name = "helmlock"
+command = "node"
+args = ["server.ts"]
+
+[lint]
+not_skills = ["plan-board"]

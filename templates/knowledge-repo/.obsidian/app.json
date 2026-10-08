@@ -1,0 +1,5 @@
+{
+  "userIgnoreFilters": ["archive/", "_work/", "runs/"],
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "shortest"
+}

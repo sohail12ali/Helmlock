@@ -1,0 +1,25 @@
+id = "runtime-claude"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = []
+requires = ["runtimes"]
+verbs = ["run"]
+entry = "index.ts"
+
+[settings.protect]
+type = "boolean"
+label = "Protect state files (Claude Code)"
+hint = "After each run, refuse changes to protected state paths that bypassed the deny rules."
+default = true
+scope = "workspace"
+section = "permissions"
+applies = "restart"
+
+[settings.command]
+type = "string"
+label = "Claude Code binary path"
+hint = "Override the Claude Code CLI binary on this machine (empty = found on PATH)."
+scope = "local"
+section = "agents"
+applies = "restart"

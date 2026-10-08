@@ -1,0 +1,9 @@
+id = "crew"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["crew"]
+# Only orders the mounts: the run manager, tickets, the workflow, the context digest and the providers (loop models).
+requires = ["runManager", "tickets", "workflow", "context", "providers"]
+verbs = ["crew show", "crew set"]
+entry = "index.ts"

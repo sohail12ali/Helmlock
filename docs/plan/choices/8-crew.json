@@ -1,0 +1,318 @@
+[
+ {
+  "id": "F152",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [],
+  "title": "Where agent work starts",
+  "ask": "How does a person hand work to an agent?",
+  "mockups": [
+   "15-ticket-thread",
+   "16-crew"
+  ],
+  "why": "The current page (a task box, agent and ticket drop-downs, a raw transcript) is the form-plus-transcript pattern every reference repo regretted. This choice shapes every agent screen.",
+  "learn": "Paperclip issue threads and wakeups; lc-wms advance per lane and the /do dispatcher; control-center's audit of four entry points (research 12)",
+  "rec_reason": "Work stays attached to its ticket, the stage already knows the next role, and one click replaces three fields. The assistant remains for plain-language requests and routes them onto tickets instead of being a separate place.",
+  "options": [
+   {
+    "id": "thread",
+    "label": "Ticket thread, Next step and Crew",
+    "desc": "Runs live on the ticket thread. Next step picks the role from the stage; @role mentions hand work over; a Crew page shows who is doing what; the assistant routes plain requests into plan cards.",
+    "cost": "L",
+    "lock": "med",
+    "rec": true,
+    "pros": [
+     "One place per piece of work",
+     "No drop-downs: the stage picks the role",
+     "Chat and runs are the same thread"
+    ],
+    "cons": [
+     "Rebuilds the agents UI",
+     "Work without a ticket goes through the assistant"
+    ],
+    "pick_if": "most agent work belongs to a ticket."
+   },
+   {
+    "id": "chat-first",
+    "label": "Keep a chat-first agents page",
+    "desc": "Improve today's page: one composer, the agent guessed from the message, a nicer transcript.",
+    "cost": "M",
+    "lock": "low",
+    "pros": [
+     "Smaller change",
+     "Works without tickets"
+    ],
+    "cons": [
+     "Chat and tickets stay separate",
+     "Results still have to be copied to the ticket"
+    ],
+    "pick_if": "you mostly run one-off tasks outside tickets."
+   },
+   {
+    "id": "board",
+    "label": "Board buttons only",
+    "desc": "One advance button per lane on the board, no chat with agents.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "Very simple"
+    ],
+    "cons": [
+     "No way to steer or talk to a running agent",
+     "No place for questions"
+    ],
+    "pick_if": "agents should run unattended end to end."
+   }
+  ],
+  "decided": {
+   "options": [
+    "thread"
+   ],
+   "note": "",
+   "date": "2026-10-08"
+  }
+ },
+ {
+  "id": "F153",
+  "phase": "agents",
+  "impact": 3,
+  "needs": [
+   "F152"
+  ],
+  "title": "The model engine for any OpenAI-compatible model",
+  "ask": "How do agents run on OpenRouter, LM Studio or DeepSeek models, next to Claude Code and Cursor?",
+  "why": "CLI agents bring their own loop and tools; a plain model does not. Something has to supply the loop, the tools, the approvals and the context management.",
+  "learn": "deepseek-harness agent loop, tools, session log, compaction (research 12)",
+  "rec_reason": "A small loop of our own fits the plugin kernel, reuses the providers, approval queue and verbs we already have, and copies deepseek-harness's proven mechanisms without its ceremony. Running deepseek-harness as a separate CLI is a cheaper fallback if the loop slips.",
+  "options": [
+   {
+    "id": "own-loop",
+    "label": "Our own small loop (Helmlock loop)",
+    "desc": "A runtime plugin: turn and step loop over the providers plugin, tools (read, grep, glob, edit with read-before-edit, shell with ask, hl verbs, todo, skill, ask_user, finish), session event log, compaction ladder, the same approval queue.",
+    "cost": "L",
+    "lock": "med",
+    "rec": true,
+    "pros": [
+     "One approval queue and one event vocabulary for both engines",
+     "Uses the models already configured",
+     "Fits the kernel and our verbs"
+    ],
+    "cons": [
+     "The biggest piece of new code",
+     "Small local models may be weak at tool use"
+    ],
+    "pick_if": "you want any model to work tickets like a CLI agent does."
+   },
+   {
+    "id": "dsh-cli",
+    "label": "Run deepseek-harness as another CLI engine",
+    "desc": "Treat the dsh CLI like Claude Code: spawn it, parse its stream, map its approvals.",
+    "cost": "M",
+    "lock": "med",
+    "pros": [
+     "Its loop is mature",
+     "Less code of our own"
+    ],
+    "cons": [
+     "Another tool to install and keep up to date",
+     "Its own config, skills and approvals beside ours"
+    ],
+    "pick_if": "you already use deepseek-harness daily."
+   },
+   {
+    "id": "chat-only",
+    "label": "Models only for the assistant",
+    "desc": "Keep models for chat and routing; code work runs only on CLI agents.",
+    "cost": "S",
+    "lock": "low",
+    "pros": [
+     "No new loop"
+    ],
+    "cons": [
+     "OpenRouter and local models never do ticket work"
+    ],
+    "pick_if": "you will always have a Claude or Cursor subscription."
+   }
+  ],
+  "decided": {
+   "options": [
+    "own-loop"
+   ],
+   "note": "",
+   "date": "2026-10-08"
+  }
+ },
+ {
+  "id": "F154",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F152"
+  ],
+  "title": "How a run's result reaches the ticket",
+  "ask": "How does the ticket learn what a run did?",
+  "why": "lc-wms scraped STATUS lines with a regex; control-center relied on the agent remembering to comment. Both lost results.",
+  "learn": "lc-wms jobs.py, control-center assistant_reply.py, Paperclip run dispositions (research 12)",
+  "rec_reason": "A typed verb is checkable, the run manager can write it to the ticket itself, and a missing report is visible instead of silent.",
+  "options": [
+   {
+    "id": "report-verb",
+    "label": "A structured outcome: hl run report",
+    "desc": "Every run ends by calling hl run report (done, review, blocked or needs-input, summary, next). The run manager writes it to the ticket; no report shows as no outcome.",
+    "cost": "S",
+    "lock": "low",
+    "rec": true
+   },
+   {
+    "id": "agent-comments",
+    "label": "The agent comments itself",
+    "desc": "Rely on the agent calling ticket comment and ticket move.",
+    "cost": "S",
+    "lock": "low"
+   },
+   {
+    "id": "status-line",
+    "label": "Parse a STATUS line",
+    "desc": "Scan the final text for a STATUS line, as lc-wms did.",
+    "cost": "S",
+    "lock": "low"
+   }
+  ],
+  "decided": {
+   "options": [
+    "report-verb"
+   ],
+   "note": "",
+   "date": "2026-10-08"
+  }
+ },
+ {
+  "id": "F155",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F152"
+  ],
+  "title": "Agent sessions",
+  "ask": "When a role works on a ticket again, does it continue its earlier session?",
+  "learn": "Paperclip agent_task_sessions, control-center resume (research 12)",
+  "rec_reason": "Resuming keeps context and saves tokens; resetting when the folder or instructions change avoids stale state, as Paperclip does.",
+  "options": [
+   {
+    "id": "role-ticket",
+    "label": "One session per role per ticket",
+    "desc": "Resumed on the next hand-off; reset when the folder or the role's instructions change; a Reset button on the ticket.",
+    "cost": "M",
+    "lock": "low",
+    "rec": true
+   },
+   {
+    "id": "fresh",
+    "label": "Fresh every run",
+    "desc": "Each run starts clean with the full brief.",
+    "cost": "S",
+    "lock": "low"
+   },
+   {
+    "id": "ticket",
+    "label": "One session per ticket for all roles",
+    "desc": "Every role continues the same conversation.",
+    "cost": "M",
+    "lock": "low"
+   }
+  ],
+  "why": "Resuming saves tokens and keeps context, but a stale session can carry wrong assumptions.",
+  "decided": {
+   "options": [
+    "role-ticket"
+   ],
+   "note": "",
+   "date": "2026-10-08"
+  }
+ },
+ {
+  "id": "F156",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F152"
+  ],
+  "title": "Isolation for build runs",
+  "ask": "Where does a build run edit code?",
+  "learn": "control-center worktrees.py, lc-wms worktrees.py (research 12)",
+  "rec_reason": "A worktree per ticket keeps parallel builds apart and gives a clean diff to review and merge; analysis roles do not need it.",
+  "options": [
+   {
+    "id": "worktree",
+    "label": "A git worktree per ticket for builds",
+    "desc": "Builder and fixer work in a worktree on branch hl/<ticket>; the run shows a diff stat and a Merge button. Other roles work in place.",
+    "cost": "M",
+    "lock": "low",
+    "rec": true
+   },
+   {
+    "id": "in-place",
+    "label": "In the project folder (today)",
+    "desc": "Runs edit the checked-out project directly.",
+    "cost": "S",
+    "lock": "low"
+   }
+  ],
+  "why": "Two builds in one folder overwrite each other, and an unreviewed edit lands straight in the project.",
+  "decided": {
+   "options": [
+    "worktree"
+   ],
+   "note": "",
+   "date": "2026-10-08"
+  }
+ },
+ {
+  "id": "F157",
+  "phase": "agents",
+  "impact": 2,
+  "needs": [
+   "F152",
+   "F153"
+  ],
+  "title": "Which engine and model a role uses",
+  "ask": "How is the engine and model for a run chosen?",
+  "mockups": [
+   "16-crew"
+  ],
+  "learn": "Paperclip adapterType per agent, control-center backends as data (research 12)",
+  "rec_reason": "A default per role means no choice in the common case, and an override per hand-off covers the rest.",
+  "options": [
+   {
+    "id": "per-role",
+    "label": "Default per role, override per hand-off",
+    "desc": "Settings > Crew sets each role's engine and model; the Next step chip overrides one hand-off.",
+    "cost": "S",
+    "lock": "low",
+    "rec": true
+   },
+   {
+    "id": "per-run",
+    "label": "Pick on every run",
+    "desc": "Choose engine and model each time.",
+    "cost": "S",
+    "lock": "low"
+   },
+   {
+    "id": "one-default",
+    "label": "One default for all roles",
+    "desc": "Every role uses the workspace default engine.",
+    "cost": "S",
+    "lock": "low"
+   }
+  ],
+  "why": "Picking an engine and model on every run is the drop-down problem again; one default for all wastes strong models on simple roles.",
+  "decided": {
+   "options": [
+    "per-role"
+   ],
+   "note": "",
+   "date": "2026-10-08"
+  }
+ }
+]

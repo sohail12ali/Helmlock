@@ -1,0 +1,11 @@
+schema_version = 1
+
+[ticket]
+id = "T-002-sa"
+title = "Seeded faults 2-4: record id mismatch, unknown AC, AC with no task at build"
+stage = "build"
+size = "M"
+priority = "normal"
+owner = "sam"
+created = "2026-10-01T09:00:00.000Z"
+updated = "2026-10-01T09:00:00.000Z"

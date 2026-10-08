@@ -1,5 +1,15 @@
 [
  {
+  "title": "People and storage scopes (Blueprint 31).",
+  "text": "Shared in git, personal under people/<slug>/ in git, private in .hl-local/ never committed. Todos default personal; chats and runs local with share and attach. Agent and skill overrides resolve local > personal > workspace > system into gitignored .claude/ copies.",
+  "source": "You, 2026-10-07/08: yes, build the multi-person scopes"
+ },
+ {
+  "title": "Front-end spike result: stay on React.",
+  "text": "The console was built in React 19 with shadcn/ui with a clean first typecheck and no library retries; Svelte is not needed (F151).",
+  "source": "Build result, 2026-10-07"
+ },
+ {
   "title": "Second review accepted (Blueprint 25).",
   "text": "Agent edit deny covers knowledge-repo state only. Chats, usage, transcripts and audio stay on the machine. Per-machine settings are workspace.local.toml. v1 onboarding is CLI-only. Ticket moves go to activity, not the work log. Plan and close approval for M and L only. SQL rules live in the software-delivery pack. v1 ships the lite workflow only. Record ids carry the author suffix. Later than v1: refiner, clipboard and screenshots, template upgrade and promote, purge, project graph, OpenAI agent loop, try mode, token cap.",
   "source": "You, 2026-10-07: accept all"

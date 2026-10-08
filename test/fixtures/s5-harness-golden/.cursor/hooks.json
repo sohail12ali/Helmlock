@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node \"../delivery/packages/plugins/harness/hooks/session-start.ts\" --host cursor -- context --session"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node \"../delivery/packages/plugins/harness/hooks/post-edit.ts\" --host cursor -- validate --changed"
+      }
+    ],
+    "stop": [
+      {
+        "command": "node \"../delivery/packages/plugins/harness/hooks/stop.ts\" --host cursor --policy harness/harness.toml -- log show"
+      }
+    ]
+  }
+}

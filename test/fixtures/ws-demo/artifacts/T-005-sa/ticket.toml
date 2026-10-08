@@ -1,0 +1,17 @@
+schema_version = 1
+
+[ticket]
+id = "T-005-sa"
+title = "Store opening hours page"
+stage = "backlog"
+size = "S"
+priority = "normal"
+owner = "sam"
+created = "2026-10-07T10:09:27.157Z"
+updated = "2026-10-07T10:09:27.157Z"
+
+[flags]
+blocked = false
+
+[links]
+related = []

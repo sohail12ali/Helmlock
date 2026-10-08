@@ -1,0 +1,360 @@
+// Pure renderers for the generated human pages (F28, F33, Blueprint 5): data in, one self-contained HTML string out.
+// No external requests; the only script is the optional inline theme toggle. Agents never read the output (site/ is deny-listed).
+import type { BugRecord, CommentLine, DecisionRecord, GapRecord, QuestionRecord, RecordKindName, StageDef, Task, Ticket, TicketRecord } from "@helmlock/core";
+import { renderMarkdown } from "./markdown.ts";
+import { PAGE_CSS, THEME_SCRIPT } from "./style.ts";
+
+/** The Helmlock icon (packages/ui/public/favicon.svg), inlined so a page needs no server. */
+const ICON_DATA_URI =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJIZWxtbG9jayI+CiAgPHRpdGxlPkhlbG1sb2NrPC90aXRsZT4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iaGwtYmciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMWUzYThhIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBmNzY2ZSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iaGwtbWV0YWwiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4MT0iMCIgeTE9IjYiIHgyPSIwIiB5Mj0iNTgiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZGU2OGEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZjU5ZTBiIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8IS0tIHRpbGUgLS0+CiAgPHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iMTQiIGZpbGw9InVybCgjaGwtYmcpIi8+CiAgPCEtLSBoZWxtOiBlaWdodCBoYW5kbGVzIGFuZCBzcG9rZXMgLS0+CiAgPGcgc3Ryb2tlPSJ1cmwoI2hsLW1ldGFsKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxnIHN0cm9rZS13aWR0aD0iNC4yIj4KICAgICAgPGxpbmUgeDE9IjMyIiB5MT0iNS41IiB4Mj0iMzIiIHkyPSI1OC41Ii8+CiAgICAgIDxsaW5lIHgxPSI1LjUiIHkxPSIzMiIgeDI9IjU4LjUiIHkyPSIzMiIvPgogICAgICA8bGluZSB4MT0iMTMuMyIgeTE9IjEzLjMiIHgyPSI1MC43IiB5Mj0iNTAuNyIvPgogICAgICA8bGluZSB4MT0iNTAuNyIgeTE9IjEzLjMiIHgyPSIxMy4zIiB5Mj0iNTAuNyIvPgogICAgPC9nPgogICAgPCEtLSByaW0gLS0+CiAgICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIxOC41IiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjQuNiIvPgogIDwvZz4KICA8IS0tIGh1YjogYSBwYWRsb2NrIC0tPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjExLjYiIGZpbGw9IiMwYjFmNGQiLz4KICA8cGF0aCBkPSJNMjcuMiAzMS4ydi0zLjFhNC44IDQuOCAwIDAgMSA5LjYgMHYzLjEiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNobC1tZXRhbCkiIHN0cm9rZS13aWR0aD0iMi42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cmVjdCB4PSIyNC42IiB5PSIzMC40IiB3aWR0aD0iMTQuOCIgaGVpZ2h0PSIxMC42IiByeD0iMi42IiBmaWxsPSJ1cmwoI2hsLW1ldGFsKSIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzQuNiIgcj0iMS43IiBmaWxsPSIjMGIxZjRkIi8+CiAgPHJlY3QgeD0iMzEuMSIgeT0iMzUuMiIgd2lkdGg9IjEuOCIgaGVpZ2h0PSIzLjQiIHJ4PSIwLjkiIGZpbGw9IiMwYjFmNGQiLz4KPC9zdmc+Cg==";
+
+export type StoredRecord = TicketRecord & { kind: RecordKindName; path: string };
+
+export interface TestCase {
+  id: string;
+  text: string;
+}
+
+export interface TicketPageData {
+  ticket: Ticket;
+  records: StoredRecord[];
+  tasks: Task[];
+  comments: CommentLine[];
+  /** Markdown sources, already read. */
+  spec?: string;
+  plan?: string;
+  /** Test-case files (path inside the ticket folder) and the case lines found in them. */
+  testCases: { file: string; cases: TestCase[] }[];
+  /** Every file in the ticket folder, relative to it. */
+  files: string[];
+  stages?: StageDef[];
+  /** Workspace-root prefix as seen from the page, default "../../" (site/t/<T>.html). */
+  rootHref?: string;
+}
+
+export const esc = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+/** Encode each path segment so odd file names still link. */
+const hrefPath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
+const day = (iso: string | undefined) => (iso ? esc(iso.slice(0, 10)) : "");
+const when = (iso: string | undefined) => (iso ? esc(iso.replace("T", " ").slice(0, 16)) : "");
+const chip = (text: string, kind = "") => `<span class="chip${kind ? ` ${kind}` : ""}">${esc(text)}</span>`;
+const table = (head: string[], rows: string[]) =>
+  `<div class="scroll"><table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+const none = (what: string) => `<p class="na">${esc(what)}</p>`;
+
+const STATUS_KIND: Record<string, string> = {
+  open: "warn",
+  accepted: "ok",
+  answered: "ok",
+  fixed: "ok",
+  closed: "ok",
+  rejected: "bad",
+  withdrawn: "",
+  done: "ok",
+  doing: "accent",
+  todo: "",
+  blocked: "bad",
+};
+const status = (s: string) => chip(s, STATUS_KIND[s] ?? "");
+const isOpen = (r: { status?: string }) => r.status === "open";
+
+function shell(title: string, body: string): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="helmlock pages">
+<title>${esc(title)}</title>
+<link rel="icon" href="${ICON_DATA_URI}">
+<style>${PAGE_CSS}</style>
+</head>
+<body>
+<!-- Generated by \`hl page build\` from TOML and markdown. Never edit by hand; agents never read this. -->
+<main>
+${body}
+</main>
+<script>${THEME_SCRIPT}</script>
+</body>
+</html>
+`;
+}
+
+/** AC ids in order of first appearance in the spec (AC-1, AC-2, ...). */
+export function acsOf(md: string | undefined): string[] {
+  return [...new Set((md ?? "").match(/\bAC-\d+\b/g) ?? [])];
+}
+
+/** Lines in a test-case markdown file that carry a TC id (TC-U-01, TC-E3, ...). */
+export function parseTestCases(md: string): TestCase[] {
+  const out: TestCase[] = [];
+  const seen = new Set<string>();
+  for (const raw of md.split(/\r?\n/)) {
+    const m = /\bTC-[A-Z]+-?\d+\b/.exec(raw);
+    if (!m || seen.has(m[0])) continue;
+    seen.add(m[0]);
+    const text = raw
+      .replace(/^\s*(?:[-*+]|\d+\.|#+)\s*/, "")
+      .replace(/\|/g, " ")
+      .replace(/\*\*/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    out.push({ id: m[0], text: text.length > 200 ? `${text.slice(0, 199)}…` : text });
+  }
+  return out;
+}
+
+export function renderTicketPage(d: TicketPageData): string {
+  const t = d.ticket.ticket;
+  const flags = d.ticket.flags ?? { blocked: false };
+  const root = d.rootHref ?? "../../";
+  const dirHref = `${root}${hrefPath(d.ticket.dir)}/`;
+  const byKind = <R>(k: RecordKindName) => d.records.filter((r) => r.kind === k) as unknown as (R & { path: string })[];
+  const decisions = byKind<DecisionRecord>("decision");
+  const questions = byKind<QuestionRecord>("question");
+  const bugs = byKind<BugRecord>("bug");
+  const gaps = byKind<GapRecord>("gap");
+  const recHref = (r: { path: string }) => `${root}${hrefPath(r.path)}`;
+  const idLink = (r: { id: string; path: string }) => `<a href="${recHref(r)}">${esc(r.id)}</a>`;
+  const sections: { id: string; title: string; n?: number; html: string }[] = [];
+
+  // Summary
+  const stageIdx = d.stages ? d.stages.findIndex((s) => s.id === t.stage) : -1;
+  const stageLine =
+    d.stages && stageIdx >= 0
+      ? `<p class="muted">Stage ${stageIdx + 1} of ${d.stages.length}: ${d.stages.map((s, i) => (i === stageIdx ? `<strong>${esc(s.label)}</strong>` : esc(s.label))).join(" → ")}</p>`
+      : "";
+  const blockedLine = flags.blocked
+    ? `<p><strong>Blocked</strong> by ${esc(flags.blocked_by ?? "unknown")}${flags.next_action ? `. Next: ${esc(flags.next_action)}` : ""}</p>`
+    : "";
+  sections.push({
+    id: "summary",
+    title: "Summary",
+    html: `${t.summary ? `<p>${esc(t.summary)}</p>` : none("No summary yet.")}${blockedLine}${stageLine}`,
+  });
+
+  // Decisions
+  sections.push({
+    id: "decisions",
+    title: "Decisions",
+    n: decisions.length,
+    html: decisions.length
+      ? table(
+          ["Id", "Decision", "Chosen", "Why", "Rejected", "Status", "Date"],
+          decisions.map(
+            (r) =>
+              `<tr><td>${idLink(r)}</td><td>${esc(r.title)}</td><td>${esc(r.chosen ?? "")}</td><td>${esc(r.why ?? "")}</td><td>${esc((r.rejected ?? []).join("; "))}</td><td>${status(r.status)}</td><td>${day(r.date)}</td></tr>`,
+          ),
+        )
+      : none("No decisions recorded."),
+  });
+
+  // Questions
+  const openQ = questions.filter(isOpen).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  const doneQ = questions.filter((q) => !isOpen(q));
+  const qItem = (q: QuestionRecord & { path: string }) =>
+    `<li>${q.blocking && isOpen(q) ? '<span class="q-blocking" title="blocks the next stage">Blocking</span>' : ""}${idLink(q)} ${esc(q.text)}${
+      q.options?.length ? `<br><span class="muted">Options: ${esc(q.options.join(" / "))}</span>` : ""
+    }${q.answer ? `<br><span class="muted">Answer: ${esc(q.answer)}</span>` : ""}</li>`;
+  sections.push({
+    id: "questions",
+    title: "Open questions",
+    n: openQ.length,
+    html:
+      (openQ.length ? `<ul class="plain">${openQ.map(qItem).join("")}</ul>` : none("No open questions.")) +
+      (doneQ.length ? `<details><summary>${doneQ.length} answered or closed</summary><ul class="plain">${doneQ.map(qItem).join("")}</ul></details>` : ""),
+  });
+
+  // Bugs and gaps
+  const issueRows = [
+    ...bugs.map((b) => ({
+      open: isOpen(b),
+      row: `<td>${idLink(b)}</td><td>Bug</td><td>${esc(b.title)}</td><td>${esc(b.severity)}</td><td>${status(b.status)}</td>`,
+      sev: b.severity,
+    })),
+    ...gaps.map((g) => ({
+      open: isOpen(g),
+      row: `<td>${idLink(g)}</td><td>Gap</td><td>${esc(g.text)}</td><td>${esc(g.category)}</td><td>${status(g.status)}</td>`,
+      sev: "",
+    })),
+  ].sort((a, b) => Number(b.open) - Number(a.open));
+  sections.push({
+    id: "bugs",
+    title: "Bugs and gaps",
+    n: issueRows.filter((r) => r.open).length,
+    html: issueRows.length
+      ? table(
+          ["Id", "Kind", "What", "Severity / area", "Status"],
+          issueRows.map((r) => `<tr${r.open && (r.sev === "high" || r.sev === "critical") ? ' class="hot"' : ""}>${r.row}</tr>`),
+        )
+      : none("No bugs or gaps."),
+  });
+
+  // Tasks with AC trace and progress
+  const done = d.tasks.filter((x) => x.status === "done").length;
+  const pct = d.tasks.length ? Math.round((done / d.tasks.length) * 100) : 0;
+  const acs = acsOf(d.spec);
+  for (const task of d.tasks) for (const a of task.acs ?? []) if (!acs.includes(a)) acs.push(a);
+  const allCases = d.testCases.flatMap((f) => f.cases);
+  const trace = acs.map((ac) => {
+    const ts = d.tasks.filter((x) => (x.acs ?? []).includes(ac));
+    const cs = allCases.filter((c) => new RegExp(`\\b${ac}\\b`).test(c.text));
+    return `<tr${ts.length ? "" : ' class="hot"'}><td>${esc(ac)}</td><td>${ts.length ? ts.map((x) => `${esc(x.id)} ${status(x.status)}`).join("<br>") : '<span class="na">no task</span>'}</td><td>${
+      cs.length ? cs.map((c) => esc(c.id)).join(", ") : '<span class="na">none</span>'
+    }</td></tr>`;
+  });
+  sections.push({
+    id: "tasks",
+    title: "Tasks",
+    n: d.tasks.length,
+    html: d.tasks.length
+      ? `<p>${done} of ${d.tasks.length} done (${pct}%)</p><div class="progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>${table(
+          ["Task", "Slice", "Title", "Layer", "ACs", "Status", "Est h"],
+          d.tasks.map(
+            (x) =>
+              `<tr><td>${esc(x.id)}</td><td>${esc(x.slice)}</td><td>${esc(x.title)}${x.depends?.length ? `<br><span class="muted">after ${esc(x.depends.join(", "))}</span>` : ""}</td><td>${esc(
+                x.layer,
+              )}</td><td>${esc((x.acs ?? []).join(", "))}</td><td>${status(x.status)}</td><td>${x.estimate_h ?? ""}</td></tr>`,
+          ),
+        )}${acs.length ? `<h3>Acceptance criteria trace</h3>${table(["AC", "Tasks", "Test cases"], trace)}` : ""}`
+      : `${none("No tasks yet.")}${acs.length ? `<h3>Acceptance criteria trace</h3>${table(["AC", "Tasks", "Test cases"], trace)}` : ""}`,
+  });
+
+  // Spec and plan
+  const md = (src: string | undefined, what: string) =>
+    src?.trim() ? `<div class="md">${renderMarkdown(src, { base: dirHref })}</div>` : none(`No ${what} yet.`);
+  sections.push({ id: "spec", title: "Spec", html: md(d.spec, "spec") });
+  sections.push({ id: "plan", title: "Plan", html: md(d.plan, "plan") });
+
+  // Test cases
+  sections.push({
+    id: "tests",
+    title: "Test cases",
+    n: allCases.length,
+    html: d.testCases.length
+      ? d.testCases
+          .map(
+            (f) =>
+              `<p><a href="${dirHref}${hrefPath(f.file)}">${esc(f.file)}</a></p>${
+                f.cases.length
+                  ? `<ul class="plain">${f.cases.map((c) => `<li><code>${esc(c.id)}</code> ${esc(c.text)}</li>`).join("")}</ul>`
+                  : none("No case ids found.")
+              }`,
+          )
+          .join("")
+      : none("No test cases yet."),
+  });
+
+  // Files
+  sections.push({
+    id: "files",
+    title: "Files",
+    n: d.files.length,
+    html: d.files.length
+      ? `<ul class="plain">${d.files.map((f) => `<li><a href="${dirHref}${hrefPath(f)}">${esc(f)}</a></li>`).join("")}</ul>`
+      : none("No files."),
+  });
+
+  // Repos and branches
+  const changes = d.ticket.changes ?? [];
+  const links = d.ticket.links ?? { related: [] };
+  const linkRows = [
+    ...(links.parent ? [`<li>Parent: <a href="${esc(links.parent)}.html">${esc(links.parent)}</a></li>`] : []),
+    ...(links.related ?? []).map((r) => `<li>Related: <a href="${esc(r)}.html">${esc(r)}</a></li>`),
+  ];
+  sections.push({
+    id: "repos",
+    title: "Repos and branches",
+    n: changes.length,
+    html:
+      (changes.length
+        ? table(
+            ["Repo", "Branch"],
+            changes.map((c) => `<tr><td>${esc(c.repo)}</td><td>${c.branch ? `<code>${esc(c.branch)}</code>` : '<span class="na">none</span>'}</td></tr>`),
+          )
+        : none("No repos linked yet.")) + (linkRows.length ? `<ul class="plain">${linkRows.join("")}</ul>` : ""),
+  });
+
+  // Thread
+  sections.push({
+    id: "thread",
+    title: "Thread",
+    n: d.comments.length,
+    html: d.comments.length
+      ? `<ul class="plain thread">${d.comments.map((c) => `<li><span class="who">${esc(c.author)}</span><span class="when">${when(c.ts)}</span><p>${esc(c.text)}</p></li>`).join("")}</ul>`
+      : none("No comments yet."),
+  });
+
+  const blockingCount = questions.filter((q) => isOpen(q) && q.blocking).length;
+  const chips = [
+    chip(`Stage: ${d.stages?.find((s) => s.id === t.stage)?.label ?? t.stage}`, "accent"),
+    t.size ? chip(`Size ${t.size}`) : "",
+    chip(`Priority ${t.priority}`, t.priority === "urgent" ? "bad" : t.priority === "high" ? "warn" : ""),
+    t.owner ? chip(`Owner ${t.owner}`) : chip("No owner"),
+    flags.blocked ? chip("Blocked", "bad") : chip("Not blocked", "ok"),
+    blockingCount ? chip(`${blockingCount} blocking question${blockingCount > 1 ? "s" : ""}`, "warn") : "",
+    d.ticket.claim ? chip(`Claimed by ${d.ticket.claim.claimed_by}`) : "",
+    t.project ? chip(`Project ${t.project}`) : "",
+  ].filter(Boolean);
+
+  const body = `<div class="top"><a href="${root}site/index.html">All tickets</a><button class="theme" type="button">Theme</button></div>
+<header>
+<h1><span class="id">${esc(t.id)}</span>${esc(t.title)}</h1>
+${t.goal ? `<p class="goal">${esc(t.goal)}</p>` : ""}
+<div class="meta">${chips.join("")}</div>
+</header>
+<nav class="toc">${sections.map((s) => `<a href="#${s.id}">${esc(s.title)}${s.n ? ` (${s.n})` : ""}</a>`).join("")}</nav>
+${sections.map((s) => `<section id="${s.id}"><h2>${esc(s.title)}${s.n !== undefined ? ` <span class="n">${s.n}</span>` : ""}</h2>${s.html}</section>`).join("\n")}
+<footer>Updated ${when(t.updated)}. Built from ${esc(d.ticket.dir)}; edit those files (through hl), not this page.</footer>`;
+  return shell(`${t.id} ${t.title}`, body);
+}
+
+export interface IndexOptions {
+  stages?: StageDef[];
+  title?: string;
+  /** Link prefix to the ticket pages, default "t/" (site/index.html). */
+  pageHref?: string;
+}
+
+/** site/index.html: a board-like list grouped by stage, in workflow order; unknown stages come last. */
+export function renderIndexPage(tickets: Ticket[], opts: IndexOptions = {}): string {
+  const stages = opts.stages ?? [];
+  const pageHref = opts.pageHref ?? "t/";
+  const known = new Set(stages.map((s) => s.id));
+  const groups: { id: string; label: string; items: Ticket[] }[] = stages.map((s) => ({ id: s.id, label: s.label, items: [] }));
+  const other = new Map<string, Ticket[]>();
+  for (const t of tickets) {
+    const st = t.ticket.stage;
+    if (known.has(st)) groups.find((g) => g.id === st)!.items.push(t);
+    else other.set(st, [...(other.get(st) ?? []), t]);
+  }
+  for (const [id, items] of [...other].sort(([a], [b]) => a.localeCompare(b))) groups.push({ id, label: id, items });
+  for (const g of groups) g.items.sort((a, b) => a.ticket.id.localeCompare(b.ticket.id));
+  const title = opts.title ?? "Tickets";
+  const row = (t: Ticket) => {
+    const x = t.ticket;
+    return `<tr${t.flags?.blocked ? ' class="hot"' : ""}><td><a href="${pageHref}${encodeURIComponent(x.id)}.html">${esc(x.id)}</a></td><td>${esc(x.title)}</td><td>${esc(
+      x.size ?? "",
+    )}</td><td>${esc(x.priority)}</td><td>${esc(x.owner ?? "")}</td><td>${t.flags?.blocked ? chip("Blocked", "bad") : ""}</td></tr>`;
+  };
+  const body = `<div class="top"><span>${tickets.length} ticket${tickets.length === 1 ? "" : "s"}</span><button class="theme" type="button">Theme</button></div>
+<header><h1>${esc(title)}</h1></header>
+<nav class="toc">${groups.map((g) => `<a href="#stage-${esc(g.id)}">${esc(g.label)} (${g.items.length})</a>`).join("")}</nav>
+${groups
+  .map(
+    (g) =>
+      `<section class="stage" id="stage-${esc(g.id)}"><h2>${esc(g.label)} <span class="n">${g.items.length}</span></h2>${
+        g.items.length ? table(["Id", "Title", "Size", "Priority", "Owner", ""], g.items.map(row)) : none("Empty.")
+      }</section>`,
+  )
+  .join("\n")}
+<footer>Generated by hl page build. Edit tickets through hl, not this page.</footer>`;
+  return shell(title, body);
+}

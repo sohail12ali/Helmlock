@@ -1,0 +1,8 @@
+id = "assistant"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["assistant"]
+requires = ["providers"]
+verbs = ["chat share"]
+entry = "index.ts"

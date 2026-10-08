@@ -1,0 +1,10 @@
+{
+  "skills": ["shape"],
+  "query": "/shape T-070-sa (size S): change the label on the confirm button of the checkout screen from 'OK' to 'Place order'. The screen and the text key are named in the ticket.",
+  "expected_behavior": [
+    "Looks up the screen and the text key itself instead of asking",
+    "Asks no questions (or one round of at most 3) because the request and the code answer everything; states at most 3 assumptions instead",
+    "Reports a confidence level and does not run several rounds for a size S ticket",
+    "Does not invent schema, data or state-transition work for a text change"
+  ]
+}

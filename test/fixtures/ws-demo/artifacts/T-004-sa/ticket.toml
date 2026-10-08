@@ -1,0 +1,19 @@
+schema_version = 1
+
+[ticket]
+id = "T-004-sa"
+title = "Fix rounding in tax totals"
+stage = "spec"
+size = "S"
+priority = "urgent"
+owner = "sam"
+created = "2026-10-07T10:09:26.812Z"
+updated = "2026-10-07T10:09:30.693Z"
+
+[flags]
+blocked = true
+blocked_by = "Finance to confirm rounding rule"
+next_action = "Ask finance on Monday"
+
+[links]
+related = []

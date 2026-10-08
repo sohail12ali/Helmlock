@@ -1,0 +1,19 @@
+id = "approval-queue"
+kind = "code"
+version = "0.1.0"
+requires_core = ">=1 <2"
+provides = ["approvalQueue"]
+requires = []
+verbs = []
+entry = "index.ts"
+
+[settings.approval_timeout_sec]
+type = "number"
+label = "Approval timeout (seconds)"
+hint = "A permission card nobody answers within this time is denied (fail-closed)."
+default = 300
+min = 10
+integer = true
+scope = "workspace"
+section = "permissions"
+applies = "restart"

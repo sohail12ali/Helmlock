@@ -1,0 +1,21 @@
+{
+  "name": "@helmlock/plugins",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./registry.ts",
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1",
+    "@helmlock/core": "workspace:^",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "smol-toml": "^1.9.0",
+    "unified": "^11.0.5",
+    "zod": "^4.6.5"
+  }
+}

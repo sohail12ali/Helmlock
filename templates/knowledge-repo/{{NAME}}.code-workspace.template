@@ -1,0 +1,12 @@
+{
+  "folders": [
+    { "name": "knowledge", "path": "." },
+    { "name": "system", "path": "{{DELIVERY_REL}}" }
+  ],
+  "settings": {
+    "files.exclude": {
+      "archive": true,
+      "_work": true
+    }
+  }
+}

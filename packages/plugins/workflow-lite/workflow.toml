@@ -1,0 +1,87 @@
+# workflow-lite: the six-lane pack (B25 H). Data only; gates are named TypeScript checks in gates.ts.
+# Lanes ported from lc-wms .kanban/config/board-ticket.toml (key, title, blurb, tone, wip).
+# Transitions are tried in order; the first match wins. A move with no matching transition is refused.
+id = "workflow-lite"
+version = 1
+
+[[stage]]
+id = "backlog"
+label = "Backlog"
+blurb = "Accepted, not started"
+tone = "muted"
+agent = "analyst"
+
+[[stage]]
+id = "spec"
+label = "Spec"
+blurb = "What and why, acceptance criteria"
+tone = "active"
+agent = "analyst"
+
+[[stage]]
+id = "plan"
+label = "Plan"
+blurb = "Design, slices and tasks"
+tone = "active"
+agent = "planner"
+
+[[stage]]
+id = "build"
+label = "Build"
+blurb = "Implementation in progress"
+tone = "active"
+agent = "builder"
+wip = 6
+
+[[stage]]
+id = "verify"
+label = "Verify"
+blurb = "Review and tests"
+tone = "warn"
+agent = "verifier"
+wip = 5
+
+[[stage]]
+id = "done"
+label = "Done"
+blurb = "Shipped"
+tone = "ok"
+terminal = true
+
+# Forward, one step at a time.
+[[transition]]
+from = "backlog"
+to = "spec"
+gate = ["not-blocked"]
+
+[[transition]]
+from = "spec"
+to = "plan"
+gate = ["not-blocked", "no-blocking-questions", "has-spec"]
+
+[[transition]]
+from = "plan"
+to = "build"
+gate = ["not-blocked", "no-blocking-questions", "has-tasks"]
+
+[[transition]]
+from = "build"
+to = "verify"
+gate = ["not-blocked", "tasks-done"]
+
+[[transition]]
+from = "verify"
+to = "done"
+gate = ["not-blocked", "no-open-bugs"]
+
+# Any stage back to backlog, and back any number of steps, with no gate.
+[[transition]]
+from = "*"
+to = "backlog"
+gate = []
+
+[[transition]]
+from = "*"
+to = "*"
+direction = "back"
+gate = []

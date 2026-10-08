@@ -1,0 +1,13 @@
+{
+  "skills": ["kickoff"],
+  "query": "/kickoff T-040-sa full",
+  "expected_behavior": [
+    "Claims the ticket with hl ticket claim first, and stops without retrying if the claim exits 1",
+    "Runs stages strictly in order; a wave never spans a stage boundary",
+    "Keeps spec and plan as single-task stages; does not fan out the analyst or the planner",
+    "Lifts the build waves from the plan's slices and the tasks in hl ticket show, not from the request; a plan with no slices is sent back as a planning gap",
+    "For a ticket with 2 or more projects, dispatches one task per project in one message after settling the cross-project contract",
+    "Moves the ticket once per stage, never per task, and treats an exit code of 2 from any verb as a gate to stop at",
+    "Launches role agents, not stage skills: no /spec, /plan or /verify composed in kickoff itself"
+  ]
+}

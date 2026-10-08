@@ -1,0 +1,24 @@
+{
+  "name": "helmlock",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "test": "node --test --test-timeout=60000 --test-reporter=dot \"packages/**/*.test.ts\"",
+    "test:e2e": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json && pnpm --filter @helmlock/ui typecheck",
+    "lint": "biome check .",
+    "hl": "node packages/cli/bin/hl.ts",
+    "test:ui": "pnpm --filter @helmlock/ui test",
+    "build:ui": "pnpm --filter @helmlock/ui build",
+    "test:perf": "node --env-file=test/perf.env --test --test-name-pattern=F109 packages/server/src/app.test.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2"
+  }
+}

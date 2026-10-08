@@ -1,0 +1,13 @@
+schema_version = 1
+
+[ticket]
+id = "T-003-sa"
+title = "Seeded faults 5-6: blocked without next_action, unparsable record"
+stage = "spec"
+priority = "normal"
+created = "2026-10-01T09:00:00.000Z"
+updated = "2026-10-01T09:00:00.000Z"
+
+[flags]
+blocked = true
+blocked_by = "DBA review"

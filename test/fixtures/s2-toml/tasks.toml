@@ -1,0 +1,29 @@
+schema_version = 1
+ticket = "T-014-sa"
+
+[[task]]
+id = "S1-T1"
+slice = "S1"
+title = "Add gift-card table and stored procedure"
+layer = "db"
+acs = ["AC-1"]
+estimate_h = 2
+status = "todo"
+depends = []
+files = ["db/forward/01_wms.GiftCard.Table.sql"]
+
+[[task]]
+id = "S1-T2"
+slice = "S1"
+title = "API endpoint to redeem a gift card"
+layer = "api"
+acs = ["AC-1", "AC-2"]
+estimate_h = 1.5
+actual_h = 2.0
+status = "doing"
+depends = ["S1-T1"]
+files = []
+reviewer = "om-prakash"
+
+[task.meta]
+risk = "high"
