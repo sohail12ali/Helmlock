@@ -264,12 +264,16 @@ export type TodoRecord = z.infer<typeof TodoRecord>;
 // ---------- logs ----------
 export const WorkLogEntry = z
   .object({
+    /** Stable id within the day file (Work page edits); entries written before ids are addressed by position. */
+    id: z.string().optional(),
     ticket: z.string().default("-"),
     category: Category,
     text: z.string().max(200),
     weight: z.number().int().min(1).max(5).optional(),
     hours: z.number().positive().optional(),
     logged: IsoTime,
+    /** "manual" or "agent-run:<run id>" when the line was drafted from a finished run. */
+    source: z.string().optional(),
   })
   .loose();
 export const WorkLogDay = z

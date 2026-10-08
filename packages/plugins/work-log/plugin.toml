@@ -1,18 +1,32 @@
 id = "work-log"
 kind = "code"
-version = "0.1.0"
+version = "0.2.0"
 requires_core = ">=1 <2"
 provides = ["worklog"]
 requires = ["roster"]
-verbs = ["log-work", "log show"]
+verbs = ["log-work", "log show", "log edit", "log remove", "log day-hours"]
 entry = "index.ts"
 
 [settings.day_hours]
 type = "number"
 label = "Working day (hours)"
-hint = "Hours a day's work-log entries are spread over when no hours are pinned."
+hint = "The contractual minimum day: weighted entries share it, a longer stated day shows as overtime. Internal is counted on top."
 default = 8
 min = 0.25
 max = 24
+scope = "workspace"
+section = "workspace"
+
+[settings.categories]
+type = "list"
+label = "Work log categories"
+hint = "Categories offered on the Work page, in order: any of Development, Code Review, Testing, Design, Documentation, Internal. Empty means all six."
+scope = "workspace"
+section = "workspace"
+
+[settings.quick_picks]
+type = "list"
+label = "Work log quick picks"
+hint = "Buttons on the Work page quick add, each label|ticket|category|hours, for example Standup|Internal|Internal|0.25, Meeting|Internal|Internal|1, Leave|Leave|Internal|8. Empty means none."
 scope = "workspace"
 section = "workspace"

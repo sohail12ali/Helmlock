@@ -154,3 +154,107 @@ export function allocate(entries: readonly { weight?: number; hours?: number }[]
   const total = hours.reduce((s, h) => s + h, 0);
   return { hours, total, pinned, length, inferred_length: inferred };
 }
+
+/** The vault-only ticket key: tracked on top of the contractual day, never sharing its floor (lc-wms VAULT_ONLY_TICKET). */
+export const INTERNAL_TICKET = "Internal";
+
+export interface DayAllocation {
+  /** Hours per entry, in file order. */
+  hours: number[];
+  total: number;
+  /** Hours of the billable pool (every ticket except Internal). */
+  billable: number;
+  /** Hours of Internal entries, on top of the floor. */
+  internal: number;
+  /** Pinned hours of the billable pool. */
+  pinned: number;
+  /** The contractual minimum (config day_hours). A floor, not a cap. */
+  floor: number;
+  /** The billable day's length: the largest of floor, stated length and pinned hours. */
+  length: number;
+  /** Pinned hours short of the length with nothing flexible to absorb the rest. Reported, never invented. */
+  shortfall: number;
+  /** Billable hours beyond the floor. A fact to state, not an error. */
+  overtime: number;
+  /** Pinned hours filled the day and no length was stated: flexible entries carry one step each as a placeholder. */
+  inferred_length: boolean;
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Largest-remainder split of `steps` quarter hours by weight. */
+function splitSteps(weights: number[], steps: number): number[] {
+  const totalW = weights.reduce((s, w) => s + w, 0) || 1;
+  const raw = weights.map((w) => (steps * w) / totalW);
+  const base = raw.map((x) => Math.floor(x));
+  const left = steps - base.reduce((s, x) => s + x, 0);
+  const order = raw.map((_, k) => k).sort((x, y) => raw[y]! - base[y]! - (raw[x]! - base[x]!) || weights[y]! - weights[x]! || x - y);
+  for (const k of order.slice(0, left)) base[k] = base[k]! + 1;
+  return base.map((b) => b * STEP);
+}
+
+/**
+ * Split one day across its entries (lc-wms allocate): billable tickets share the floor (`floor`, default 8) or the
+ * stated length when longer; pinned hours stand; the rest goes by weight in quarter hours, largest remainder, so the
+ * parts sum exactly. Internal entries are allocated on top (a weight is that many quarter hours) so harness and wiki
+ * work never take hours from delivery tickets. A day with no entries is zero, never a manufactured eight.
+ */
+export function allocateDay(
+  entries: readonly { ticket?: string; weight?: number; hours?: number }[],
+  floor = DEFAULT_DAY_HOURS,
+  stated?: number,
+): DayAllocation {
+  const hours = entries.map(() => 0);
+  const billIdx = entries.flatMap((e, i) => (e.ticket === INTERNAL_TICKET ? [] : [i]));
+  const intIdx = entries.flatMap((e, i) => (e.ticket === INTERNAL_TICKET ? [i] : []));
+
+  let pinned = 0;
+  let length = r2(Math.max(floor, stated ?? 0));
+  let inferred = false;
+  if (billIdx.length) {
+    const flex = billIdx.filter((i) => entries[i]?.hours === undefined);
+    pinned = r2(billIdx.reduce((s, i) => s + (entries[i]?.hours ?? 0), 0));
+    length = r2(Math.max(floor, stated ?? 0, pinned));
+    let remaining = r2(length - pinned);
+    if (flex.length && remaining < STEP * flex.length) {
+      remaining = STEP * flex.length;
+      length = r2(pinned + remaining);
+      inferred = stated === undefined;
+    }
+    for (const i of billIdx) {
+      const h = entries[i]?.hours;
+      if (h !== undefined) hours[i] = h;
+    }
+    if (flex.length) {
+      const parts = splitSteps(
+        flex.map((i) => Math.max(1, entries[i]?.weight ?? DEFAULT_WEIGHT)),
+        Math.round(remaining / STEP),
+      );
+      flex.forEach((i, k) => {
+        hours[i] = parts[k] ?? 0;
+      });
+    }
+  }
+  // Internal on top: a weight is that many quarter hours.
+  for (const i of intIdx) {
+    const e = entries[i];
+    hours[i] = e?.hours ?? Math.max(1, e?.weight ?? DEFAULT_WEIGHT) * STEP;
+  }
+  const billable = r2(billIdx.reduce((s, i) => s + (hours[i] ?? 0), 0));
+  const internal = r2(intIdx.reduce((s, i) => s + (hours[i] ?? 0), 0));
+  return {
+    hours,
+    total: r2(billable + internal),
+    billable,
+    internal,
+    pinned,
+    floor: r2(floor),
+    length,
+    shortfall: billIdx.length ? r2(Math.max(0, length - billable)) : 0,
+    overtime: r2(Math.max(0, billable - floor)),
+    inferred_length: inferred,
+  };
+}
+
+/** Where a line came from: "manual" or "agent-run:<run id>". */
+export const SOURCE_RE = /^(?:manual|agent-run:[\w.-]{1,120})$/;

@@ -34,6 +34,9 @@ Ids: tickets `T-014-sa` (counter plus author initials), records `D-003-sa` (deci
 | `hl todo done <TD>` / `hl todo list` | `--json` | S4 |
 | `hl log-work <T or -> "<one sentence>"` | `--category`, `--weight 1-5`, `--hours` | S4 |
 | `hl log show` | `--week`, `--author`, `--json` | S4 |
+| `hl log edit <date> <entry id or position>` | `--text`, `--category`, `--ticket`, `--weight` (unpins), `--hours` (pins), `--hash`, `--dry-run` | Work page |
+| `hl log remove <date> <entry id or position>` | `--hash`, `--dry-run` | Work page |
+| `hl log day-hours <date> <hours>` | stated day length, 0 clears; `--hash`, `--dry-run` | Work page |
 | `hl context <T>` / `hl context --session` | `--json` (digest: ticket, stage, blocked, open questions, next, files) | S4 |
 | `hl search "<query>"` | `--archived`, `--json` | S4 |
 | `hl skill list` / `hl skill find "<query>"` | `--json`; same-named skills in several layers are all shown | S4 |

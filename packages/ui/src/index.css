@@ -19,6 +19,14 @@
   --warn: #b8730a;
   --danger: #d81f2a;
   --radius: 10px;
+  /* Work log category palette (control-center): fixed, never cycled; a 7th series folds into --cat-other. */
+  --cat-1: #2481d7;
+  --cat-2: #d1571f;
+  --cat-3: #178f63;
+  --cat-4: #4a3aa7;
+  --cat-5: #c4527d;
+  --cat-6: #8a6a08;
+  --cat-other: #6b7280;
   color-scheme: light;
 }
 
@@ -36,6 +44,13 @@
   --ok: #4ade80;
   --warn: #fbbf24;
   --danger: #f87171;
+  --cat-1: #4d9bea;
+  --cat-2: #e8813f;
+  --cat-3: #35c07d;
+  --cat-4: #9b8bf5;
+  --cat-5: #e77aa5;
+  --cat-6: #c9a227;
+  --cat-other: #8b919c;
   color-scheme: dark;
 }
 
@@ -63,6 +78,13 @@
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-destructive: var(--danger);
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+  --color-cat-other: var(--cat-other);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

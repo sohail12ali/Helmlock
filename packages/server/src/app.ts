@@ -18,6 +18,7 @@ import { registerProjectRoutes } from "./projects.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import { registerThreadRoutes } from "./thread.ts";
+import { registerWorklogRoutes } from "./worklog.ts";
 import {
   checkWriteRequest,
   createWriteQueue,
@@ -226,6 +227,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   // Milestone 8: the crew and the ticket thread (Next step, hand-off, composer).
   registerCrewRoutes(api, m4);
   registerThreadRoutes(api, m4);
+  // Work page: day sheets, rollups, search, evidence and suggested entries.
+  registerWorklogRoutes(api, m4);
 
   api.post("/verbs/*", async (c) => {
     try {
