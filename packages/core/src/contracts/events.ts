@@ -14,4 +14,6 @@ export interface Events {
   "approval.requested": { id: string; action: string; detail: string; runId?: string; chatId?: string; localOnly: boolean };
   "approval.decided": { id: string; decision: "allow" | "deny"; by: string; channel: "console" | "telegram" | "terminal" | "timeout" };
   "chat.message": { chatId: string; role: "user" | "assistant"; text: string; channel: "console" | "telegram" };
+  // milestone 7: a machine secret was saved (name only, never the value); e.g. the Telegram bot re-checks its token.
+  "secret.saved": { name: string; actor: Actor };
 }

@@ -29,3 +29,10 @@ export async function askMissing(verb: string, missing: FieldInfo[]): Promise<Re
   }
   return out;
 }
+
+/** A hidden prompt for a secret input; undefined when cancelled. The value is masked and never echoed. */
+export async function askSecret(verb: string, key: string): Promise<string | undefined> {
+  const { password, isCancel } = await import("@clack/prompts");
+  const r = await password({ message: `${verb}: ${key.replace(/_/g, " ")} (hidden)`, validate: (v) => (v?.trim() ? undefined : "required") });
+  return isCancel(r) ? undefined : String(r);
+}

@@ -39,12 +39,17 @@ Ids: tickets `T-014-sa` (counter plus author initials), records `D-003-sa` (deci
 | `hl harness sync` | `--check` | S5 |
 | `hl harness lint` | `--json` | S5 |
 | `hl run "<task>"` | `--runtime claude\|cursor`, `--agent <role>`, `--ticket <T>`, `--mode plan\|ask\|auto-review\|force` | S5 |
+<<<<<<< HEAD
 | `hl provider add <id>` | `--preset`, `--base-url`, `--key-env <NAME>`, `--model` or `--models` (repeatable, at least one), `--label`; first model becomes the default when there is none | M7 |
 | `hl provider remove <id>` | removes the provider and its models; refuses when it holds the default model unless `--force` (the default then moves to the first remaining model, or is cleared) | M7 |
 | `hl model add <provider> <model...>` | adds models to a saved provider; models already there are skipped and named | M7 |
 | `hl model remove <model-id>` | `--default <model-id>` is required when removing the default model; role models naming it are cleared | M7 |
 | `hl model default <model-id>` | the model must be configured | M7 |
 | `hl model list` | `--json`; the default model is marked `*` | M7 |
+=======
+| `hl secret set <NAME>` | value from a hidden prompt, or stdin when piped (`hl secret set NAME < file`); never on the command line (`--value` is refused). Writes `NAME=value` to the knowledge repo's gitignored `.env` (adds `.env` to `.gitignore` if missing); output and activity carry the name only. Not offered to the assistant or Telegram. | M7 |
+| `hl secret status [NAME...]` | where each name is found: `environment`, `.env` or `missing` (default: the Telegram token variable and every provider `key_env`); never values; `--json` | M7 |
+>>>>>>> worktree-agent-abbf2cbf1e71f7811
 
 Stages (workflow-lite): `backlog`, `spec`, `plan`, `build`, `verify`, `done`. Blocked is a flag that needs `--by` and `--next`.
 

@@ -5,6 +5,8 @@ import { CONSOLE_VERBS, describeInput, type FieldInfo, type FileLayer, type Tool
 
 /** Read-only verbs offered as tools (when their plugin is mounted). */
 export const READ_VERBS = ["search", "context", "ticket show", "ticket list", "todo list", "log show", "skill find"] as const;
+/** Never offered as tools: a secret must not pass through a model or a chat log (milestone 7). */
+export const NEVER_TOOLS: readonly string[] = ["secret set", "secret status"];
 export const FILE_READ = "file_read";
 export const FILE_READ_MAX = 12_000;
 export const TOOL_RESULT_MAX = 6_000;
@@ -71,7 +73,7 @@ export function buildTools(verbs: VerbsService, o: { writes: boolean; lowTrust: 
   if (o.writes)
     for (const id of CONSOLE_VERBS) {
       const def = verbs.get(id);
-      if (def?.writes) out.push(verbTool(def, "write"));
+      if (def?.writes && !NEVER_TOOLS.includes(id) && !def.secret?.length) out.push(verbTool(def, "write"));
     }
   return out;
 }

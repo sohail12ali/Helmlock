@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { ModelsTest } from "@/features/chat/ModelsTest";
 import { readPref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
+import { MachineSecret } from "./MachineSecret";
 import { ProviderForm } from "./ProviderForm";
 import { ENV_NAME, splitList } from "./presets";
 
@@ -76,10 +77,12 @@ function TelegramStep() {
   const [ids, setIds] = useState<string>();
   const tokenDraft = tokenEnv ?? (typeof cur("token_env") === "string" ? (cur("token_env") as string) : "HL_TELEGRAM_TOKEN");
   const idsDraft = ids ?? (Array.isArray(curIds) ? curIds.join(", ") : typeof curIds === "string" ? curIds : "");
-  const invalidate = [...INVALIDATE.settings, "setup"];
+  const invalidate = [...INVALIDATE.settings, "setup", "secrets"];
   const token = useVerbRun("config set", invalidate);
   const allow = useVerbRun("config set", invalidate);
   const [problem, setProblem] = useState<string>();
+  const savedName = typeof cur("token_env") === "string" && ENV_NAME.test(cur("token_env") as string) ? (cur("token_env") as string) : "HL_TELEGRAM_TOKEN";
+  const [advanced, setAdvanced] = useState(false);
 
   return (
     <div className="flex flex-col gap-3 text-sm">
@@ -88,33 +91,44 @@ function TelegramStep() {
           In Telegram, open a chat with <Mono>@BotFather</Mono> and send <Mono>/newbot</Mono>.
         </li>
         <li>Pick a name and a username ending in "bot". BotFather replies with a token.</li>
-        <li>
-          Put the token in an environment variable on this machine (for example <Mono>HL_TELEGRAM_TOKEN</Mono>), never in a file in the repo.
-        </li>
+        <li>Paste the token below and save it on this machine. It never goes into the repo.</li>
         <li>
           Send any message to <Mono>@userinfobot</Mono> to learn your numeric user id, and allow it below.
         </li>
-        <li>
-          Restart <Mono>hl serve</Mono>; the bot starts when the variable is set. Everyone not allowed gets nothing.
-        </li>
+        <li>The bot starts by itself once both are saved; no restart needed. Everyone not allowed gets nothing.</li>
       </ol>
-      <Field label="Bot token variable (name only)" htmlFor={`${uid}-tok`} hint="Stored in workspace.local.toml (this machine only).">
-        <div className="flex flex-wrap gap-2">
-          <Input id={`${uid}-tok`} className="max-w-xs font-mono" value={tokenDraft} onChange={(e) => setTokenEnv(e.target.value)} />
-          <Button
-            size="sm"
-            disabled={token.pending}
-            onClick={() => {
-              setProblem(undefined);
-              if (!ENV_NAME.test(tokenDraft.trim())) return setProblem("An environment variable name, such as HL_TELEGRAM_TOKEN.");
-              void token.run({ plugin: "telegram", key: "token_env", value: tokenDraft.trim(), local: true });
-            }}
+      <MachineSecret name={savedName} label="Bot token" placeholder="123456:ABC..." />
+      <div>
+        <Button size="sm" variant="ghost" aria-expanded={advanced} onClick={() => setAdvanced((a) => !a)}>
+          {advanced ? "Hide" : "Advanced:"} token variable name
+        </Button>
+      </div>
+      {advanced && (
+        <>
+          <Field
+            label="Bot token variable (name only)"
+            htmlFor={`${uid}-tok`}
+            hint="Only if the token already lives in another environment variable. Stored in workspace.local.toml (this machine only)."
           >
-            Save variable
-          </Button>
-        </div>
-      </Field>
-      {token.last && <VerbResult result={token.last.result} okText="Saved." />}
+            <div className="flex flex-wrap gap-2">
+              <Input id={`${uid}-tok`} className="max-w-xs font-mono" value={tokenDraft} onChange={(e) => setTokenEnv(e.target.value)} />
+              <Button
+                size="sm"
+                disabled={token.pending}
+                onClick={() => {
+                  setProblem(undefined);
+                  if (!ENV_NAME.test(tokenDraft.trim()))
+                    return setProblem("That is not a variable name. To save the token itself, paste it into Bot token above.");
+                  void token.run({ plugin: "telegram", key: "token_env", value: tokenDraft.trim(), local: true });
+                }}
+              >
+                Save variable
+              </Button>
+            </div>
+          </Field>
+          {token.last && <VerbResult result={token.last.result} okText="Saved." />}
+        </>
+      )}
       <Field label="Allowed Telegram user ids" htmlFor={`${uid}-ids`} hint="Comma-separated numeric ids. Empty means nobody (fail-closed).">
         <div className="flex flex-wrap gap-2">
           <Input

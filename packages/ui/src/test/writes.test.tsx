@@ -89,6 +89,8 @@ function mockServer(reply: (c: Call) => VerbCallResult = () => ({ ok: true, data
   const spy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const p = new URL(url, "http://localhost").pathname.replace(/^\/api\/v1/, "");
+    // The machine-secret badge asks `secret status` (a read); it is not a write under test.
+    if (init?.method === "POST" && p === "/verbs/secret/status") return json({ ok: true, data: [] });
     if (init?.method === "POST") {
       const c: Call = { path: p, headers: init.headers as Record<string, string>, body: JSON.parse(String(init.body)) };
       calls.push(c);
@@ -192,9 +194,9 @@ describe("settings", () => {
     renderApp("/settings");
     expect(await screen.findByRole("heading", { name: "Workspace and repos" })).toBeInTheDocument();
     expect(screen.getByText(/provider layer arrives with the assistant/)).toBeInTheDocument();
-    expect(screen.getByText(/channel milestone/)).toBeInTheDocument();
+    expect(screen.getByText(/telegram plugin is not enabled/)).toBeInTheDocument();
     expect(screen.getByText("workspace.local.toml")).toBeInTheDocument();
-    expect(screen.getByText(/The secret itself stays in your environment/)).toBeInTheDocument();
+    expect(screen.getByText(/Only the variable name is saved here/)).toBeInTheDocument();
     expect(screen.getAllByText(/shared with the team/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/this machine only/).length).toBeGreaterThan(0);
   });

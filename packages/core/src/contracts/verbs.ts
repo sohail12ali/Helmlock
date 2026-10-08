@@ -44,6 +44,11 @@ export interface VerbDef<I extends z.ZodType = z.ZodType, O = unknown> {
   writes: boolean;
   /** Only for flags that are not plain input keys (e.g. repeatable options). */
   repeatable?: readonly string[];
+  /**
+   * Input keys that hold a secret (milestone 7): never taken from the command line (the CLI prompts hidden or reads
+   * stdin), never used as the activity entity, never offered to the assistant or Telegram. The verb must not echo them.
+   */
+  secret?: readonly string[];
   run(v: VerbCtx, input: z.infer<I>): Promise<VerbResult<O>>;
 }
 

@@ -18,7 +18,7 @@ import { catalog } from "../registry.ts";
 import { createBotApi, type TgUpdate } from "./api.ts";
 import { type BotOptions, TelegramBot } from "./bot.ts";
 import { type FakeBotApi, startFakeBotApi } from "./fake-bot-api.ts";
-import { Config, startTelegram } from "./index.ts";
+import { Config, startTelegram, superviseTelegram } from "./index.ts";
 
 const ME = 4242;
 const STRANGER = 666;
@@ -484,4 +484,48 @@ test("Config parses the allowlist from text or a list and drops junk", () => {
   assert.deepEqual(Config.parse({ allowed_user_ids: "1, 2;3 x" }).allowed_user_ids, [1, 2, 3]);
   assert.deepEqual(Config.parse({ allowed_user_ids: [5, "6"] }).allowed_user_ids, [5, 6]);
   assert.deepEqual(Config.parse({}).allowed_user_ids, []);
+});
+
+test("superviseTelegram: a token saved with secret set starts the bot without a restart; a new token restarts it", async () => {
+  const ws = await createTestWorkspace({ catalog, fixture: "ws-demo" });
+  const api = await startFakeBotApi();
+  const logs: string[] = [];
+  writeFileSync(
+    join(ws.root, "workspace.local.toml"),
+    `schema_version = 1\n\n[[plugin]]\nid = "telegram"\nconfig = { token_env = "MY_BOT_TOKEN", allowed_user_ids = ["${ME}"], notify = false }\n`,
+  );
+  const rt = await createRuntime({ cwd: ws.root, env: { HL_DELIVERY: DELIVERY_ROOT }, catalog });
+  const sup = superviseTelegram(rt, { env: {}, apiBase: api.base, log: (l) => logs.push(l), pollTimeoutSec: 1 });
+  try {
+    await sup.recheck();
+    assert.equal(sup.handle, undefined, "no token yet: not started, silent");
+    assert.deepEqual(logs, []);
+
+    const r = await rt.run("secret set", { name: "MY_BOT_TOKEN", value: api.token }, { actor: { kind: "person", id: "sam", onBehalfOf: "sam" } });
+    assert.ok(r.ok, JSON.stringify(r));
+    assert.ok(!JSON.stringify(r).includes(api.token));
+    await sup.recheck();
+    assert.ok(sup.handle, "started from the secret.saved event");
+    api.push(dm(ME, "/help"));
+    await api.waitFor(() => api.callsTo("sendMessage").length === 1);
+    const first = sup.handle;
+    await sup.recheck();
+    assert.equal(sup.handle, first, "unchanged settings keep the running bot");
+
+    // A setting change after start (config set) is picked up too: an empty allowlist stops the bot (fail-closed).
+    const off = await rt.run(
+      "config set",
+      { plugin: "telegram", key: "allowed_user_ids", value: [], local: true },
+      { actor: { kind: "person", id: "sam", onBehalfOf: "sam" } },
+    );
+    assert.ok(off.ok, JSON.stringify(off));
+    await sup.recheck();
+    assert.equal(sup.handle, undefined);
+    assert.ok(logs.some((l) => /allowed_user_ids is empty/.test(l)));
+  } finally {
+    await sup.stop();
+    await rt.dispose();
+    await api.close();
+    await ws.cleanup();
+  }
 });
