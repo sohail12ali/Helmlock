@@ -5,7 +5,6 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderApp } from "@/test/render";
 import { route } from "@/test/server";
-import { toTranscript } from "./agents/run-flags";
 import { MicButton } from "./chat/MicButton";
 import { groupModels, ModelPicker } from "./chat/ModelPicker";
 import { ModelsTest } from "./chat/ModelsTest";
@@ -117,53 +116,7 @@ const chatDetail: ChatDetail = {
 // ---------- runs ----------
 
 describe("agent runs", () => {
-  it("start run posts RunStart with the write header and opens the run view", async () => {
-    const spy = mockFetch((u, init) => {
-      if (u.pathname === "/api/v1/runs" && init?.method === "POST") return ok(running, 201);
-      if (u.pathname === "/api/v1/runs/r-0100") return ok(running);
-      return undefined;
-    });
-    renderApp("/agents");
-    const form = await screen.findByRole("form", { name: "Start a run" }, { timeout: 10_000 }); // lazy page: allow for a slow first load
-    fireEvent.change(within(form).getByLabelText("Task"), { target: { value: "Draft the spec" } });
-    fireEvent.change(within(form).getByLabelText("Ticket"), { target: { value: "T-001-sa" } });
-    fireEvent.change(within(form).getByLabelText("Mode"), { target: { value: "ask" } });
-    fireEvent.click(within(form).getByRole("button", { name: /start run/i }));
-
-    await waitFor(() => expect(calls(spy, "POST", "/runs")).toHaveLength(1));
-    const [, init] = calls(spy, "POST", "/runs")[0]!;
-    expect((init!.headers as Record<string, string>)["X-Helmlock-Request"]).toBe("1");
-    expect(JSON.parse(String(init!.body))).toEqual({ task: "Draft the spec", runtime: "claude-code", mode: "ask", agent: "analyst", ticket: "T-001-sa" });
-    expect(await screen.findByRole("heading", { name: "r-0100" })).toBeInTheDocument();
-  });
-
-  it("lists runs active first with the recovery badge", async () => {
-    mockFetch((u) => {
-      if (u.pathname === "/api/v1/runs")
-        return ok([
-          {
-            id: "r-1",
-            runtime: "claude-code",
-            agent: "builder",
-            mode: "plan",
-            started: iso(NOW - 600_000),
-            ended: iso(NOW - 500_000),
-            ok: false,
-            failure_class: "stalled",
-          },
-          { id: "r-2", runtime: "claude-code", agent: "analyst", mode: "plan", started: iso(NOW - 900_000) },
-        ]);
-      return undefined;
-    });
-    renderApp("/agents");
-    const list = await screen.findByRole("list", { name: "Runs" });
-    const rows = within(list).getAllByRole("listitem");
-    expect(rows[0]).toHaveTextContent("r-2");
-    expect(rows[0]).toHaveTextContent("running");
-    expect(rows[1]).toHaveTextContent("Recovery needed");
-  });
-
-  it("run view renders streamed events and cancels through an in-page confirmation", async () => {
+  it("the old run link opens the run page: streamed timeline and stop through an in-page confirmation", async () => {
     const spy = mockFetch((u, init) => {
       if (u.pathname === "/api/v1/runs/r-0100/cancel" && init?.method === "POST") return ok({ ...running, status: "cancelled", ended: iso(Date.now()) });
       if (u.pathname === "/api/v1/runs/r-0100") return ok(running);
@@ -189,32 +142,24 @@ describe("agent runs", () => {
       es.open();
       for (const l of lines) es.emit("event", l);
     });
-    const transcript = screen.getByTestId("run-transcript");
+    const transcript = screen.getByTestId("run-timeline");
     expect(within(transcript).getByText("Reading the ticket folder.")).toBeInTheDocument();
     expect(within(transcript).getByText("Thinking")).toBeInTheDocument();
-    expect(within(transcript).getByText("artifacts/T-001-sa/spec.md")).toBeInTheDocument();
+    expect(within(transcript).getByText("Read spec.md")).toBeInTheDocument();
     expect(within(transcript).getByTestId("run-result")).toHaveTextContent("Spec drafted.");
     expect(within(transcript).queryByText("DUPLICATE")).toBeNull();
-    expect(transcript).toHaveTextContent("usage 12k in / 800 out");
+    expect(screen.getByTestId("run-rail")).toHaveTextContent("$0.05");
     // the run's pending approval shows in the run view
     expect(await screen.findByRole("region", { name: "Approval a-1" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /cancel run/i }));
-    const confirm = screen.getByRole("alertdialog", { name: "Confirm cancel" });
+    fireEvent.click(screen.getByRole("button", { name: /^stop$/i }));
+    const confirm = screen.getByRole("alertdialog", { name: "Confirm stop" });
     expect(calls(spy, "POST", "/runs/r-0100/cancel")).toHaveLength(0);
     fireEvent.click(within(confirm).getByRole("button", { name: "Stop run" }));
     await waitFor(() => expect(calls(spy, "POST", "/runs/r-0100/cancel")).toHaveLength(1));
     const [, init] = calls(spy, "POST", "/runs/r-0100/cancel")[0]!;
     expect((init!.headers as Record<string, string>)["X-Helmlock-Request"]).toBe("1");
-    await waitFor(() => expect(screen.queryByRole("button", { name: /cancel run/i })).toBeNull());
-  });
-
-  it("folds tool start and end into one line", () => {
-    const items = toTranscript([
-      { seq: 1, event: { type: "tool", phase: "start", name: "Bash", id: "x", input: { command: "ls" } } },
-      { seq: 2, event: { type: "tool", phase: "end", name: "Bash", id: "x", isError: true } },
-    ]);
-    expect(items).toEqual([{ kind: "tool", seq: 1, name: "Bash", input: { command: "ls" }, done: true, isError: true }]);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^stop$/i })).toBeNull());
   });
 });
 

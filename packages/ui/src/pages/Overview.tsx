@@ -179,7 +179,7 @@ export function OverviewPage() {
           <CardHeader>
             <CardTitle>Agent runs</CardTitle>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/agents">All runs</Link>
+              <Link to="/crew">Crew</Link>
             </Button>
           </CardHeader>
           <CardContent>

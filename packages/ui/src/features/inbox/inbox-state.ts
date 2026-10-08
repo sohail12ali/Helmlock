@@ -33,15 +33,15 @@ export function selectItems(items: InboxItem[], view: InboxView, kinds: Readonly
 /** Where Enter takes an item. Approvals open their run or chat; tickets open on the ticket page. */
 export function targetOf(item: InboxItem, card?: ApprovalCard): string | undefined {
   if (item.kind === "approval") {
-    if (card?.run_id) return `/agents/runs/${encodeURIComponent(card.run_id)}`;
+    if (card?.run_id) return `/runs/${encodeURIComponent(card.run_id)}`;
     if (card?.chat_id) return "/chat";
     if (item.ticket) return `/t/${encodeURIComponent(item.ticket)}`;
     return undefined;
   }
-  if (item.kind === "run-failed" && item.id) return `/agents/runs/${encodeURIComponent(item.id)}`;
+  if (item.kind === "run-failed" && item.id) return `/runs/${encodeURIComponent(item.id)}`;
   if (item.ticket) return `/t/${encodeURIComponent(item.ticket)}${item.kind === "question" ? "?tab=questions" : ""}`;
   if (item.kind === "setup") return "/setup";
-  if (item.kind === "run-failed") return "/agents";
+  if (item.kind === "run-failed") return "/crew";
   if (item.kind === "retention") return "/tickets";
   return undefined;
 }

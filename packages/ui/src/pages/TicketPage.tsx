@@ -3,17 +3,7 @@ import { ChevronRight, Copy, MessageCircleQuestion, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { useArtifact, useRuns, useStageLabel, useTicket } from "@/api/hooks";
-import {
-  BugForm,
-  CommentBox,
-  DecisionForm,
-  GapForm,
-  QuestionCard,
-  QuestionForm,
-  ResolveRecord,
-  TaskForm,
-  TaskStatusToggle,
-} from "@/components/actions/RecordActions";
+import { BugForm, DecisionForm, GapForm, QuestionCard, QuestionForm, ResolveRecord, TaskForm, TaskStatusToggle } from "@/components/actions/RecordActions";
 import { BlockControl, ClaimControl, FieldsEditor, MoveControls } from "@/components/actions/TicketControls";
 import { EmptyState, ErrorState, Loading, Mono, StatusChip } from "@/components/common";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -24,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArtifactViewer } from "@/components/viewers/ArtifactViewer";
+import { NextStepBar } from "@/features/thread/NextStep";
+import { TicketThreadView } from "@/features/thread/TicketThread";
 import { fmtBytes, fmtDateTime } from "@/lib/format";
 
 type Rec<T> = T & { kind: string; path: string };
@@ -254,29 +246,6 @@ function TasksView({ tasks, ticket }: { tasks: Task[]; ticket: string }) {
   );
 }
 
-function Thread({ d }: { d: TicketDetail }) {
-  return (
-    <div className="flex flex-col gap-3">
-      {d.comments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No comments yet.</p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {d.comments.map((c) => (
-            <li key={c.ts + c.author} className="rounded-md border bg-card p-3 text-sm">
-              <div className="mb-1 flex gap-2 text-xs text-muted-foreground">
-                <Mono>{c.author}</Mono>
-                <span>{fmtDateTime(c.ts)}</span>
-              </div>
-              <p className="whitespace-pre-wrap">{c.text}</p>
-            </li>
-          ))}
-        </ol>
-      )}
-      <CommentBox ticket={d.card.id} />
-    </div>
-  );
-}
-
 function Properties({ d, stageLabel }: { d: TicketDetail; stageLabel: (s: string) => string }) {
   const t = d.ticket as { links?: { related?: string[] }; flags?: { next_action?: string } };
   const rows: [string, ReactNode][] = [
@@ -374,6 +343,16 @@ export function TicketPage() {
   const stageLabel = useStageLabel();
   const [params, setParams] = useSearchParams();
   const tab = (TABS as readonly string[]).includes(params.get("tab") ?? "") ? (params.get("tab") as Tab) : "overview";
+  const showTab = (v: string) =>
+    setParams(
+      (p) => {
+        const n = new URLSearchParams(p);
+        if (v === "overview") n.delete("tab");
+        else n.set("tab", v);
+        return n;
+      },
+      { replace: true },
+    );
 
   if (q.isPending) return <Loading />;
   if (q.isError)
@@ -396,21 +375,8 @@ export function TicketPage() {
       <div className="mt-3">
         <MoveControls detail={d} stageLabel={stageLabel} />
       </div>
-      <Tabs
-        className="mt-3"
-        value={tab}
-        onValueChange={(v) =>
-          setParams(
-            (p) => {
-              const n = new URLSearchParams(p);
-              if (v === "overview") n.delete("tab");
-              else n.set("tab", v);
-              return n;
-            },
-            { replace: true },
-          )
-        }
-      >
+      <NextStepBar className="mt-3" ticket={d.card.id} onHandedOff={() => showTab("thread")} />
+      <Tabs className="mt-3" value={tab} onValueChange={showTab}>
         <TabsList aria-label="Ticket sections">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="thread">Thread {d.comments.length}</TabsTrigger>
@@ -489,7 +455,7 @@ export function TicketPage() {
           </Card>
         </TabsContent>
         <TabsContent value="thread">
-          <Thread d={d} />
+          <TicketThreadView ticket={d.card.id} showNext={false} />
         </TabsContent>
         <TabsContent value="runs">{runs.isError ? <ErrorState error={runs.error} /> : <RunsTable runs={ticketRuns} />}</TabsContent>
         <TabsContent value="decisions" className="flex flex-col gap-3">

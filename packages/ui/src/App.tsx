@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { lazy, type ReactNode, Suspense } from "react";
-import { Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useParams } from "react-router";
 import { Loading } from "@/components/common";
 import { AppShell } from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/lib/theme";
@@ -9,8 +9,8 @@ import { TicketsPage } from "@/pages/Tickets";
 
 const TicketPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.TicketPage })));
 const ArtifactPage = lazy(() => import("@/pages/TicketPage").then((m) => ({ default: m.ArtifactPage })));
-const AgentsPage = lazy(() => import("@/features/agents/AgentsPage").then((m) => ({ default: m.AgentsPage })));
-const RunView = lazy(() => import("@/features/agents/RunView").then((m) => ({ default: m.RunView })));
+const CrewPage = lazy(() => import("@/features/crew/CrewPage").then((m) => ({ default: m.CrewPage })));
+const RunPage = lazy(() => import("@/features/crew/RunPage").then((m) => ({ default: m.RunPage })));
 const ChatPage = lazy(() => import("@/features/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
 const TodosPage = lazy(() => import("@/pages/Todos").then((m) => ({ default: m.TodosPage })));
 const WorkPage = lazy(() => import("@/pages/Work").then((m) => ({ default: m.WorkPage })));
@@ -46,6 +46,12 @@ export function Providers({ client, children }: { client: QueryClient; children:
 
 const s = (el: ReactNode) => <Suspense fallback={<Loading />}>{el}</Suspense>;
 
+/** The old "Agents and chat" run links (milestone 4) now open the run page. */
+function OldRunRedirect() {
+  const { id = "" } = useParams();
+  return <Navigate to={`/runs/${encodeURIComponent(id)}`} replace />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -55,8 +61,10 @@ export function AppRoutes() {
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="t/:id" element={s(<TicketPage />)} />
         <Route path="t/:id/:artifact" element={s(<ArtifactPage />)} />
-        <Route path="agents" element={s(<AgentsPage />)} />
-        <Route path="agents/runs/:id" element={s(<RunView />)} />
+        <Route path="crew" element={s(<CrewPage />)} />
+        <Route path="runs/:id" element={s(<RunPage />)} />
+        <Route path="agents" element={<Navigate to="/crew" replace />} />
+        <Route path="agents/runs/:id" element={<OldRunRedirect />} />
         <Route path="chat" element={s(<ChatPage />)} />
         <Route path="todos" element={s(<TodosPage />)} />
         <Route path="work" element={s(<WorkPage />)} />
