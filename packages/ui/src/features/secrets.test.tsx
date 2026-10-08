@@ -15,12 +15,12 @@ function server() {
   let saved = false;
   const setup = (): SetupStatus => ({
     steps: [
-      { id: "author", label: "Author", done: true, detail: "You are sam." },
-      { id: "model", label: "Model", done: true, detail: "1 model" },
+      { id: "you", label: "You", done: true, detail: "Sam Abbott (sam)" },
+      { id: "engine", label: "Engines", done: true, detail: "Claude Code" },
       saved
-        ? { id: "telegram", label: "Telegram", done: true, detail: "token in HL_TELEGRAM_TOKEN (this machine's .env); 1 allowed id" }
-        : { id: "telegram", label: "Telegram", done: false, detail: "optional: paste the token below or set HL_TELEGRAM_TOKEN" },
-      { id: "first-ticket", label: "First ticket", done: false, detail: "none" },
+        ? { id: "phone", label: "Phone", optional: true, done: true, detail: "token in HL_TELEGRAM_TOKEN (this machine's .env); 1 allowed id" }
+        : { id: "phone", label: "Phone", optional: true, done: false, detail: "optional: paste the token below or set HL_TELEGRAM_TOKEN" },
+      { id: "first-task", label: "First task", done: false, detail: "no tickets yet" },
     ],
   });
   const spy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -54,8 +54,9 @@ const posts = (spy: ReturnType<typeof server>, path: string) =>
 describe("setup: telegram token", () => {
   it("saves the token with secret set, clears the field, shows the source and flips the step to done", async () => {
     const spy = server();
-    renderApp("/setup");
-    const step = await screen.findByRole("region", { name: "Step: Telegram" });
+    localStorage.setItem("hl.welcome.draft", JSON.stringify({ step: "phone" }));
+    renderApp("/setup"); // the old address redirects to /welcome
+    const step = await screen.findByRole("region", { name: "Step: Phone" });
     expect(within(step).getByText("Saved only on this machine,", { exact: false })).toBeInTheDocument();
     await within(step).findByText("missing");
 
@@ -73,14 +74,15 @@ describe("setup: telegram token", () => {
     await within(step).findByText("this machine's .env");
     expect(await screen.findByText(/HL_TELEGRAM_TOKEN saved in this machine's \.env/)).toBeInTheDocument();
     expect(document.body.textContent).not.toContain(TOKEN);
-    // The setup query was refetched and the telegram step is done now.
-    await waitFor(() => expect(screen.getByRole("button", { name: /Telegram/ })).toHaveAccessibleName(/done/i));
+    // The setup query was refetched and the phone step is done now.
+    await waitFor(() => expect(screen.getByRole("button", { name: /Phone/ })).toHaveAccessibleName(/done/i));
   });
 
   it("the advanced variable field says where a pasted token belongs", async () => {
     server();
-    renderApp("/setup");
-    const step = await screen.findByRole("region", { name: "Step: Telegram" });
+    localStorage.setItem("hl.welcome.draft", JSON.stringify({ step: "phone" }));
+    renderApp("/setup"); // the old address redirects to /welcome
+    const step = await screen.findByRole("region", { name: "Step: Phone" });
     fireEvent.click(within(step).getByRole("button", { name: /token variable name/ }));
     fireEvent.change(within(step).getByLabelText(/Bot token variable/), { target: { value: TOKEN } });
     fireEvent.click(within(step).getByRole("button", { name: "Save variable" }));

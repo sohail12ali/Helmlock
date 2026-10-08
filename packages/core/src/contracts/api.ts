@@ -409,12 +409,15 @@ export interface InboxItem {
 
 /** GET /api/v1/setup: first-run checklist for the web wizard (F1a after the writable console). */
 export interface SetupStatus {
+  /** Blueprint 34: you, engine, code (optional), crew, phone (optional), first-task. Same list as `hl setup`. */
   steps: {
-    id: "author" | "model" | "telegram" | "code" | "first-ticket" | "agents" | "trust";
+    id: SetupStepId;
     label: string;
     done: boolean;
     detail: string;
     action?: string;
+    /** Optional steps (code, phone) may be skipped and do not count as "left". */
+    optional?: boolean;
   }[];
 }
 
@@ -752,4 +755,101 @@ export interface WorkSearchResult {
   query: string;
   total: number;
   hits: (WorkEntryView & { date: string; author: string })[];
+// ---------------------------------------------------------------------------------------------------------------
+// Onboarding v2 (Blueprint 34): the /welcome wizard. Detection never sends values: key names and sources only, a
+// redacted first line of a hello probe at most. Git identity is a suggestion and is used only after a confirm.
+// ---------------------------------------------------------------------------------------------------------------
+
+export type SetupStepId = "you" | "engine" | "code" | "crew" | "phone" | "first-task";
+
+/** One ordered check of an engine test (Paperclip testEnvironment): code is stable, message and hint are for people. */
+export interface SetupCheck {
+  code: string;
+  level: "info" | "warn" | "error";
+  message: string;
+  hint?: string;
+}
+/** POST /api/v1/setup/test-engine {engine, model?} -> SetupEngineTest. ok = no error-level check. */
+export interface SetupEngineTestBody {
+  engine: EngineId;
+  model?: string;
+}
+export interface SetupEngineTest {
+  engine: EngineId;
+  ok: boolean;
+  checks: SetupCheck[];
+  /** When it ran (ISO). */
+  at: string;
+}
+
+/** A model provider that can be added in one click: a preset whose key name is set, or a local server that answers. */
+export interface SetupProviderCandidate {
+  preset: string;
+  label: string;
+  base_url: string;
+  key_env?: string;
+  /** Where the key was found, or "running" for a local server that answered. */
+  source: "environment" | ".env" | "running";
+  /** Models a running local server listed. */
+  models?: string[];
+}
+
+/** GET /api/v1/setup/detect */
+export interface SetupDetect {
+  you: {
+    /** From the knowledge repo's git config: a suggestion only, never the identity without a confirm. */
+    git_name?: string;
+    git_email?: string;
+    suggested_slug?: string;
+    suggested_initials?: string;
+    /** author.local, when set. */
+    author?: string;
+    /** author.local names a roster person: the You screen is skipped. */
+    author_known: boolean;
+    person?: { id: string; name: string };
+    /** A roster person who already claims the git name or email ("Is this you?"). */
+    match?: { id: string; name: string };
+  };
+  engines: {
+    id: EngineId;
+    label: string;
+    capabilities: EngineCapabilities;
+    /** CLI found on this machine (always true for engines without a binary, such as the loop). */
+    found: boolean;
+    version?: string;
+    /** The cached test (detect-based; a hello test runs only on demand). */
+    test: EngineTest;
+    /** The last on-demand test in this console session. */
+    last?: SetupEngineTest;
+  }[];
+  providers: {
+    configured: { id: string; label: string; models: number }[];
+    default_model?: string;
+    candidates: SetupProviderCandidate[];
+  };
+  /** Folders of the workspace file that no project names yet. */
+  folders: { name: string; path: string }[];
+  projects: { id: string; name: string }[];
+}
+
+/** POST /api/v1/setup/you: add (or pick) the roster person, write author.local, claim the git name. Only when no valid author is set. */
+export interface SetupYouBody {
+  id: string;
+  name?: string;
+  initials?: string;
+  email?: string;
+  /** Git spellings to claim for this person (the confirmed git name and email). */
+  git?: string[];
+}
+export interface SetupYouResult {
+  person: { id: string; name: string; initials: string };
+  created: boolean;
+  claimed: string[];
+}
+
+/** POST /api/v1/setup/upkeep: technical upkeep the wizard repairs silently (harness sync, per-machine gitignore). */
+export interface SetupUpkeep {
+  repaired: string[];
+  /** Only failures are shown to the person. */
+  failures: { name: string; message: string; fix?: string }[];
 }

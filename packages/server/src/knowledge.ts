@@ -1,16 +1,14 @@
 // Milestone 5: GET /knowledge, GET /knowledge/doc, GET /inbox, POST /inbox/:key, GET /setup (contracts/api.ts).
 // The inbox is derived from files on every call; read/archive state is local (.hl-cache/inbox.json, F67) and an
 // archived item comes back when it changes after it was archived.
-import { readdir, readFile, realpath, stat } from "node:fs/promises";
-import { homedir } from "node:os";
+import { readFile, realpath, stat } from "node:fs/promises";
 import { join, sep } from "node:path";
 import type { InboxItem, InboxItemState, KnowledgeDoc, KnowledgeView, Runtime, SetupStatus } from "@helmlock/core";
-import { secretSource } from "@helmlock/core";
 import { splitFrontmatter } from "@helmlock/plugins/lifecycle/digest.ts";
 import { archivedTicket, closedAt, findArchived, findDigest, retentionSuggest, SHARED_DIGESTS, terminalStages } from "@helmlock/plugins/lifecycle/lifecycle.ts";
 import { readProjects } from "@helmlock/plugins/notes/notes.ts";
 import { collectIndex } from "@helmlock/plugins/notes/shared-index.ts";
-import { readTelegramRow, Config as TelegramConfig } from "@helmlock/plugins/telegram/index.ts";
+import { setupStatus as sharedSetupStatus } from "@helmlock/plugins/settings/setup-status.ts";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ReadModel } from "./data.ts";
 import { STALE_CLAIM_DAYS } from "./data.ts";
@@ -102,133 +100,9 @@ export async function knowledgeDoc(runtime: Runtime, raw: string | undefined): P
 }
 
 // ---------- setup ----------
-async function listMd(dir: string): Promise<string[]> {
-  return (await readdir(dir, { withFileTypes: true }).catch(() => []))
-    .filter((d) => d.isFile() && d.name.endsWith(".md"))
-    .map((d) => d.name)
-    .sort();
-}
-
-async function trusted(home: string, root: string): Promise<boolean> {
-  try {
-    const cfg = JSON.parse(await readFile(join(home, ".claude.json"), "utf8")) as { projects?: Record<string, { hasTrustDialogAccepted?: boolean }> };
-    const want = root.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase();
-    return Object.entries(cfg.projects ?? {}).some(
-      ([k, v]) => k.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase() === want && v?.hasTrustDialogAccepted === true,
-    );
-  } catch {
-    return false;
-  }
-}
-
+/** The first-run steps (Blueprint 34), shared with `hl setup` and the /welcome wizard. */
 export async function setupStatus(runtime: Runtime, o: { home?: string; env?: NodeJS.ProcessEnv } = {}): Promise<SetupStatus> {
-  const ctx = runtime.ctx;
-  const info = runtime.info;
-  const env = o.env ?? process.env;
-  const steps: SetupStatus["steps"] = [];
-
-  const person = info.author ? await ctx.get("roster").get(info.author) : undefined;
-  steps.push({
-    id: "author",
-    label: "You are in the roster",
-    done: Boolean(person),
-    detail: person
-      ? `${person.name} (${person.id})`
-      : info.author
-        ? `author.local says ${info.author}, who is not in people.toml`
-        : "no author.local on this machine",
-    ...(person ? {} : { action: "write your roster id to author.local and add yourself to people.toml (hl doctor)" }),
-  });
-
-  let modelDone = false;
-  let modelDetail = "the providers plugin is not enabled";
-  if (ctx.has("providers")) {
-    const p = ctx.get("providers");
-    const models = p.models();
-    const probed = [];
-    for (const pr of p.providers()) if (await ctx.get("files").exists(`.hl-cache/models/${pr.id}.json`)) probed.push(pr.id);
-    modelDone = models.length > 0 && probed.length > 0;
-    modelDetail = !models.length
-      ? "no model configured"
-      : probed.length
-        ? `${models.length} model(s); probed: ${probed.join(", ")}`
-        : `${models.length} model(s) configured, none probed yet`;
-  }
-  steps.push({
-    id: "model",
-    label: "A model is configured and tested",
-    done: modelDone,
-    detail: modelDetail,
-    ...(modelDone ? {} : { action: "Settings > Models: add a provider, then Test" }),
-  });
-
-  // Read fresh (settings saved after the console started count) and the token by name from the environment or .env.
-  const tgRow = await readTelegramRow(ctx);
-  const tgParsed = TelegramConfig.safeParse(tgRow?.config ?? {});
-  const tokenEnv = tgParsed.success ? tgParsed.data.token_env : "HL_TELEGRAM_TOKEN";
-  const allowed = tgParsed.success ? tgParsed.data.allowed_user_ids : [];
-  const source = secretSource(info.root, env, tokenEnv);
-  const tgDone = Boolean(tgRow) && source !== undefined && allowed.length > 0;
-  const where = source === ".env" ? "this machine's .env" : "environment";
-  const tgDetail = !tgRow
-    ? "the telegram plugin is not enabled"
-    : !source
-      ? `optional: paste the token below or set ${tokenEnv}${allowed.length ? "" : ", then allow your Telegram user id"}`
-      : allowed.length
-        ? `token in ${tokenEnv} (${where}); ${allowed.length} allowed id${allowed.length === 1 ? "" : "s"}`
-        : `token in ${tokenEnv} (${where}); allow at least one Telegram user id`;
-  steps.push({
-    id: "telegram",
-    label: "Telegram (optional)",
-    done: tgDone,
-    detail: tgDetail,
-    ...(tgDone ? {} : { action: "Settings > Telegram" }),
-  });
-
-  // Milestone 7: connect your code (at least one projects/<id>/project.toml), before the first ticket.
-  const projects = await readProjects(ctx);
-  steps.push({
-    id: "code",
-    label: "Connect your code",
-    done: projects.length > 0,
-    detail: projects.length ? `${projects.length} project(s): ${projects.map((p) => p.id).join(", ")}` : "no projects yet",
-    ...(projects.length ? {} : { action: "Add project: a repo folder, or import a .code-workspace file (hl project add)" }),
-  });
-
-  const count = (await ctx.get("tickets").list()).length;
-  steps.push({
-    id: "first-ticket",
-    label: "A first ticket",
-    done: count > 0,
-    detail: count ? `${count} ticket(s)` : "no tickets yet",
-    ...(count ? {} : { action: "create one on the Board (or hl ticket new)" }),
-  });
-
-  const sys = await listMd(join(info.deliveryRoot, ".claude", "agents"));
-  const have = new Set(await listMd(join(info.root, ".claude", "agents")));
-  const missing = sys.filter((n) => !have.has(n));
-  const agentsDone = sys.length > 0 && missing.length === 0;
-  steps.push({
-    id: "agents",
-    label: "System agents are in the knowledge repo",
-    done: agentsDone,
-    detail: !sys.length
-      ? "the delivery repo has no agents"
-      : missing.length
-        ? `missing: ${missing.map((n) => n.replace(/\.md$/, "")).join(", ")}`
-        : `${sys.length} agent(s)`,
-    ...(agentsDone ? {} : { action: "hl harness sync" }),
-  });
-
-  const trust = await trusted(o.home ?? homedir(), info.root);
-  steps.push({
-    id: "trust",
-    label: "Claude Code trusts this folder",
-    done: trust,
-    detail: trust ? "trust prompt accepted" : "hint: open the knowledge repo once in Claude Code and accept the trust prompt (Cursor runs pass --trust)",
-    ...(trust ? {} : { action: "run claude in the knowledge repo once" }),
-  });
-  return { steps };
+  return sharedSetupStatus(runtime.ctx, o.env ? { env: o.env } : {});
 }
 
 // ---------- inbox ----------
@@ -315,8 +189,14 @@ export async function deriveInbox(runtime: Runtime, model: ReadModel, o: { home?
 
   const setup = await setupStatus(runtime, o.home ? { home: o.home } : {});
   for (const s of setup.steps)
-    if (!s.done && (s.id === "author" || s.id === "model" || s.id === "agents"))
-      out.push({ key: `setup:${s.id}`, kind: "setup", title: s.label, detail: s.action ? `${s.detail}; ${s.action}` : s.detail, updated: EPOCH });
+    if (!s.done && (s.id === "you" || s.id === "engine"))
+      out.push({
+        key: `setup:${s.id}`,
+        kind: "setup",
+        title: s.id === "you" ? "Confirm who you are" : "Set up an engine",
+        detail: s.action ? `${s.detail}; ${s.action}` : s.detail,
+        updated: EPOCH,
+      });
 
   const ret = await retentionSuggest(ctx, o.now ? { today: o.now } : {});
   for (const x of ret.items)

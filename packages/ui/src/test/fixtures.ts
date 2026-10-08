@@ -7,6 +7,7 @@ import type {
   Overview,
   RunList,
   SearchResults,
+  SetupDetect,
   SkillList,
   StageDef,
   TicketCard,
@@ -285,3 +286,38 @@ export const skills: SkillList = [
 ];
 
 export const search: SearchResults = [{ path: "artifacts/T-001-sa/T-001-sa-spec.md", line: 4, text: "Let customers redeem a gift card balance at checkout." }];
+
+/** GET /setup/detect (onboarding v2): sam is known, Claude Code found, Cursor not, an OpenRouter key in the environment. */
+export const setupDetect: SetupDetect = {
+  you: { git_name: "Sam Abbott", git_email: "sam@example.com", author: "sam", author_known: true, person: { id: "sam", name: "Sam Abbott" } },
+  engines: [
+    {
+      id: "claude-code",
+      label: "Claude Code",
+      capabilities: { resume: true, steer: false, approve: true, models: true },
+      found: true,
+      version: "2.1.0 (Claude Code)",
+      test: { ok: true, checks: [{ level: "info", message: "found claude" }] },
+    },
+    {
+      id: "cursor",
+      label: "Cursor",
+      capabilities: { resume: true, steer: false, approve: false, models: true },
+      found: false,
+      test: { ok: false, checks: [{ level: "error", message: "Cursor was not found on this machine" }] },
+    },
+    {
+      id: "loop",
+      label: "Helmlock loop",
+      capabilities: { resume: true, steer: true, approve: true, models: true },
+      found: true,
+      test: { ok: false, checks: [{ level: "error", message: "no model configured" }] },
+    },
+  ],
+  providers: {
+    configured: [],
+    candidates: [{ preset: "openrouter", label: "OpenRouter", base_url: "https://openrouter.ai/api/v1", key_env: "OPENROUTER_API_KEY", source: "environment" }],
+  },
+  folders: [],
+  projects: [{ id: "wms", name: "Warehouse" }],
+};

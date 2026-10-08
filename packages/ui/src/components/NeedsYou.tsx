@@ -13,7 +13,7 @@ const KIND_LABEL = { blocked: "Blocked", question: "Question", "claim-stale": "S
 
 function target(item: NeedsYouItem): string | undefined {
   if (item.ticket) return `/t/${encodeURIComponent(item.ticket)}${item.kind === "question" ? "?tab=questions" : ""}`;
-  if (item.kind === "setup") return "/setup";
+  if (item.kind === "setup") return "/welcome";
   if (item.kind === "run-failed") return item.id ? `/runs/${encodeURIComponent(item.id)}` : "/crew";
   return undefined;
 }

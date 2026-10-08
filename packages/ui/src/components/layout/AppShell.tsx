@@ -17,6 +17,7 @@ import { AddProjectHost } from "@/features/projects/AddProject";
 import { useActiveProject, useProjectUrlSync } from "@/features/projects/active";
 import { CenterSwitcher, ProjectChip, ProjectsNav } from "@/features/projects/Switcher";
 import { WorkNavBadge } from "@/features/work/NavBadge";
+import { useAutoWelcome } from "@/features/welcome/auto";
 import { useGlobalKeys } from "@/lib/keys";
 import { NARROW, PHONE, useMediaQuery } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
@@ -130,6 +131,7 @@ export function AppShell() {
   const live = useLiveUpdates();
   useM4Live();
   useM5Live();
+  useAutoWelcome();
   const unread = useInboxUnread();
   useProjectUrlSync();
   const { setProject } = useActiveProject();

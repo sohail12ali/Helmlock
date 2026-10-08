@@ -40,7 +40,7 @@ export function targetOf(item: InboxItem, card?: ApprovalCard): string | undefin
   }
   if (item.kind === "run-failed" && item.id) return `/runs/${encodeURIComponent(item.id)}`;
   if (item.ticket) return `/t/${encodeURIComponent(item.ticket)}${item.kind === "question" ? "?tab=questions" : ""}`;
-  if (item.kind === "setup") return "/setup";
+  if (item.kind === "setup") return "/welcome";
   if (item.kind === "run-failed") return "/crew";
   if (item.kind === "retention") return "/tickets";
   return undefined;
