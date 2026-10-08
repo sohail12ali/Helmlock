@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelsTest } from "@/features/chat/ModelsTest";
-import { OverridesSection } from "@/features/people/OverridesSection";
 import { MachineSecret } from "@/features/setup/MachineSecret";
 import { ProviderForm } from "@/features/setup/ProviderForm";
 import { ProvidersList } from "@/features/setup/ProvidersList";
@@ -321,9 +320,6 @@ export function SettingsPage() {
                 {s.label}
               </a>
             ))}
-            <a href="#settings-overrides" className="rounded-full border px-2.5 py-0.5 text-ink2 hover:bg-accent">
-              Your agents and skills
-            </a>
             <a href="#appearance" className="rounded-full border px-2.5 py-0.5 text-ink2 hover:bg-accent">
               Appearance
             </a>
@@ -361,14 +357,6 @@ export function SettingsPage() {
             </CardContent>
           </Card>
         )}
-        <Card id="settings-overrides" aria-labelledby="settings-overrides-title">
-          <CardHeader>
-            <CardTitle id="settings-overrides-title">Your agents and skills</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <OverridesSection />
-          </CardContent>
-        </Card>
         <Appearance />
       </div>
     </PageLayout>

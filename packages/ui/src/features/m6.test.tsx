@@ -1,12 +1,11 @@
 // Milestone 6 stream P3: people and storage scopes in the console, against the contract with fetch mocked.
-import type { ChatDetail, ModelsView, OverridesView, PeopleView, TodoList } from "@helmlock/core/contracts";
+import type { ChatDetail, ModelsView, PeopleView, TodoList } from "@helmlock/core/contracts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialsOf, slugify } from "@/api/m6";
 import { filterTodos, groupTodos } from "@/pages/Todos";
 import { renderApp } from "@/test/render";
 import { route } from "@/test/server";
-import { overridePaths } from "./people/OverridesSection";
 
 class FakeEventSource {
   readyState = 0;
@@ -276,53 +275,3 @@ describe("people page", () => {
 });
 
 // ---------- overrides ----------
-
-describe("settings: your agents and skills", () => {
-  const overrides: OverridesView = [
-    {
-      kind: "agent",
-      name: "builder",
-      layer: "personal",
-      path: "people/sam/agents/builder.md",
-      overrides: [{ layer: "system", path: "delivery/.claude/agents/builder.md" }],
-    },
-    { kind: "agent", name: "analyst", layer: "system", path: "delivery/.claude/agents/analyst.md", overrides: [] },
-    {
-      kind: "skill",
-      name: "spec",
-      layer: "local",
-      path: ".hl-local/skills/spec/SKILL.md",
-      overrides: [{ layer: "workspace", path: ".claude/skills/spec/SKILL.md" }],
-    },
-  ];
-
-  it("lists each item with its winning layer, what it overrides, and the paths for your own variant", async () => {
-    mockFetch((u) => (u.pathname === "/api/v1/overrides" ? ok(overrides) : u.pathname === "/api/v1/people" ? ok(people) : undefined));
-    renderApp("/settings");
-    const agents = await screen.findByRole("list", { name: "Agents" });
-    const builder = within(agents).getByText("builder").closest("li")!;
-    expect(builder.querySelector('[data-layer="personal"]')).not.toBeNull();
-    expect(builder).toHaveTextContent(/overrides system/);
-    const analyst = within(agents).getByText("analyst").closest("li")!;
-    expect(analyst.querySelector('[data-layer="system"]')).not.toBeNull();
-    expect(
-      within(screen.getByRole("list", { name: "Skills" }))
-        .getByText("spec")
-        .closest("li")!
-        .querySelector('[data-layer="local"]'),
-    ).not.toBeNull();
-
-    fireEvent.click(within(analyst).getByRole("button", { name: "Make my own" }));
-    expect(within(analyst).getByText("people/sam/agents/analyst.md")).toBeInTheDocument();
-    expect(within(analyst).getByText(".hl-local/agents/analyst.md")).toBeInTheDocument();
-    expect(within(analyst).getByText("hl harness sync")).toBeInTheDocument();
-  });
-
-  it("builds override paths for agents and skills", () => {
-    expect(overridePaths({ kind: "agent", name: "fixer" }, "sam")).toEqual({ personal: "people/sam/agents/fixer.md", local: ".hl-local/agents/fixer.md" });
-    expect(overridePaths({ kind: "skill", name: "spec" }, undefined)).toEqual({
-      personal: "people/<you>/skills/spec/SKILL.md",
-      local: ".hl-local/skills/spec/SKILL.md",
-    });
-  });
-});

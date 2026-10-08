@@ -25,8 +25,6 @@ async function orNull<T>(p: Promise<T>): Promise<T | null> {
 
 export const usePeople = () => useQuery({ queryKey: keys.people, queryFn: ({ signal }) => orNull(m6.people(signal)), retry: false, staleTime: 30_000 });
 
-export const useOverrides = () => useQuery({ queryKey: keys.overrides, queryFn: ({ signal }) => orNull(m6.overrides(signal)), retry: false });
-
 export const useScopedTodos = (q: { status: "open" | "done"; all: boolean }) =>
   useQuery({ queryKey: keys.todos(q.all ? q : { status: q.status }), queryFn: ({ signal }) => m6.todos(q, signal) });
 
