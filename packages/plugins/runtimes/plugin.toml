@@ -16,6 +16,7 @@ options = ["claude-code", "cursor"]
 default = "claude-code"
 scope = "workspace"
 section = "agents"
+applies = "restart"
 
 [settings.silence_sec]
 type = "number"
@@ -26,3 +27,4 @@ min = 1
 integer = true
 scope = "workspace"
 section = "agents"
+applies = "restart"

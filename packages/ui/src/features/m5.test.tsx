@@ -413,7 +413,7 @@ describe("setup wizard", () => {
         ? ok({ sections: [{ id: "models", label: "Models", plugins: [] }] } satisfies SettingsView)
         : base(input, init),
     );
-    renderApp("/settings");
+    renderApp("/settings#settings-models");
     fireEvent.click(await screen.findByRole("button", { name: "Add provider" }));
     const form = await screen.findByTestId("provider-form");
     fireEvent.click(within(form).getByRole("button", { name: "Fetch models" }));
@@ -520,11 +520,11 @@ describe("list setting", () => {
       if (u.pathname === "/api/v1/verbs/config/set" && init?.method === "POST") return json({ ok: true, data: { changed: true } });
       return undefined;
     });
-    renderApp("/settings");
+    renderApp("/settings#settings-telegram");
     const input = await screen.findByLabelText("Allowed Telegram user ids");
     expect(input).toHaveValue("111");
     fireEvent.change(input, { target: { value: "111, 222 , ,333" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save Allowed Telegram user ids" }));
+    fireEvent.blur(input);
     await waitFor(() => expect(posts(spy, "/verbs/config/set")).toHaveLength(1));
     expect(posts(spy, "/verbs/config/set")[0]!.body).toEqual({
       input: { plugin: "telegram", key: "allowed_user_ids", value: ["111", "222", "333"], local: true },

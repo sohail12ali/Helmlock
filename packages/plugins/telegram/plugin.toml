@@ -17,6 +17,7 @@ hint = "Name of the environment variable that holds the BotFather token (never t
 default = "HL_TELEGRAM_TOKEN"
 scope = "local"
 section = "telegram"
+applies = "live"
 
 [settings.allowed_user_ids]
 type = "list"
@@ -24,6 +25,7 @@ label = "Allowed Telegram user ids"
 hint = "Numeric Telegram user ids (a TOML array; the CLI takes them comma-separated). Anyone else gets nothing; empty means nobody (fail-closed)."
 scope = "local"
 section = "telegram"
+applies = "live"
 
 [settings.notify]
 type = "boolean"
@@ -32,6 +34,7 @@ hint = "Message me when a run finishes, a ticket is blocked or an approval times
 default = true
 scope = "local"
 section = "telegram"
+applies = "live"
 
 [settings.model]
 type = "string"
@@ -40,3 +43,4 @@ hint = "Model for new Telegram chats (empty = the assistant's default)."
 default = ""
 scope = "local"
 section = "telegram"
+applies = "live"

@@ -53,7 +53,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Settings > Models: several models", () => {
   it("lists each provider with its models and marks the default; the star makes another one the default", async () => {
     const spy = server();
-    renderApp("/settings");
+    renderApp("/settings#settings-models");
     const list = await screen.findByTestId("providers-list");
     const lms = within(list).getByRole("region", { name: "Provider lms" });
     const or = within(list).getByRole("region", { name: "Provider or" });
@@ -68,7 +68,7 @@ describe("Settings > Models: several models", () => {
 
   it("removing the default model asks for the new default in the page", async () => {
     const spy = server();
-    renderApp("/settings");
+    renderApp("/settings#settings-models");
     const or = await screen.findByRole("region", { name: "Provider or" });
     fireEvent.click(within(or).getByRole("button", { name: "Remove or/a/one" }));
     const confirm = within(or).getByRole("group", { name: "Confirm removing or/a/one" });
@@ -89,7 +89,7 @@ describe("Settings > Models: several models", () => {
 
   it("removing the provider that holds the default says where the default goes and sends force", async () => {
     const spy = server();
-    renderApp("/settings");
+    renderApp("/settings#settings-models");
     const or = await screen.findByRole("region", { name: "Provider or" });
     fireEvent.click(within(or).getByRole("button", { name: "Remove provider or" }));
     const confirm = within(or).getByRole("group", { name: "Confirm removing provider or" });
@@ -107,7 +107,7 @@ describe("Settings > Models: several models", () => {
 
   it("Add models fetches the provider's list with its saved URL and key name and adds the ticked ones", async () => {
     const spy = server();
-    renderApp("/settings");
+    renderApp("/settings#settings-models");
     const or = await screen.findByRole("region", { name: "Provider or" });
     fireEvent.click(within(or).getByRole("button", { name: "Add models" }));
     fireEvent.click(within(or).getByRole("button", { name: "Fetch models" }));

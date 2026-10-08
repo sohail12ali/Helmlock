@@ -1,14 +1,14 @@
 // Settings plugin: `hl config set <plugin> <key> <value> [--local]`, validated against the plugin's
 // [settings.<key>] tables (F44). Writes go through the file layer (atomic, stale-write checked) with a closed
 // emitter that keeps every other key and [[plugin]] row. Config is re-read by the next call (F107: no re-mount).
-import type { FileLayer, PluginManifest, PluginModule, TomlEmitter, VerbDef } from "@helmlock/core";
+import type { FileLayer, PluginManifest, PluginModule, SettingApplies, TomlEmitter, VerbDef } from "@helmlock/core";
 import { composeRows, ok, readManifests } from "@helmlock/core";
 import { z } from "zod";
 import { catalog } from "../registry.ts";
 import { modelVerbs } from "./models.ts";
 import { providerAddVerb } from "./provider-add.ts";
 import { secretSetVerb, secretStatusVerb } from "./secret.ts";
-import { coerceValue, type SettingDecl, SettingError, type SettingValue, setInDoc, settingsOf } from "./settings.ts";
+import { coerceValue, type SettingDecl, SettingError, type SettingValue, setInDoc, settingsOf, unsetInDoc } from "./settings.ts";
 
 export * from "./secret.ts";
 export * from "./settings.ts";
@@ -38,9 +38,12 @@ const manifests = () => {
 export interface SetResult {
   plugin: string;
   key: string;
-  value: SettingValue;
+  /** The stored value; null after an unset (the value falls back to the layer below or the plugin default). */
+  value: SettingValue | null;
   file: string;
   changed: boolean;
+  /** When the change takes effect in a running console (the setting's `applies`). */
+  applies: SettingApplies;
 }
 
 async function readDoc(files: FileLayer, rel: string): Promise<{ data: Record<string, unknown>; hash?: string } | undefined> {
@@ -52,10 +55,11 @@ async function readDoc(files: FileLayer, rel: string): Promise<{ data: Record<st
   }
 }
 
-/** Validate and write one setting. Throws SettingError (rule config-unknown-key / config-bad-value / config). */
+/** Validate and write one setting, or remove it with `unset` (back to the layer below or the plugin default).
+ *  Throws SettingError (rule config-unknown-key / config-bad-value / config). */
 export async function setSetting(
   files: FileLayer,
-  i: { plugin: string; key: string; value: unknown; local?: boolean },
+  i: { plugin: string; key: string; value?: unknown; local?: boolean; unset?: boolean },
   opts: { dryRun?: boolean; manifests?: Map<string, PluginManifest> } = {},
 ): Promise<SetResult> {
   const ws = await readDoc(files, WORKSPACE_FILE);
@@ -81,10 +85,21 @@ export async function setSetting(
       `plugin ${i.plugin} declares no setting "${i.key}"`,
       decls.length ? `known keys: ${decls.map((d) => d.key).join(", ")}` : `plugin ${i.plugin} has no settings`,
     );
-  const value = coerceValue(i.plugin, decl, i.value);
   const rel = decl.scope === "local" || i.local ? LOCAL_FILE : WORKSPACE_FILE;
   const current = rel === LOCAL_FILE ? local : ws;
-  const next = setInDoc(current?.data ?? { schema_version: 1 }, i.plugin, i.key, value);
+  const applies = decl.applies ?? "live";
+  let value: SettingValue | null = null;
+  let next: Record<string, unknown>;
+  if (i.unset) {
+    const u = unsetInDoc(current?.data ?? {}, i.plugin, i.key);
+    if (!u.removed) return { plugin: i.plugin, key: i.key, value: null, file: rel, changed: false, applies };
+    next = u.doc;
+  } else {
+    if (i.value === undefined)
+      throw new SettingError("config-bad-value", `${i.plugin}.${i.key}: no value given`, "give a value, or --unset to go back to the default");
+    value = coerceValue(i.plugin, decl, i.value);
+    next = setInDoc(current?.data ?? { schema_version: 1 }, i.plugin, i.key, value);
+  }
   // The result must still compose (e.g. a patch row in workspace.local.toml needs its id defined below it).
   try {
     composeRows(rel === LOCAL_FILE ? { workspace: ws.data, local: next } : { workspace: next, local: local?.data });
@@ -96,8 +111,14 @@ export async function setSetting(
     dryRun: opts.dryRun ?? false,
     ...(current?.hash ? { expectHash: current.hash } : {}),
   });
-  return { plugin: i.plugin, key: i.key, value, file: rel, changed: res.changed };
+  return { plugin: i.plugin, key: i.key, value, file: rel, changed: res.changed, applies };
 }
+
+const APPLIES_NOTE: Record<SettingApplies, string> = {
+  live: " (applies now)",
+  "next-run": " (applies from the next agent run)",
+  restart: " (applies to hl commands now; restart hl serve for the console)",
+};
 
 const flag = z.preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean()).optional();
 
@@ -112,22 +133,29 @@ const configSet = verb({
     "hl config set runtime-claude command C:/tools/claude.exe",
     "hl config set runtimes silence_sec 900 --dry-run",
     'hl config set telegram allowed_user_ids "12345, 67890"',
+    "hl config set runtimes silence_sec --unset",
   ],
   args: ["plugin", "key", "value"],
   input: z.object({
     plugin: z.string().min(1),
     key: z.string().min(1),
-    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]),
+    value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()]))]).optional(),
     local: flag,
+    /** Remove the stored value instead (back to the layer below or the plugin default). */
+    unset: flag,
   }),
   writes: true,
   async run(v, i) {
     const r = await setSetting(v.ctx.get("files"), i, { dryRun: v.dryRun });
+    // Config reload only (F107): hl commands read it now; a running `hl serve` follows the setting's `applies`.
+    const note = r.changed && !v.dryRun ? APPLIES_NOTE[r.applies] : "";
+    if (i.unset) {
+      const verb = v.dryRun ? "would reset" : r.changed ? "reset" : "unchanged (not set):";
+      return ok(r, `${verb} ${r.plugin}.${r.key} in ${r.file} (back to the default)${note}`);
+    }
     const shown = typeof r.value === "string" || Array.isArray(r.value) ? JSON.stringify(r.value) : String(r.value);
     const verb = v.dryRun ? "would set" : r.changed ? "set" : "unchanged:";
-    // Config reload only (F107): hl commands read it now; a running `hl serve` picks it up when restarted (F132 style).
-    const note = r.changed && !v.dryRun ? " (applies to hl commands now; restart hl serve for the console)" : "";
-    return ok({ ...r, applies: "next-start" }, `${verb} ${r.plugin}.${r.key} = ${shown} in ${r.file}${note}`);
+    return ok(r, `${verb} ${r.plugin}.${r.key} = ${shown} in ${r.file}${note}`);
   },
 });
 

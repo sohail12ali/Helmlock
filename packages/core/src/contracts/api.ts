@@ -259,7 +259,11 @@ export interface SettingField {
   options?: string[];
   /** "workspace" = workspace.toml (shared, committed); "local" = workspace.local.toml (this machine). */
   scope: "workspace" | "local";
+  /** When a change takes effect in a running console: at once ("live", the default), from the next agent run, or after
+   *  `hl serve` restarts (hl commands always read it at once). Declared as `applies` in plugin.toml. */
+  applies?: SettingApplies;
 }
+export type SettingApplies = "live" | "next-run" | "restart";
 export interface PluginSettings {
   plugin: string;
   label: string;
@@ -546,3 +550,33 @@ export type RunStateList = RunState[];
 /** Re-exported so the outcome type is reachable from the API module. */
 export type RunOutcomeView = RunOutcome;
 export type OutcomeKindView = OutcomeKind;
+
+// ---------- settings page diagnostics (Settings redesign) ----------
+
+/** One [[plugin]] row as mounted by this `hl serve`. */
+export interface ServerPlugin {
+  /** Row id (what `config set` takes). */
+  id: string;
+  /** The catalog plugin the row uses. */
+  use: string;
+  version?: string;
+  provides: string[];
+  /** ok = mounted; pending = waiting for a service; failed = load or mount error; off = disabled row. */
+  status: "ok" | "pending" | "failed" | "off";
+  waiting_for?: string[];
+  error?: string;
+}
+/** GET /api/v1/server/plugins: what this console process has loaded. */
+export interface ServerPluginsView {
+  plugins: ServerPlugin[];
+  /** Set when workspace.toml or workspace.local.toml does not compose (plugins then stay unmounted). */
+  config_error?: string;
+}
+/** GET /api/v1/settings/env: the knowledge repo's gitignored .env and the NAMES it defines (never values). */
+export interface MachineEnvView {
+  file: string;
+  exists: boolean;
+  names: string[];
+}
+/** POST /api/v1/engines/test {} -> EngineView[]: drop the cached engine tests and run them again. */
+export type EngineTestResult = EngineView[];

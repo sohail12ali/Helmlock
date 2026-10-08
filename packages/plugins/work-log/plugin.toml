@@ -16,3 +16,4 @@ min = 0.25
 max = 24
 scope = "workspace"
 section = "workspace"
+applies = "restart"
