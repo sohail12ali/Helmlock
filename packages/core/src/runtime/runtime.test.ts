@@ -35,7 +35,7 @@ test("mountAll mounts every stub plugin", async () => {
       results.filter((r) => r.state === "failed"),
       [],
     );
-    assert.equal(results.length, 24);
+    assert.equal(results.length, 25);
   } finally {
     await ws.cleanup();
   }
