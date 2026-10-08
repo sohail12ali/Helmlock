@@ -16,6 +16,8 @@ export interface StartOptions {
   uiDir?: string;
   heartbeatMs?: number;
   log?: (line: string) => void;
+  /** Per-user home for ~/.helmlock/recent.toml (the knowledge-center switcher); default the OS home. */
+  home?: string;
 }
 
 export interface RunningServer {
@@ -44,6 +46,7 @@ export async function startServer(o: StartOptions): Promise<RunningServer> {
     log,
     ...(o.uiDir ? { uiDir: o.uiDir } : {}),
     ...(o.heartbeatMs ? { heartbeatMs: o.heartbeatMs } : {}),
+    ...(o.home ? { home: o.home } : {}),
   });
   const server = createAdaptorServer({ fetch: app.fetch }) as Server;
   const want = o.port ?? DEFAULT_PORT;

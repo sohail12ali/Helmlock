@@ -191,6 +191,9 @@ export const CONSOLE_VERBS = [
   "model remove",
   "model default",
   "provider remove",
+  // Milestone 7: project switcher. Both write the .code-workspace file: the console shows the dry run, then confirms with yes.
+  "project add",
+  "project import",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 
@@ -290,6 +293,8 @@ export interface RunStart {
   ticket?: string;
   mode?: Exclude<RunMode, "force">;
   model?: string;
+  /** Milestone 7: run in this project's repo folder (its first repo folder of the workspace file that exists). */
+  project?: string;
 }
 /** GET /api/v1/runs/:id and the 201 body of POST /runs. */
 export type RunDetail = RunState;
@@ -390,7 +395,13 @@ export interface InboxItem {
 
 /** GET /api/v1/setup: first-run checklist for the web wizard (F1a after the writable console). */
 export interface SetupStatus {
-  steps: { id: "author" | "model" | "telegram" | "first-ticket" | "agents" | "trust"; label: string; done: boolean; detail: string; action?: string }[];
+  steps: {
+    id: "author" | "model" | "telegram" | "code" | "first-ticket" | "agents" | "trust";
+    label: string;
+    done: boolean;
+    detail: string;
+    action?: string;
+  }[];
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -416,3 +427,39 @@ export interface ResolvedItem {
 }
 /** GET /api/v1/overrides */
 export type OverridesView = ResolvedItem[];
+
+// ---------------------------------------------------------------------------------------------------------------
+// Milestone 7: project switcher. One console serves one knowledge center (F138); other centers are listed, not switched.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** One project of projects/<id>/project.toml with its repo folders resolved through the live .code-workspace file. */
+export interface ProjectEntry {
+  id: string;
+  name: string;
+  status: string;
+  /** Repo folder names from project.toml; path is absolute when the workspace file names the folder. */
+  repos: { folder: string; path?: string; exists: boolean }[];
+  tickets: number;
+}
+/** GET /api/v1/projects */
+export interface ProjectsView {
+  projects: ProjectEntry[];
+}
+
+/** A knowledge center this machine has served (~/.helmlock/recent.toml, written by `hl serve`). */
+export interface CenterEntry {
+  name: string;
+  root: string;
+  port: number;
+  last_opened: string;
+  /** A console answered GET /api/v1/workspace at that port for that root just now. */
+  running: boolean;
+  url?: string;
+  /** What to run in `root` when it is not running. */
+  command: string;
+}
+/** GET /api/v1/centers */
+export interface CentersView {
+  current: { name: string; console_name: string; root: string };
+  others: CenterEntry[];
+}

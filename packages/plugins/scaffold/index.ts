@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { blocked, type Context, fail, ok, type PluginModule, type ScaffoldService, type VerbCtx } from "@helmlock/core";
 import { z } from "zod";
 import { type Clack, loadClack } from "./prompts.ts";
-import { applyProjectAdd, INITIALS_RE, initRepo, NAME_RE, planInit, planProjectAdd, projectEmitter, SLUG_RE, slugify } from "./scaffold.ts";
+import { applyProjectAdd, INITIALS_RE, initRepo, NAME_RE, planInit, planProjectAdd, planProjectImport, projectEmitter, SLUG_RE, slugify } from "./scaffold.ts";
 
 const today = () => {
   const d = new Date();
@@ -28,6 +28,25 @@ const ProjectAddInput = z.object({
   folder: z.string().min(1),
   path: z.string().optional(),
   id: z.string().optional(),
+  name: z.string().optional(),
+  yes: z.boolean().optional(),
+});
+
+const ProjectImportInput = z.object({
+  file: z.string().min(1),
+  folders: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((v) =>
+      v === undefined
+        ? undefined
+        : Array.isArray(v)
+          ? v
+          : v
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+    ),
   yes: z.boolean().optional(),
 });
 
@@ -139,7 +158,12 @@ function projectAddVerb(ctx: Context) {
           path = await ask(c, `Path to ${input.folder} (relative to the knowledge repo)`, (s) => (s.trim() ? undefined : "required"), `../${input.folder}`);
       }
       if (!path) return fail("missing-args", "missing --path", { fix: `hl project add ${input.folder} --path ../${input.folder}` });
-      const plan = await planProjectAdd(files, ws, { folder: input.folder, path, ...(input.id ? { id: input.id } : {}) });
+      const plan = await planProjectAdd(files, ws, {
+        folder: input.folder,
+        path,
+        ...(input.id ? { id: input.id } : {}),
+        ...(input.name ? { name: input.name } : {}),
+      });
       const diffText = plan.diff.join("\n");
       if (v.dryRun) return ok({ ...plan, writes: plan.writes.map((w) => w.rel), dry_run: true }, `${diffText}\ndry run: nothing written`);
       if (!input.yes) {
@@ -155,6 +179,62 @@ function projectAddVerb(ctx: Context) {
       }
       const changed = await applyProjectAdd(files, plan, ws.author);
       return ok({ folder: plan.folder, path: plan.path, id: plan.id, changed }, `${diffText}\nwritten: ${changed.join(", ")}`);
+    },
+  };
+}
+
+function projectImportVerb(ctx: Context) {
+  return {
+    id: "project import",
+    summary: "Add the product folders of another .code-workspace file as projects (skips the knowledge and system folders).",
+    examples: ["hl project import ../shop/Shop.code-workspace --dry-run", "hl project import ../shop/Shop.code-workspace --folders shop-api,shop-web --yes"],
+    args: ["file"],
+    input: ProjectImportInput,
+    writes: true,
+    async run(v: VerbCtx, input: z.infer<typeof ProjectImportInput>) {
+      const files = ctx.get("files");
+      const ws = ctx.get("workspace");
+      const { file, candidates } = planProjectImport(ws, input.file);
+      const addable = candidates.filter((c) => c.add);
+      let picked = addable;
+      if (input.folders) {
+        const unknown = input.folders.filter((n) => !candidates.some((c) => c.name === n));
+        if (unknown.length) return fail("unknown-folder", `${file} has no folder named ${unknown.map((n) => `"${n}"`).join(", ")}`);
+        const skipped = candidates.filter((c) => !c.add && input.folders?.includes(c.name));
+        if (skipped.length)
+          return fail("folder-skipped", skipped.map((c) => `"${c.name}" cannot be added: ${c.reason}`).join("; "), { fix: "leave it out of --folders" });
+        picked = addable.filter((c) => input.folders?.includes(c.name));
+      }
+      // Plans read the files as they are now; each add re-plans after the previous one wrote (same checks as project add).
+      const plans = [];
+      for (const c of picked) plans.push(await planProjectAdd(files, ws, { folder: c.name, path: c.abs, id: c.id }));
+      const lines = [
+        `from ${file}:`,
+        ...candidates.map((c) =>
+          c.add ? `  ${picked.includes(c) ? "[x]" : "[ ]"} ${c.name} -> projects/${c.id}  (${c.abs})` : `  [-] ${c.name}: skipped, ${c.reason}`,
+        ),
+        ...plans.flatMap((p) => p.diff),
+      ];
+      const data = { file, candidates, folders: picked.map((c) => c.name) };
+      if (picked.length === 0) return ok({ ...data, changed: [], dry_run: v.dryRun }, `${lines.join("\n")}\nnothing to add`);
+      if (v.dryRun) return ok({ ...data, diff: plans.flatMap((p) => p.diff), dry_run: true }, `${lines.join("\n")}\ndry run: nothing written`);
+      if (!input.yes) {
+        const c = v.interactive ? await loadClack() : undefined;
+        if (!c) {
+          return blocked("confirm-required", `hl project import writes the workspace file; confirm with --yes\n${lines.join("\n")}`, {
+            fix: `hl project import ${JSON.stringify(input.file)} --folders ${picked.map((p) => p.name).join(",")} --yes`,
+          });
+        }
+        c.note(lines.join("\n"), "hl project import");
+        const yes = await c.confirm({ message: `Add ${picked.length} project(s)?`, initialValue: true });
+        if (c.isCancel(yes) || !yes) return fail("cancelled", "cancelled; nothing was written");
+      }
+      const changed: string[] = [];
+      for (const cand of picked) {
+        const plan = await planProjectAdd(files, ws, { folder: cand.name, path: cand.abs, id: cand.id });
+        for (const rel of await applyProjectAdd(files, plan, ws.author)) if (!changed.includes(rel)) changed.push(rel);
+      }
+      return ok({ ...data, changed }, `${lines.join("\n")}\nwritten: ${changed.join(", ")}`);
     },
   };
 }
@@ -182,7 +262,7 @@ const plugin: PluginModule = {
     };
     ctx.provide("scaffold", service);
     const verbs = ctx.get("verbs");
-    for (const def of [initVerb(ctx), projectAddVerb(ctx)]) {
+    for (const def of [initVerb(ctx), projectAddVerb(ctx), projectImportVerb(ctx)]) {
       const off = verbs.register(def as never);
       await ctx.effect(() => off);
     }

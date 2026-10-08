@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { DELIVERY_ROOT, FIXTURES } from "@helmlock/core/testing";
 import { catalog } from "@helmlock/plugins";
+import { readRecent } from "@helmlock/plugins/scaffold/recent.ts";
 import { parseServeArgs, serve } from "./serve.ts";
 
 test("parseServeArgs", () => {
@@ -27,7 +28,7 @@ test("hl serve starts, answers, and shuts down cleanly", async () => {
     const io = {
       argv: [],
       cwd: root,
-      env: { HL_DELIVERY: DELIVERY_ROOT },
+      env: { HL_DELIVERY: DELIVERY_ROOT, HL_USER_HOME: join(root, ".home") },
       catalog,
       stdout: (s: string) => {
         stdout += s;
@@ -37,10 +38,16 @@ test("hl serve starts, answers, and shuts down cleanly", async () => {
     };
     const running = serve(io, ["serve", "--port", "0"], true, { stdout: io.stdout, stderr: io.stderr, color: false }, stopped);
     while (!stdout.includes("\n")) await new Promise((r) => setTimeout(r, 20));
-    const started = JSON.parse(stdout) as { ok: boolean; data: { url: string } };
+    const started = JSON.parse(stdout) as { ok: boolean; data: { url: string; port: number } };
     assert.equal(started.ok, true);
     const res = await fetch(`${started.data.url}api/v1/board`);
     assert.equal(res.status, 200);
+    // hl serve records this center in the per-user recent list (the console switcher reads it).
+    const recent = readRecent(join(root, ".home"));
+    assert.deepEqual(
+      recent.map((c) => [c.name, c.port]),
+      [["Test", started.data.port]],
+    );
     stop();
     assert.equal(await running, 0);
   } finally {

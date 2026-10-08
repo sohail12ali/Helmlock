@@ -3,9 +3,11 @@ import { Plus } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router";
 import { useBoard } from "@/api/hooks";
+import { useProjects } from "@/api/projects";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input, Kbd } from "@/components/ui/input";
+import { useActiveProject } from "@/features/projects/active";
 import { isTyping } from "@/lib/keys";
 import { ActionForm, Field, PRIORITIES, Select, SIZES } from "./fields";
 import { useAction } from "./use-action";
@@ -46,11 +48,16 @@ function Composer({ onClose }: { onClose: () => void }) {
   const action = useAction("ticket new");
   const navigate = useNavigate();
   const board = useBoard();
-  const projects = [...new Set((board.data?.tickets ?? []).map((t) => t.project).filter((p): p is string => !!p))].sort();
+  // Milestone 7: the projects of projects/<id>/ plus any named on tickets; the active project is the default.
+  const known = useProjects();
+  const { project: active } = useActiveProject();
+  const projects = [
+    ...new Set([...(known.data?.projects.map((p) => p.id) ?? []), ...(board.data?.tickets ?? []).map((t) => t.project).filter((p): p is string => !!p)]),
+  ].sort();
   const [title, setTitle] = useState("");
   const [size, setSize] = useState("M");
   const [priority, setPriority] = useState("normal");
-  const [project, setProject] = useState("");
+  const [project, setProject] = useState(active);
 
   const input = () => ({
     title: title.trim(),

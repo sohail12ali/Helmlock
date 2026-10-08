@@ -90,11 +90,12 @@ describe("knowledge", () => {
     const s = await data<SetupStatus>("/api/v1/setup");
     assert.deepEqual(
       s.steps.map((x) => x.id),
-      ["author", "model", "telegram", "first-ticket", "agents", "trust"],
+      ["author", "model", "telegram", "code", "first-ticket", "agents", "trust"],
     );
     const by = new Map(s.steps.map((x) => [x.id, x]));
     assert.equal(by.get("author")?.done, true);
     assert.equal(by.get("first-ticket")?.done, true);
+    assert.equal(by.get("code")?.done, true); // projects/wms/project.toml exists
     assert.equal(by.get("model")?.done, false);
     assert.equal(by.get("agents")?.done, false);
     assert.equal(by.get("agents")?.action, "hl harness sync");

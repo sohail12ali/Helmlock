@@ -4,7 +4,7 @@
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { CodeWorkspace, type FileLayer, type InitOptions, PeopleToml, ProjectToml, type TomlEmitter, WorkspaceToml } from "@helmlock/core";
+import { CodeWorkspace, type FileLayer, type InitOptions, PeopleToml, ProjectToml, parseJsonc, type TomlEmitter, WorkspaceToml } from "@helmlock/core";
 import { parse } from "smol-toml";
 
 /** The static template tree shipped with this hl install. */
@@ -272,6 +272,11 @@ export interface ProjectPlan {
   folder: string;
   path: string;
   id: string;
+  /** Display name for a new project.toml (default: the id). */
+  name?: string;
+  /** The folder on disk (absolute) and whether it exists as a folder now; a missing one may be cloned later. */
+  abs: string;
+  exists: boolean;
   /** Workspace-relative files and their new text. */
   writes: { rel: string; text: string; created: boolean }[];
   /** Human diff for the dry run. */
@@ -296,7 +301,7 @@ function addFolderText(rel: string, text: string, folder: string, path: string):
 export async function planProjectAdd(
   files: FileLayer,
   ws: { root: string; codeWorkspaceFile: string | undefined },
-  o: { folder: string; path: string; id?: string },
+  o: { folder: string; path: string; id?: string; name?: string },
 ): Promise<ProjectPlan> {
   if (!o.folder.trim() || /[\\/"]/.test(o.folder)) throw new ScaffoldError("bad-folder", `folder name "${o.folder}" may not hold slashes or quotes`);
   const id = o.id ?? slugify(o.folder);
@@ -307,6 +312,8 @@ export async function planProjectAdd(
     });
   }
   const path = isAbsolute(o.path) ? relPath(ws.root, o.path) : toPosix(o.path);
+  const abs = resolve(ws.root, path);
+  const exists = isDir(abs);
   const wsRel = relPath(ws.root, ws.codeWorkspaceFile);
   const targets = [wsRel];
   if (await files.exists(`${wsRel}.template`)) targets.push(`${wsRel}.template`);
@@ -343,7 +350,16 @@ export async function planProjectAdd(
     writes.push({ rel: hubRel, text, created: true });
     diff.push(`+ ${hubRel}`);
   }
-  return { folder: o.folder, path, id, writes, diff };
+  if (!exists) diff.push(`! ${abs} does not exist yet (clone it there, or fix the path)`);
+  return { folder: o.folder, path, id, ...(o.name?.trim() ? { name: o.name.trim() } : {}), abs, exists, writes, diff };
+}
+
+function isDir(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 export async function applyProjectAdd(files: FileLayer, plan: ProjectPlan, author: string | undefined): Promise<string[]> {
@@ -354,7 +370,7 @@ export async function applyProjectAdd(files: FileLayer, plan: ProjectPlan, autho
       if (w.created) {
         data = ProjectToml.parse({
           schema_version: 1,
-          project: { id: plan.id, name: plan.id, status: "active", owners: author ? [author] : [], repos: [plan.folder], goals: [] },
+          project: { id: plan.id, name: plan.name ?? plan.id, status: "active", owners: author ? [author] : [], repos: [plan.folder], goals: [] },
         });
       } else {
         data = ProjectToml.parse((await files.readTomlRaw(w.rel)).data);
@@ -367,4 +383,89 @@ export async function applyProjectAdd(files: FileLayer, plan: ProjectPlan, autho
     changed.push(w.rel);
   }
   return changed;
+}
+
+// ---------- project import ----------
+
+/** One folder of an imported .code-workspace file: added as a project unless it is skipped (with the reason). */
+export interface ImportCandidate {
+  /** Folder name (the name in the file, else the folder's base name). */
+  name: string;
+  /** Absolute path on disk. */
+  abs: string;
+  /** Project id it would get (slug of the name). */
+  id: string;
+  add: boolean;
+  reason?: string;
+}
+
+const normPath = (p: string) => {
+  const n = resolve(p).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? n.toLowerCase() : n;
+};
+export const samePath = (a: string, b: string) => normPath(a) === normPath(b);
+
+/** Folders of a JSONC .code-workspace file, resolved against the file's own folder. */
+export function readWorkspaceFolders(file: string): { name: string; abs: string }[] {
+  let raw: unknown;
+  try {
+    raw = parseJsonc(readFileSync(file, "utf8"));
+  } catch (e) {
+    throw new ScaffoldError("bad-workspace-file", `${file} is not a readable .code-workspace file: ${(e as Error).message.split("\n")[0]}`, { file });
+  }
+  const rows = (raw as { folders?: unknown } | null)?.folders;
+  if (!Array.isArray(rows)) throw new ScaffoldError("bad-workspace-file", `${file} has no "folders" list`, { file });
+  const out: { name: string; abs: string }[] = [];
+  for (const f of rows as Record<string, unknown>[]) {
+    if (typeof f?.path !== "string" || !f.path.trim()) continue;
+    const abs = resolve(dirname(file), f.path);
+    const name = typeof f.name === "string" && f.name.trim() ? f.name.trim() : (abs.split(/[\\/]/).filter(Boolean).pop() ?? abs);
+    out.push({ name, abs });
+  }
+  return out;
+}
+
+/**
+ * Plans `hl project import`: reads another .code-workspace file (anywhere on this machine; read only) and lists its
+ * folders. The knowledge and system folders, folders already in this workspace, names already taken, missing folders
+ * and names that cannot be a folder name are skipped with a reason. Nothing is written here.
+ */
+export function planProjectImport(
+  ws: { root: string; deliveryRoot: string; codeWorkspaceFile: string | undefined },
+  file: string,
+): { file: string; candidates: ImportCandidate[] } {
+  const abs = resolve(ws.root, file);
+  if (!/\.code-workspace(\.template)?$/i.test(abs))
+    throw new ScaffoldError("bad-workspace-file", `${abs} is not a .code-workspace file`, { fix: "pick a file ending in .code-workspace" });
+  if (!existsSync(abs) || !statSync(abs).isFile()) throw new ScaffoldError("not-found", `${abs} does not exist`, { file: abs });
+  if (!ws.codeWorkspaceFile) {
+    throw new ScaffoldError("no-workspace", "no .code-workspace file found for this knowledge center", { fix: "run inside a knowledge center" });
+  }
+  const mine = readWorkspaceFolders(ws.codeWorkspaceFile);
+  const layerOf = new Map<string, string>();
+  try {
+    const t = parse(readFileSync(join(ws.root, "workspace.toml"), "utf8")) as { layers?: { folder?: unknown; layer?: unknown }[] };
+    for (const r of t.layers ?? []) if (typeof r.folder === "string" && typeof r.layer === "string") layerOf.set(r.folder, r.layer);
+  } catch {
+    /* no layers: the path checks below still catch the knowledge and system folders */
+  }
+  const candidates: ImportCandidate[] = [];
+  const taken = new Set<string>();
+  for (const f of readWorkspaceFolders(abs)) {
+    const id = slugify(f.name);
+    const layer = layerOf.get(f.name);
+    let reason: string | undefined;
+    if (samePath(f.abs, ws.root)) reason = "this knowledge center";
+    else if (samePath(f.abs, ws.deliveryRoot)) reason = "the system (delivery) repo";
+    else if (f.name === "system" || layer === "system") reason = "the system folder";
+    else if (f.name === "knowledge" || layer === "workspace") reason = "a knowledge folder";
+    else if (mine.some((m) => samePath(m.abs, f.abs))) reason = "already in this workspace";
+    else if (mine.some((m) => m.name === f.name) || taken.has(f.name)) reason = `a folder named "${f.name}" is already in this workspace`;
+    else if (/[\\/"]/.test(f.name)) reason = "the folder name holds slashes or quotes";
+    else if (!SLUG_RE.test(id)) reason = `cannot make a project id from "${f.name}"`;
+    else if (!isDir(f.abs)) reason = "folder not found on this machine";
+    if (!reason) taken.add(f.name);
+    candidates.push({ name: f.name, abs: f.abs, id, add: !reason, ...(reason ? { reason } : {}) });
+  }
+  return { file: abs, candidates };
 }

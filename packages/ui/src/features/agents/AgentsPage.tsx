@@ -1,12 +1,13 @@
 // Agents and runs (mockup 13, F84, F65, F97): start a run in one line, runs list with active ones first.
 import type { RunSummary } from "@helmlock/core/contracts";
 import { useNavigate } from "react-router";
-import { useRuns } from "@/api/hooks";
+import { useBoard, useRuns } from "@/api/hooks";
 import { EmptyState, ErrorState, Loading, Mono, PageHeader, StatusChip, TicketLink } from "@/components/common";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PendingApprovals } from "@/features/approvals/PendingApprovals";
+import { inProject, useActiveProject } from "@/features/projects/active";
 import { fmtCost, fmtDateTime, fmtTokens } from "@/lib/format";
 import { useListNav } from "@/lib/keys";
 import { runState, runTokens } from "@/lib/runs";
@@ -78,7 +79,10 @@ export function RunsList({ runs }: { runs: RunSummary[] }) {
 
 export function AgentsPage() {
   const q = useRuns();
-  const runs = sortRuns(q.data ?? []);
+  // Active project (milestone 7): runs of other projects' tickets are hidden; runs with no ticket stay.
+  const { project } = useActiveProject();
+  const board = useBoard();
+  const runs = sortRuns(inProject(q.data ?? [], project, (r) => r.ticket, board.data?.tickets));
 
   const today = new Date().toISOString().slice(0, 10);
   const todays = runs.filter((r) => r.started.startsWith(today));

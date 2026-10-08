@@ -11,7 +11,8 @@ Ids: tickets `T-014-sa` (counter plus author initials), records `D-003-sa` (deci
 | `hl help agent` | prints the agent contract | S1 |
 | `hl config show` | `--json` | S1 |
 | `hl init <dir>` | `--name`, `--author`, `--slug`, `--initials`, `--email`, `--no-git`, `--delivery <path>`, `--yes`, `--dry-run` | S6 |
-| `hl project add <folder-name>` | `--path`, `--id`, `--yes`, `--dry-run` | S6 |
+| `hl project add <folder-name>` | `--path`, `--id`, `--name`, `--yes`, `--dry-run` (the dry run warns when the folder does not exist yet); console verb (milestone 7) | S6 |
+| `hl project import <file.code-workspace>` | `--folders a,b` (default: every addable folder), `--yes`, `--dry-run`; skips the knowledge and system folders, folders already in the workspace and missing folders, each with a reason; same writes as `project add`; console verb (milestone 7) | S6 |
 | `hl ticket new "<title>"` | `--project`, `--size S\|M\|L`, `--priority`, `--goal` | S3 |
 | `hl ticket show <T>` / `hl ticket list` | `--stage`, `--mine`, `--json` (show includes tasks and record counts) | S3 |
 | `hl ticket move <T> <stage>` | exits 2 when a gate blocks | S3 |

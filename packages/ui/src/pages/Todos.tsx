@@ -3,6 +3,7 @@
 // todos are shown read-only under "Everyone's".
 import type { TodoItem } from "@helmlock/core/api";
 import { useId, useState } from "react";
+import { useBoard } from "@/api/hooks";
 import { INVALIDATE_M6, usePeople, useScopedTodos } from "@/api/m6";
 import { INVALIDATE } from "@/api/write-hooks";
 import { EmptyState, ErrorState, Loading, Mono, PageHeader, StatusChip, TicketLink } from "@/components/common";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SCOPE_ORDER, SCOPES, type Scope, ScopeBadge, ScopePicker } from "@/features/people/scope";
+import { inProject, useActiveProject } from "@/features/projects/active";
 import { isoLocal } from "@/lib/dates";
 
 const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
@@ -198,7 +200,20 @@ export function TodosPage() {
   const me = people.data?.me?.id;
   const q = useScopedTodos({ status, all: filter === "everyone" });
   const today = isoLocal(new Date());
-  const sections = q.data ? groupTodos(filterTodos(q.data, filter, me), me) : [];
+  // Active project (milestone 7): todos carry a ticket, not a project, so a todo is hidden only when its ticket is in
+  // another project; todos with no ticket stay.
+  const { project } = useActiveProject();
+  const board = useBoard();
+  const sections = q.data
+    ? groupTodos(
+        filterTodos(
+          inProject(q.data, project, (t) => t.ticket, board.data?.tickets),
+          filter,
+          me,
+        ),
+        me,
+      )
+    : [];
   const names = new Map((people.data?.people ?? []).map((p) => [p.id, p.name]));
   return (
     <PageLayout id="todos">
@@ -231,6 +246,11 @@ export function TodosPage() {
             </button>
           ))}
         </fieldset>
+        {project && (
+          <p className="mb-2 text-xs text-muted-foreground" data-testid="todos-project-note">
+            Project <Mono>{project}</Mono>: todos of its tickets, and todos with no ticket.
+          </p>
+        )}
         {q.isPending ? (
           <Loading />
         ) : q.isError ? (

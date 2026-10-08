@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { VirtualList } from "@/components/VirtualList";
+import { useActiveProject } from "@/features/projects/active";
 import { useListNav } from "@/lib/keys";
 import { readPref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
@@ -289,6 +290,7 @@ export function TicketsPage() {
   const stageLabel = useStageLabel();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const { project, setProject } = useActiveProject();
   const view = (params.get("view") ?? readPref("tickets.view", "board", ["board", "list"] as const)) as "board" | "list";
   const filters: Filters = {
     mine: params.get("mine") === "1",
@@ -296,7 +298,7 @@ export function TicketsPage() {
     size: params.get("size") ?? "",
     text: params.get("q") ?? "",
     stage: params.get("stage") ?? "",
-    project: params.get("project") ?? "",
+    project,
   };
   const selected = params.get("t") ?? undefined;
   const me = ws.data?.author?.id;
@@ -394,7 +396,7 @@ export function TicketsPage() {
           </Chip>
         )}
         {filters.project && (
-          <Chip active onClick={() => set("project", undefined)}>
+          <Chip active onClick={() => setProject("")}>
             Project: {filters.project} ×
           </Chip>
         )}

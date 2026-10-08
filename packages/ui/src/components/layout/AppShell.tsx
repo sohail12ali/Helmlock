@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/input";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ApprovalsBadge } from "@/features/approvals/PendingApprovals";
+import { AddProjectHost } from "@/features/projects/AddProject";
+import { useActiveProject, useProjectUrlSync } from "@/features/projects/active";
+import { CenterSwitcher, ProjectChip, ProjectsNav } from "@/features/projects/Switcher";
 import { useGlobalKeys } from "@/lib/keys";
 import { NARROW, PHONE, useMediaQuery } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
@@ -79,6 +82,7 @@ function SideNav({ collapsed, needsYou, unread, onNavigate }: { collapsed: boole
           )}
         </NavLink>
       ))}
+      <ProjectsNav collapsed={collapsed} onPick={onNavigate} />
     </nav>
   );
 }
@@ -125,6 +129,8 @@ export function AppShell() {
   useM4Live();
   useM5Live();
   const unread = useInboxUnread();
+  useProjectUrlSync();
+  const { setProject } = useActiveProject();
   const [chatOpen, setChatOpenState] = useState(loadChatOpen);
   const setChatOpen = (o: boolean) => {
     setChatOpenState(o);
@@ -181,10 +187,13 @@ export function AppShell() {
               {narrow ? <Menu /> : <PanelLeft />}
             </Button>
           )}
-          <NavLink to="/" className="flex min-w-0 items-center gap-2 font-semibold" title={ws.data?.name}>
+          <NavLink to="/" className="flex shrink-0 items-center" title={consoleName} aria-label={`${consoleName}: overview`}>
             <img src="/favicon.svg" alt="" width={22} height={22} className="size-[22px] shrink-0" />
-            <span className="truncate">{phone ? (ws.data?.name ?? consoleName) : consoleName}</span>
           </NavLink>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <CenterSwitcher compact={phone} />
+            <ProjectChip />
+          </div>
           <form
             aria-label="Search the workspace"
             className="relative mx-auto hidden w-full max-w-md sm:block"
@@ -304,6 +313,7 @@ export function AppShell() {
         <Palette open={paletteOpen} onOpenChange={setPaletteOpen} pathname={location.pathname} />
         <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
         <NewTicketHost />
+        <AddProjectHost onAdded={(ids) => ids.length === 1 && ids[0] && setProject(ids[0])} />
       </div>
     </ShellContext.Provider>
   );

@@ -18,8 +18,8 @@ describe("overview", () => {
     expect(screen.getByRole("list", { name: "Tickets by stage" })).toHaveTextContent("Spec2");
     // Runs: a run that did nothing is labelled.
     expect(screen.getByText("no-op")).toBeInTheDocument();
-    // Console name from /workspace.
-    expect(await screen.findByText("Test Console")).toBeInTheDocument();
+    // The top bar names the knowledge center (milestone 7 switcher), from /workspace.
+    expect(await screen.findByRole("button", { name: /Knowledge center: Test./ })).toBeInTheDocument();
   });
 
   it("j then Enter opens the selected needs-you item", async () => {

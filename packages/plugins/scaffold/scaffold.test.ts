@@ -214,6 +214,120 @@ test("project add: dry run, confirm gate, write, then duplicate refused", async 
   });
 });
 
+test("project add: the dry run reports a missing folder and takes a display name", async () => {
+  const root = await init();
+  mkdirSync(join(root, "..", "shop-web"));
+  await withRuntime(root, async (rt) => {
+    const missing = await rt.run("project add", { folder: "ghost", path: "../ghost" }, { dryRun: true });
+    assert.ok(missing.ok);
+    assert.equal((missing.data as { exists: boolean }).exists, false);
+    assert.match(missing.text ?? "", /does not exist yet/);
+    const there = await rt.run("project add", { folder: "shop-web", path: join(root, "..", "shop-web"), name: "Shop web" }, { dryRun: true });
+    assert.equal((there.data as { exists: boolean; path: string }).exists, true);
+    assert.equal((there.data as { path: string }).path, "../shop-web");
+    assert.ok(!existsSync(join(root, "projects", "shop-web")));
+    const done = await rt.run("project add", { folder: "shop-web", path: "../shop-web", name: "Shop web", yes: true });
+    assert.ok(done.ok, JSON.stringify(done));
+    const pt = ProjectToml.parse(parse(readFileSync(join(root, "projects", "shop-web", "project.toml"), "utf8")));
+    assert.equal(pt.project.name, "Shop web");
+  });
+});
+
+test("project import: lists folders, skips knowledge, system, known and missing ones; dry run writes nothing", async () => {
+  const root = await init();
+  const parent = join(root, "..");
+  for (const d of ["shop-api", "shop-web", "wms-api"]) mkdirSync(join(parent, d));
+  // Another product's workspace file, outside the knowledge center, with comments (JSONC).
+  const other = tempDir();
+  const file = join(other, "Shop.code-workspace");
+  writeFileSync(
+    file,
+    `{
+  // the shop
+  "folders": [
+    { "name": "knowledge", "path": ${JSON.stringify(root)} },
+    { "name": "system", "path": ${JSON.stringify(DELIVERY_ROOT)} },
+    { "name": "shop-api", "path": ${JSON.stringify(join(parent, "shop-api"))} },
+    { "path": ${JSON.stringify(join(parent, "shop-web"))} },
+    { "name": "wms-api", "path": ${JSON.stringify(join(parent, "wms-api"))} },
+    { "name": "gone", "path": "./gone" },
+  ],
+}`,
+  );
+  const wsFile = join(root, "Acme.code-workspace");
+  await withRuntime(root, async (rt) => {
+    assert.ok((await rt.run("project add", { folder: "wms-api", path: "../wms-api", id: "wms", yes: true })).ok);
+    const before = readFileSync(wsFile, "utf8");
+    const dry = await rt.run("project import", { file }, { dryRun: true });
+    assert.ok(dry.ok, JSON.stringify(dry));
+    const d = dry.data as { candidates: { name: string; add: boolean; reason?: string; id: string }[]; folders: string[] };
+    assert.deepEqual(
+      d.candidates.map((c) => [c.name, c.add]),
+      [
+        ["knowledge", false],
+        ["system", false],
+        ["shop-api", true],
+        ["shop-web", true],
+        ["wms-api", false],
+        ["gone", false],
+      ],
+    );
+    assert.match(d.candidates[0]?.reason ?? "", /knowledge center/);
+    assert.match(d.candidates[1]?.reason ?? "", /system/);
+    assert.match(d.candidates[4]?.reason ?? "", /already in this workspace/);
+    assert.match(d.candidates[5]?.reason ?? "", /not found/);
+    assert.deepEqual(d.folders, ["shop-api", "shop-web"]);
+    assert.equal(readFileSync(wsFile, "utf8"), before);
+    assert.ok(!existsSync(join(root, "projects", "shop-api")));
+
+    const gated = await rt.run("project import", { file, folders: ["shop-api"] });
+    assert.ok(!gated.ok);
+    assert.equal(gated.code, 2);
+    assert.equal(readFileSync(wsFile, "utf8"), before);
+
+    const bad = await rt.run("project import", { file, folders: ["system"], yes: true });
+    assert.equal(bad.ok, false);
+    assert.equal(!bad.ok && bad.error.rule, "folder-skipped");
+    const unknown = await rt.run("project import", { file, folders: ["nope"], yes: true });
+    assert.equal(!unknown.ok && unknown.error.rule, "unknown-folder");
+
+    const done = await rt.run("project import", { file, folders: "shop-api", yes: true });
+    assert.ok(done.ok, JSON.stringify(done));
+    const ws = JSON.parse(readFileSync(wsFile, "utf8")) as { folders: { name: string; path: string }[] };
+    assert.deepEqual(ws.folders.at(-1), { name: "shop-api", path: "../shop-api" });
+    assert.ok(existsSync(join(root, "projects", "shop-api", "project.toml")));
+    assert.ok(!existsSync(join(root, "projects", "shop-web")));
+
+    const notWs = await rt.run("project import", { file: join(other, "nope.json") }, { dryRun: true });
+    assert.equal(!notWs.ok && notWs.error.rule, "bad-workspace-file");
+    const absent = await rt.run("project import", { file: join(other, "Absent.code-workspace") }, { dryRun: true });
+    assert.equal(!absent.ok && absent.error.rule, "not-found");
+  });
+});
+
+test("recent list: record, refresh by root, newest first, broken file reads empty", async () => {
+  const { readRecent, recordRecent, recentFile, centerName } = await import("./recent.ts");
+  const home = tempDir();
+  assert.deepEqual(readRecent(home), []);
+  recordRecent(home, { name: "Acme", root: join(home, "acme"), port: 4317, last_opened: "2026-10-01T00:00:00.000Z" });
+  recordRecent(home, { name: "Shop", root: join(home, "shop"), port: 4400, last_opened: "2026-10-02T00:00:00.000Z" });
+  recordRecent(home, { name: "Acme", root: join(home, "acme"), port: 4318, last_opened: "2026-10-03T00:00:00.000Z" });
+  const list = readRecent(home);
+  assert.deepEqual(
+    list.map((c) => [c.name, c.port]),
+    [
+      ["Acme", 4318],
+      ["Shop", 4400],
+    ],
+  );
+  writeFileSync(recentFile(home), "not = [toml");
+  assert.deepEqual(readRecent(home), []);
+  const ws = tempDir();
+  writeFileSync(join(ws, "workspace.toml"), 'schema_version = 1\n[workspace]\nname = "Acme Ops"\n');
+  assert.equal(centerName(ws, "fallback"), "Acme Ops");
+  assert.equal(centerName(home, "fallback"), "fallback");
+});
+
 test("the generated hl.cmd runs `where` from another folder", { skip: process.platform !== "win32" && "Windows only" }, async () => {
   // Inside the delivery repo's gitignored cache so DELIVERY_REL is a real relative path.
   const root = await init(join(DELIVERY_ROOT, ".hl-cache", "s6-tests"));
