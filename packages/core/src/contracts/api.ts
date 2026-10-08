@@ -546,3 +546,38 @@ export type RunStateList = RunState[];
 /** Re-exported so the outcome type is reachable from the API module. */
 export type RunOutcomeView = RunOutcome;
 export type OutcomeKindView = OutcomeKind;
+
+// ---------- folder picker (Add project: Browse...) ----------
+
+/** GET /api/v1/fs/list?path=<absolute>&mode=folder|workspace -> FsListing. Read-only: only folder names (and, in mode
+ *  "workspace", *.code-workspace file names) are listed; never file contents, never other files. */
+export type FsListMode = "folder" | "workspace";
+export interface FsEntry {
+  name: string;
+  /** Absolute path. */
+  path: string;
+  kind: "folder" | "workspace-file";
+  /** The folder holds a .git entry (a repo). */
+  git?: boolean;
+  /** The folder holds a *.code-workspace file. */
+  workspace?: boolean;
+}
+export interface FsShortcut {
+  label: string;
+  path: string;
+}
+export interface FsListing {
+  /** The listed folder, absolute. */
+  path: string;
+  /** Its parent folder, or null at a root. */
+  parent: string | null;
+  /** Drive roots on Windows (for example "C:\\", "D:\\"), "/" elsewhere. */
+  roots: string[];
+  /** Folders first, then workspace files; each sorted by name. */
+  entries: FsEntry[];
+  /** True when the folder held more entries than the cap (500). */
+  truncated: boolean;
+  /** Home, the knowledge repo's parent folder and the folders of the current .code-workspace (recent picks are kept
+   *  by the console in the browser). */
+  shortcuts: FsShortcut[];
+}

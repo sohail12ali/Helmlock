@@ -2,7 +2,7 @@
 // (`project import`). Only `hl init` and `hl project add` write the workspace file, so every add shows the dry run
 // (what will change) first and writes only on confirm. Used in a dialog (sidebar) and in the setup wizard.
 import type { VerbCallResult } from "@helmlock/core/api";
-import { FolderPlus } from "lucide-react";
+import { FolderOpen, FolderPlus } from "lucide-react";
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { slugify } from "@/api/m6";
 import { PROJECT_INVALIDATE } from "@/api/projects";
@@ -10,6 +10,7 @@ import { Mono } from "@/components/common";
 import { Field } from "@/components/forms/controls";
 import { useVerbRun } from "@/components/forms/useVerbRun";
 import { VerbResult } from "@/components/forms/VerbResult";
+import { PathPicker } from "@/components/PathPicker";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -45,17 +46,24 @@ function FolderForm({ onAdded }: { onAdded?: (ids: string[]) => void }) {
   const [name, setName] = useState("");
   const add = useVerbRun("project add", PROJECT_INVALIDATE);
   const [preview, setPreview] = useState<{ key: string; result: VerbCallResult }>();
+  const [browsing, setBrowsing] = useState(false);
+  const inputFor = (p: string) => {
+    const f = folderOf(p);
+    const i = slugify(f);
+    return { folder: f, path: p.trim().replace(/^["']|["']$/g, ""), ...(i ? { id: i } : {}), ...(name.trim() ? { name: name.trim() } : {}) };
+  };
   const folder = folderOf(path);
   const id = slugify(folder);
-  const input = { folder, path: path.trim().replace(/^["']|["']$/g, ""), ...(id ? { id } : {}), ...(name.trim() ? { name: name.trim() } : {}) };
+  const input = inputFor(path);
   const key = JSON.stringify(input);
   const current = preview?.key === key ? preview.result : undefined;
   const exists = current?.ok ? (current.data as { exists?: boolean } | undefined)?.exists !== false : false;
   const [done, setDone] = useState<VerbCallResult>();
 
-  const runPreview = async () => {
+  const runPreview = async (p: string = path) => {
     setDone(undefined);
-    setPreview({ key, result: await add.run(input, true) });
+    const i = inputFor(p);
+    setPreview({ key: JSON.stringify(i), result: await add.run(i, true) });
   };
   const confirm = async () => {
     const r = await add.run({ ...input, yes: true });
@@ -83,8 +91,24 @@ function FolderForm({ onAdded }: { onAdded?: (ids: string[]) => void }) {
         required
         hint="The folder of a product repo on this machine, for example D:\code\wms-api or ../wms-api."
       >
-        <Input id={`${uid}-path`} className="font-mono" value={path} onChange={(e) => setPath(e.target.value)} placeholder="../wms-api" />
+        <div className="flex gap-2">
+          <Input id={`${uid}-path`} className="font-mono" value={path} onChange={(e) => setPath(e.target.value)} placeholder="../wms-api" />
+          <Button type="button" variant="outline" onClick={() => setBrowsing(true)}>
+            <FolderOpen />
+            Browse…
+          </Button>
+        </div>
       </Field>
+      <PathPicker
+        open={browsing}
+        onOpenChange={setBrowsing}
+        mode="folder"
+        initialPath={path}
+        onPick={(p) => {
+          setPath(p);
+          if (folderOf(p)) void runPreview(p);
+        }}
+      />
       <Field
         label="Project name (optional)"
         htmlFor={`${uid}-name`}
@@ -143,10 +167,11 @@ function ImportForm({ onAdded }: { onAdded?: (ids: string[]) => void }) {
   const key = JSON.stringify([list?.file, [...checked].sort()]);
   const current = preview?.key === key ? preview.result : undefined;
 
-  const read = async () => {
+  const [browsing, setBrowsing] = useState(false);
+  const read = async (f: string = cleanFile) => {
     setDone(undefined);
     setError(undefined);
-    const r = await imp.run({ file: cleanFile }, true);
+    const r = await imp.run({ file: f }, true);
     if (!r.ok) {
       setList(undefined);
       setError(r);
@@ -191,7 +216,13 @@ function ImportForm({ onAdded }: { onAdded?: (ids: string[]) => void }) {
           required
           hint="A VS Code or Cursor workspace file that lists your repos. Its knowledge and system folders are skipped."
         >
-          <Input id={`${uid}-file`} className="font-mono" value={file} onChange={(e) => setFile(e.target.value)} placeholder="D:\code\Shop.code-workspace" />
+          <div className="flex gap-2">
+            <Input id={`${uid}-file`} className="font-mono" value={file} onChange={(e) => setFile(e.target.value)} placeholder="D:\code\Shop.code-workspace" />
+            <Button type="button" variant="outline" onClick={() => setBrowsing(true)}>
+              <FolderOpen />
+              Browse…
+            </Button>
+          </div>
         </Field>
         <div>
           <Button type="submit" variant="outline" disabled={!cleanFile || imp.pending}>
@@ -199,6 +230,16 @@ function ImportForm({ onAdded }: { onAdded?: (ids: string[]) => void }) {
           </Button>
         </div>
       </form>
+      <PathPicker
+        open={browsing}
+        onOpenChange={setBrowsing}
+        mode="workspace"
+        initialPath={cleanFile}
+        onPick={(p) => {
+          setFile(p);
+          void read(p);
+        }}
+      />
       {error && <VerbResult result={error} />}
       {list && (
         <fieldset className="flex flex-col gap-1.5" aria-label="Folders to add">
