@@ -12,7 +12,7 @@ import { didYouMean } from "../../core/src/verbs/suggest.ts";
 import { leadingWords, splitGlobals } from "./args.ts";
 import { buildLeaf, parseLeaf } from "./leaf.ts";
 import { type Out, printFailure, printResult } from "./output.ts";
-import { askMissing, clackAsk } from "./prompt.ts";
+import { askMissing, askSecret, clackAsk } from "./prompt.ts";
 import { buildTree, resolve, type VerbEntry } from "./tree.ts";
 
 export interface MainIo {
@@ -24,6 +24,8 @@ export interface MainIo {
   stderr: (s: string) => void;
   /** stdin and stdout are both a terminal. */
   tty: boolean;
+  /** All of stdin as text (for secrets piped in when not a terminal). */
+  readStdin?: () => Promise<string>;
   version?: string;
 }
 
@@ -116,6 +118,19 @@ export async function main(io: MainIo): Promise<number> {
       io.stdout(spec.cmd.helpInformation() + helpAfter(def.examples));
       return 0;
     }
+    const secrets = def.secret ?? [];
+    const onArgv = secrets.filter((k) => argv.some((a) => a === `--${k.replace(/_/g, "-")}` || a.startsWith(`--${k.replace(/_/g, "-")}=`)));
+    if (onArgv.length)
+      return printFailure(
+        {
+          rule: "secret-on-argv",
+          message: `hl ${id}: --${onArgv[0]?.replace(/_/g, "-")} is not accepted on the command line (it would stay in your shell history)`,
+          fix: `run \`hl ${id}\` and paste it at the hidden prompt, or pipe it in: \`hl ${id} ... < file\``,
+        },
+        1,
+        g.json,
+        out,
+      );
     let parsed: ReturnType<typeof parseLeaf>;
     try {
       parsed = parseLeaf(spec, argv);
@@ -134,6 +149,22 @@ export async function main(io: MainIo): Promise<number> {
       const answers = await askMissing(id, parsed.missing);
       if (!answers) return printFailure({ rule: "cancelled", message: "cancelled" }, 1, g.json, out);
       Object.assign(parsed.input, answers);
+    }
+    for (const key of secrets) {
+      let value = "";
+      if (interactive) {
+        const asked = await askSecret(id, key);
+        if (asked === undefined) return printFailure({ rule: "cancelled", message: "cancelled" }, 1, g.json, out);
+        value = asked;
+      } else if (io.readStdin) value = (await io.readStdin()).replace(/\r?\n$/, "");
+      if (!value.trim())
+        return printFailure(
+          { rule: "missing-argument", message: `hl ${id}: no ${key} given`, fix: `pipe it in on stdin (\`hl ${id} ... < file\`) or run it in a terminal` },
+          1,
+          g.json,
+          out,
+        );
+      parsed.input[key] = value;
     }
     const res = await rt.run(id, parsed.input, { json: g.json, dryRun: g.dryRun, interactive });
     return printResult(res, g.json, out);

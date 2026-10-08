@@ -4,6 +4,19 @@ export * from "./contracts/index.ts";
 export { LockTimeoutError } from "./files/atomic.ts";
 export { createFileLayer, PathOutsideWorkspaceError, UnknownEmitterError } from "./files/file-layer.ts";
 export { parseJsonc, stripBom } from "./files/jsonc.ts";
+export {
+  effectiveEnv,
+  MACHINE_ENV_FILE,
+  machineSecret,
+  parseEnvText,
+  readMachineEnv,
+  SECRET_NAME,
+  SecretError,
+  type SecretSource,
+  type SetSecretResult,
+  secretSource,
+  setMachineSecret,
+} from "./files/machine-env.ts";
 export { resolveWorkspace } from "./files/resolve.ts";
 export { createKernel, type FullKernel, type KernelOptions } from "./kernel/kernel.ts";
 export { readManifest, readManifests } from "./runtime/manifests.ts";

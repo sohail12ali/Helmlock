@@ -281,6 +281,8 @@ export class TelegramBot {
   /** Writes from commands go through the verb registry as the person (same path as the CLI). */
   private async verb(id: string, input: Record<string, unknown>, usage: string | undefined, said: (data: unknown) => string): Promise<string> {
     if (usage) return usage;
+    // Secrets are never set from a chat (milestone 7): the value would sit in Telegram's history.
+    if (this.o.runtime.ctx.get("verbs").get(id)?.secret?.length) return "Secrets can only be saved in the console or with hl on this machine.";
     const actor = this.actor();
     if (!actor) return "No author is set on this machine (author.local), so nothing can be written.";
     const r = await this.o.runtime.run(id, input, { actor });

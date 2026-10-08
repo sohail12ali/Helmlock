@@ -5,7 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ChatTurn, CompletionDelta, FileLayer, ModelInfo, ProbeResult, ProvidersService, ToolSpec } from "@helmlock/core";
-import { composeRows } from "@helmlock/core";
+import { composeRows, machineSecret } from "@helmlock/core";
 import { parse } from "smol-toml";
 import { type ProviderRow, type ProvidersConfig, type Role, readProvidersConfig, splitModelId } from "./config.ts";
 import { Accumulator, classifyStatus, errorMessage, ProviderError, parseRetryAfter, SseLines } from "./wire.ts";
@@ -163,10 +163,17 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
 
   const headers = (p: ProviderRow): Record<string, string> => {
     const h: Record<string, string> = { "content-type": "application/json", accept: "application/json, text/event-stream" };
-    const key = p.key_env ? env[p.key_env] : undefined;
+    // By name: the process env first, then this machine's .env (read fresh, so a key saved later works at once).
+    const key = p.key_env ? machineSecret(o.root, p.key_env, env) : undefined;
     if (key) h.authorization = `Bearer ${key}`;
     else if (p.auth === "required")
-      throw new ProviderError("auth", `provider ${p.id} needs a key: set the environment variable ${p.key_env ?? "(key_env not set)"}`, { status: 401 });
+      throw new ProviderError(
+        "auth",
+        p.key_env
+          ? `provider ${p.id} needs a key: save ${p.key_env} on this machine (hl secret set ${p.key_env}) or set it in the environment`
+          : `provider ${p.id} needs a key: set key_env to the variable name that holds it`,
+        { status: 401 },
+      );
     return h;
   };
 

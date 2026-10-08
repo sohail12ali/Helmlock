@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import type { FieldInfo } from "@helmlock/core";
@@ -154,4 +156,43 @@ test("a trailing ...rest collects the remainder", () => {
   ];
   const p = parseLeaf(buildLeaf({ id: "log-work", summary: "", examples: ["x"], args: ["ticket", "...words"] }, fields), ["T-1", "did", "the", "thing"]);
   assert.deepEqual(p.input, { ticket: "T-1", words: ["did", "the", "thing"] });
+});
+
+test("hl secret set: refuses the value on argv; reads it from stdin; never prints it", () => {
+  const root = mkdtempSync(join(tmpdir(), "hl-cli-secret-"));
+  cpSync(WS, root, { recursive: true });
+  const run = (args: string[], input?: string) => {
+    const r = spawnSync(process.execPath, [HL, ...args], {
+      cwd: root,
+      env: { ...process.env, HL_DELIVERY: DELIVERY, NO_COLOR: "1" },
+      encoding: "utf8",
+      input: input ?? "",
+    });
+    return { code: r.status, out: r.stdout + r.stderr };
+  };
+  try {
+    const argv = run(["secret", "set", "MY_KEY", "--value", "sk-argv-secret"]);
+    assert.equal(argv.code, 1);
+    assert.match(argv.out, /not accepted on the command line/);
+    assert.ok(!argv.out.includes("sk-argv-secret"));
+
+    const empty = run(["secret", "set", "MY_KEY"], "");
+    assert.equal(empty.code, 1);
+    assert.match(empty.out, /no value given/);
+
+    const ok = run(["secret", "set", "MY_KEY"], "sk-piped-secret\r\n");
+    assert.equal(ok.code, 0, ok.out);
+    assert.ok(!ok.out.includes("sk-piped-secret"));
+    assert.match(ok.out, /MY_KEY saved in this machine's \.env/);
+    assert.match(readFileSync(join(root, ".env"), "utf8"), /^MY_KEY=sk-piped-secret$/m);
+    const activity = readdirSync(join(root, "activity"), { recursive: true, withFileTypes: true }).filter((e) => e.isFile());
+    for (const f of activity) assert.ok(!readFileSync(join(f.parentPath, f.name), "utf8").includes("sk-piped-secret"));
+
+    const status = run(["secret", "status", "MY_KEY"]);
+    assert.equal(status.code, 0, status.out);
+    assert.match(status.out, /MY_KEY: (this machine's \.env|environment)/);
+    assert.ok(!status.out.includes("sk-piped-secret"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

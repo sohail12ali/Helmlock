@@ -16,6 +16,11 @@ try {
     stdout: (s) => void process.stdout.write(s),
     stderr: (s) => void process.stderr.write(s),
     tty,
+    readStdin: async () => {
+      const chunks: Buffer[] = [];
+      for await (const c of process.stdin) chunks.push(c as Buffer);
+      return Buffer.concat(chunks).toString("utf8");
+    },
   });
 } catch (e) {
   process.stderr.write(`hl: internal error: ${(e as Error).stack ?? String(e)}\n`);

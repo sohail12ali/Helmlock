@@ -36,10 +36,10 @@ export function errorResult(e: unknown): VerbResult<never> {
   return res;
 }
 
-function entityOf(res: VerbResult, input: Record<string, unknown>): string | undefined {
+function entityOf(res: VerbResult, input: Record<string, unknown>, secret: readonly string[] = []): string | undefined {
   const d = res.ok ? res.data : undefined;
-  if (d && typeof d === "object" && typeof (d as { id?: unknown }).id === "string") return (d as { id: string }).id;
-  for (const k of ["id", "ticket"]) if (typeof input[k] === "string") return input[k] as string;
+  if (d && typeof d === "object" && typeof (d as { id?: unknown }).id === "string" && !secret.includes("id")) return (d as { id: string }).id;
+  for (const k of ["id", "ticket"]) if (typeof input[k] === "string" && !secret.includes(k)) return input[k] as string;
   return undefined;
 }
 
@@ -48,7 +48,7 @@ export function createVerbRegistry(root: Context): VerbRegistry {
 
   const finish = async (def: VerbDef, input: Record<string, unknown>, v: VerbCtx, res: VerbResult): Promise<VerbResult> => {
     const code = res.ok ? 0 : res.code;
-    const entity = entityOf(res, input);
+    const entity = entityOf(res, input, def.secret);
     // No activity line outside a knowledge repo (e.g. `hl init` run before one exists).
     const w = v.ctx.has("workspace") ? v.ctx.get("workspace") : undefined;
     const outside = w !== undefined && (w.codeWorkspaceFile === undefined || w.root === w.deliveryRoot);

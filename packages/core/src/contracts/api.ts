@@ -187,6 +187,8 @@ export const CONSOLE_VERBS = [
   "people claim",
   // Milestone 7: machine secrets (value written to the gitignored .env, never echoed or logged) and several models.
   "secret set",
+  // Read-only: where each secret name is found (environment, .env, missing). Never values.
+  "secret status",
   "model add",
   "model remove",
   "model default",

@@ -8,7 +8,7 @@ import { type FakeRequest, providersToml, sseText, sseToolCalls, startFakeOpenAI
 import { catalog } from "../registry.ts";
 import { createAssistant } from "./assistant.ts";
 import { collect, fakeQueue } from "./testing.ts";
-import { hlCommand, readFileTool } from "./tools.ts";
+import { buildTools, hlCommand, readFileTool } from "./tools.ts";
 import { estimateTokens, fitWindow } from "./window.ts";
 
 const actor: Actor = { kind: "person", id: "sam", onBehalfOf: "sam" };
@@ -215,6 +215,20 @@ test("window, command line and file read helpers", async () => {
     assert.equal((await readFileTool(files, "author.local", false)).ok, false);
     assert.equal((await readFileTool(files, "../x", false)).ok, false);
     assert.equal((await readFileTool(files, ".git/config", false)).ok, false);
+  } finally {
+    await ws.cleanup();
+  }
+});
+
+test("tools: secret verbs are never offered to the model, even with writes on", async () => {
+  const ws = await createTestWorkspace({ catalog: catalogWithoutQueue });
+  try {
+    await ws.runtime.mountAll();
+    const verbs = ws.runtime.ctx.get("verbs");
+    assert.ok(verbs.get("secret set"), "the verb exists");
+    const names = buildTools(verbs, { writes: true, lowTrust: false }).map((t) => t.spec.name);
+    assert.ok(names.includes("todo_add"));
+    assert.ok(!names.includes("secret_set") && !names.includes("secret_status"));
   } finally {
     await ws.cleanup();
   }

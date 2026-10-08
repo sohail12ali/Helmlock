@@ -5,10 +5,12 @@ import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, sep } from "node:path";
 import type { InboxItem, InboxItemState, KnowledgeDoc, KnowledgeView, Runtime, SetupStatus } from "@helmlock/core";
+import { secretSource } from "@helmlock/core";
 import { splitFrontmatter } from "@helmlock/plugins/lifecycle/digest.ts";
 import { archivedTicket, closedAt, findArchived, findDigest, retentionSuggest, SHARED_DIGESTS, terminalStages } from "@helmlock/plugins/lifecycle/lifecycle.ts";
 import { readProjects } from "@helmlock/plugins/notes/notes.ts";
 import { collectIndex } from "@helmlock/plugins/notes/shared-index.ts";
+import { readTelegramRow, Config as TelegramConfig } from "@helmlock/plugins/telegram/index.ts";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ReadModel } from "./data.ts";
 import { STALE_CLAIM_DAYS } from "./data.ts";
@@ -160,15 +162,26 @@ export async function setupStatus(runtime: Runtime, o: { home?: string; env?: No
     ...(modelDone ? {} : { action: "Settings > Models: add a provider, then Test" }),
   });
 
-  const tg = ctx.get("config").pluginConfig("telegram") as Record<string, unknown>;
-  const tokenEnv = typeof tg.token_env === "string" && tg.token_env ? tg.token_env : "HL_TELEGRAM_TOKEN";
-  const ids = String(tg.allowed_user_ids ?? "").trim();
-  const tgDone = Boolean(env[tokenEnv]) && ids.length > 0;
+  // Read fresh (settings saved after the console started count) and the token by name from the environment or .env.
+  const tgRow = await readTelegramRow(ctx);
+  const tgParsed = TelegramConfig.safeParse(tgRow?.config ?? {});
+  const tokenEnv = tgParsed.success ? tgParsed.data.token_env : "HL_TELEGRAM_TOKEN";
+  const allowed = tgParsed.success ? tgParsed.data.allowed_user_ids : [];
+  const source = secretSource(info.root, env, tokenEnv);
+  const tgDone = Boolean(tgRow) && source !== undefined && allowed.length > 0;
+  const where = source === ".env" ? "this machine's .env" : "environment";
+  const tgDetail = !tgRow
+    ? "the telegram plugin is not enabled"
+    : !source
+      ? `optional: paste the token below or set ${tokenEnv}${allowed.length ? "" : ", then allow your Telegram user id"}`
+      : allowed.length
+        ? `token in ${tokenEnv} (${where}); ${allowed.length} allowed id${allowed.length === 1 ? "" : "s"}`
+        : `token in ${tokenEnv} (${where}); allow at least one Telegram user id`;
   steps.push({
     id: "telegram",
     label: "Telegram (optional)",
     done: tgDone,
-    detail: tgDone ? `token in ${tokenEnv}; allowed ids set` : `optional: set ${tokenEnv} and the allowed user ids`,
+    detail: tgDetail,
     ...(tgDone ? {} : { action: "Settings > Telegram" }),
   });
 

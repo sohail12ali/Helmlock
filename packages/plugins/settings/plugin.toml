@@ -4,5 +4,5 @@ version = "0.1.0"
 requires_core = ">=1 <2"
 provides = []
 requires = []
-verbs = ["config set", "provider add"]
+verbs = ["config set", "provider add", "secret set", "secret status"]
 entry = "index.ts"

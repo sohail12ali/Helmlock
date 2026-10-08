@@ -1,5 +1,6 @@
 // Settings (F9a sections, F9b layers, F9c/F44 forms from plugin manifests). Each field saves through `config set`;
-// shared fields go to workspace.toml (committed), local ones to workspace.local.toml. Secrets are stored by env-var name only.
+// shared fields go to workspace.toml (committed), local ones to workspace.local.toml. Secrets are stored by env-var name
+// only; the secret itself can be saved on this machine (the gitignored .env) next to its name, through `secret set`.
 import type { PluginSettings, SettingField, SettingsView } from "@helmlock/core/api";
 import { type ReactNode, useId, useState } from "react";
 import { Link } from "react-router";
@@ -16,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelsTest } from "@/features/chat/ModelsTest";
 import { OverridesSection } from "@/features/people/OverridesSection";
+import { MachineSecret } from "@/features/setup/MachineSecret";
 import { ProviderForm } from "@/features/setup/ProviderForm";
 import { type ThemePref, useTheme } from "@/lib/theme";
 
@@ -28,7 +30,7 @@ const COMING: Record<SectionId, string> = {
   models: "The provider layer arrives with the assistant. Providers and models will be set here.",
   agents: "Agent and backend choices arrive with agent runs from the console.",
   permissions: "Approval rules arrive with the approval gate in the console.",
-  telegram: "The Telegram channel arrives with the channel milestone. Its bot token will be named here by env var.",
+  telegram: "The telegram plugin is not enabled in this workspace.",
 };
 
 const SOURCE_LABEL: Record<Source, string> = {
@@ -168,7 +170,9 @@ function SettingRow({ plugin, field, current }: { plugin: string; field: Setting
         hint={
           <>
             {field.hint && <span className="block">{field.hint}</span>}
-            {field.type === "secret-env" && <span className="block">The secret itself stays in your environment; only the variable name is saved.</span>}
+            {field.type === "secret-env" && (
+              <span className="block">Only the variable name is saved here. Save the secret itself on this machine below, or set it in your environment.</span>
+            )}
             {field.type === "list" && <span className="block">Separate entries with commas.</span>}
             {problem && (
               <span className="block text-destructive" role="alert">
@@ -201,6 +205,9 @@ function SettingRow({ plugin, field, current }: { plugin: string; field: Setting
       </Field>
       {meta}
       {v.last && <VerbResult result={v.last.result} okText="Saved." />}
+      {field.type === "secret-env" && typeof value === "string" && /^[A-Z][A-Z0-9_]*$/.test(value) && (
+        <MachineSecret name={value} label={plugin === "telegram" ? "Bot token" : `Value of ${value}`} />
+      )}
     </li>
   );
 }

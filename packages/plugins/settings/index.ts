@@ -6,8 +6,10 @@ import { composeRows, ok, readManifests } from "@helmlock/core";
 import { z } from "zod";
 import { catalog } from "../registry.ts";
 import { providerAddVerb } from "./provider-add.ts";
+import { secretSetVerb, secretStatusVerb } from "./secret.ts";
 import { coerceValue, type SettingDecl, SettingError, type SettingValue, setInDoc, settingsOf } from "./settings.ts";
 
+export * from "./secret.ts";
 export * from "./settings.ts";
 
 export const WORKSPACE_CONFIG_KIND = "workspace-config";
@@ -136,6 +138,8 @@ const plugin: PluginModule = {
     await ctx.effect(() => files.registerEmitter(workspaceConfigEmitter));
     await ctx.effect(() => ctx.get("verbs").register(configSet));
     await ctx.effect(() => ctx.get("verbs").register(providerAddVerb(WORKSPACE_CONFIG_KIND)));
+    await ctx.effect(() => ctx.get("verbs").register(secretSetVerb));
+    await ctx.effect(() => ctx.get("verbs").register(secretStatusVerb));
   },
 };
 

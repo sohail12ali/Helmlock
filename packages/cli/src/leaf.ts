@@ -14,7 +14,9 @@ export interface LeafSpec {
 
 const flagName = (key: string) => key.replace(/_/g, "-");
 
-export function buildLeaf(def: Pick<VerbDef, "id" | "summary" | "examples" | "args" | "repeatable">, fields: FieldInfo[]): LeafSpec {
+export function buildLeaf(def: Pick<VerbDef, "id" | "summary" | "examples" | "args" | "repeatable" | "secret">, all: FieldInfo[]): LeafSpec {
+  // Secret inputs never come from the command line (shell history, process lists): main() prompts or reads stdin.
+  const fields = all.filter((f) => !def.secret?.includes(f.key));
   const cmd = new Command(`hl ${def.id}`)
     .description(def.summary)
     .exitOverride()
