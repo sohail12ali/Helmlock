@@ -4,9 +4,22 @@
 // get chat plus a read-only search of the message (F77). History is the chat's JSONL file (F11e).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Actor, ApprovalCardData, AssistantEvent, AssistantService, ChatMessageData, ChatTurn, Context, ModelInfo } from "@helmlock/core";
+import type {
+  Actor,
+  ApprovalCardData,
+  AssistantEvent,
+  AssistantService,
+  ChatMessageData,
+  ChatTurn,
+  Context,
+  CrewService,
+  ModelInfo,
+  RunManagerService,
+  TicketsService,
+} from "@helmlock/core";
+import { buildPlan, createPlanner, type PlanDeps, type Planner, planText } from "./plan.ts";
 import { asData, type ChatStore, chatError, createChatStore, newMessageId, type StoredCall, toTurns, UNTITLED } from "./store.ts";
-import { buildTools, cap, hlCommand, readFileTool, resultText, type ToolEntry } from "./tools.ts";
+import { buildTools, cap, hlCommand, readFileTool, resultText, TOOL_RESULT_MAX, type ToolEntry } from "./tools.ts";
 import { budgetFor, fitWindow } from "./window.ts";
 
 export const MAX_ROUNDS = 6;
@@ -29,18 +42,58 @@ export interface AssistantOptions {
   deliveryRoot?: string;
   /** Approval wait (default: the queue's own default). */
   approvalTimeoutMs?: number;
+  /** Test seams: services used instead of the context's (crew is another plugin and may be absent). */
+  services?: { crew?: CrewService; runManager?: RunManagerService; tickets?: TicketsService };
 }
 
-export function createAssistant(ctx: Context, o: AssistantOptions = {}): AssistantService & { store: ChatStore } {
+/** Told to the person on the plan message itself (Telegram shows only text). */
+export const DECIDE_HINT = "Open the console to decide this plan (Approve, Revise or Skip).";
+
+export function createAssistant(ctx: Context, o: AssistantOptions = {}): AssistantService & { store: ChatStore; plans: Planner } {
   const files = ctx.get("files");
   const ws = ctx.get("workspace");
   const now = o.now ?? (() => new Date());
   const store = createChatStore(files, now);
   const running = new Set<string>();
+  const deps: PlanDeps = {
+    crew: () => o.services?.crew ?? (ctx.has("crew") ? ctx.get("crew") : undefined),
+    tickets: () => o.services?.tickets ?? (ctx.has("tickets") ? ctx.get("tickets") : undefined),
+    runs: () => o.services?.runManager ?? (ctx.has("runManager") ? ctx.get("runManager") : undefined),
+  };
+  const plans = createPlanner(store, deps);
+
+  /** The crew_status tool: roles, engines and live runs, as compact JSON. */
+  const crewStatus = async (): Promise<{ ok: boolean; text: string }> => {
+    const crew = deps.crew();
+    if (!crew) return { ok: false, text: "error: the crew plugin is not enabled in this workspace, so no roles or runs are available" };
+    try {
+      const [roles, engines] = await Promise.all([crew.roles(), crew.engines()]);
+      const runs = (deps.runs()?.active() ?? []).map((r) => ({ id: r.id, ticket: r.ticket, role: r.role ?? r.agent, engine: r.runtime, status: r.status }));
+      const view = {
+        roles: roles.map((r) => ({
+          id: r.id,
+          label: r.label,
+          engine: r.engine,
+          ...(r.model ? { model: r.model } : {}),
+          ...(r.description ? { description: r.description } : {}),
+        })),
+        engines: engines.map((e) => ({
+          id: e.id,
+          label: e.label,
+          ok: e.test.ok,
+          ...(e.test.ok ? {} : { problem: e.test.checks.find((c) => c.level === "error")?.message }),
+        })),
+        live_runs: runs,
+      };
+      return { ok: true, text: cap(JSON.stringify(view), TOOL_RESULT_MAX) };
+    } catch (e) {
+      return { ok: false, text: `error: ${(e as Error).message}` };
+    }
+  };
   /** Tools a person allowed "for this chat" (card scope "chat"). In memory: a restart asks again. */
   const allowedForChat = new Map<string, Set<string>>();
 
-  const persona = async (name: "assistant.md" | "house-style.md"): Promise<string> => {
+  const persona = async (name: "assistant.md" | "house-style.md" | "routing.md"): Promise<string> => {
     const rel = `assistant/persona/${name}`;
     if (await files.exists(rel)) return files.readText(rel); // the knowledge repo overrides (F11f)
     const sys = join(o.deliveryRoot ?? ws.deliveryRoot, rel);
@@ -128,8 +181,9 @@ export function createAssistant(ctx: Context, o: AssistantOptions = {}): Assista
     return decided;
   }
 
-  const service: AssistantService & { store: ChatStore } = {
+  const service: AssistantService & { store: ChatStore; plans: Planner } = {
     store,
+    plans,
     list: () => store.list(),
     async create(opts) {
       const model = opts.model ?? ctx.get("providers").defaultModel("assistant") ?? "";
@@ -194,7 +248,9 @@ export function createAssistant(ctx: Context, o: AssistantOptions = {}): Assista
         let tools: ToolEntry[] = [];
         if (model.capabilities.tool_calls) {
           const writes = ctx.has("approvalQueue");
-          tools = buildTools(ctx.get("verbs"), { writes, lowTrust });
+          tools = buildTools(ctx.get("verbs"), { writes, lowTrust, crew: true });
+          // Routing guidance (plan cards) only when the crew tools are offered: small windows keep their room.
+          notes.push(await persona("routing.md"));
           if (!writes) notes.push("## Note\nWrite tools are off in this session (no approval queue). For changes, give the person the hl command.");
         } else {
           notes.push(
@@ -308,7 +364,27 @@ export function createAssistant(ctx: Context, o: AssistantOptions = {}): Assista
             };
             if (!entry) await finish(false, `error: there is no tool named ${call.name}`);
             else if (!parsed) await finish(false, "error: the arguments are not a valid JSON object");
-            else if (entry.kind === "file") {
+            else if (entry.kind === "crew") {
+              const r = await crewStatus();
+              await finish(r.ok, r.text);
+            } else if (entry.kind === "plan") {
+              const r = await buildPlan(input, deps);
+              if (!r.ok) {
+                await finish(false, `error: ${r.error}`);
+                yield { type: "message", message: { ...msg, tool: { ...tool } } };
+                continue;
+              }
+              await finish(true, `Plan card ${r.card.id} is shown to the person. Nothing has started; wait for their decision.`);
+              yield { type: "message", message: { ...msg, tool: { ...tool } } };
+              // The turn ends with the card: the person approves, revises or skips (lc-wms gated ledger).
+              const card: ChatMessageData = { id: newMessageId(), role: "assistant", text: `${planText(r.card)}\n\n${DECIDE_HINT}`, plan: r.card, ts: ts() };
+              await put(card);
+              lastId = card.id;
+              yield { type: "message", message: card };
+              await ctx.emit("chat.message", { chatId: id, role: "assistant", text: card.text, channel });
+              yield { type: "done", message_id: card.id };
+              return;
+            } else if (entry.kind === "file") {
               const r = await readFileTool(files, input.path, lowTrust);
               await finish(r.ok, r.text);
             } else if (entry.kind === "read") {

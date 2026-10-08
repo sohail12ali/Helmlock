@@ -1,7 +1,8 @@
 // Milestone 4: the assistant over HTTP. POST /chats/:id/messages answers 202 and runs the turn in the background; the
 // turn streams over GET /chats/:id/events as SSE "assistant" frames (AssistantEvent). A subscriber that joins late gets
 // the current (or last) turn replayed first. Writes use the same request checks as verb calls.
-import type { AssistantEvent, ChatDetail, ChatSummary } from "@helmlock/core";
+import type { AssistantEvent, AssistantService, ChatDetail, ChatSummary, PlanDecision, PlanDecisionResult } from "@helmlock/core";
+import { type Planner, parseDecision } from "@helmlock/plugins/assistant/plan.ts";
 import type { Hono } from "hono";
 import { ApiError } from "./errors.ts";
 import { currentPerson, failJson, type M4RouteDeps, okJson, service, writeBody } from "./models.ts";
@@ -165,6 +166,37 @@ export function mountChatRoutes(api: Hono, d: M4RouteDeps, hub: TurnHub = create
       const events = a.send(id, text, { actor: { kind: "person", id: person.id, onBehalfOf: person.id }, channel: "console", signal: abort.signal });
       hub.run(id, events, abort).catch((e) => d.log(`chat ${id}: ${(e as Error)?.stack ?? String(e)}`));
       return okJson(c, { chat: id, accepted: true }, 202);
+    } catch (e) {
+      return failJson(c, e, d.log);
+    }
+  });
+
+  // Milestone 8: decide a plan card. Approved steps become crew hand-offs (one live run per ticket); "revise" is sent
+  // back to the assistant as the next user turn and streams like a normal message.
+  api.post("/chats/:id/plans/:plan", async (c) => {
+    try {
+      const body = await writeBody(c, d.hostOf);
+      const decision: PlanDecision = parseDecision(body);
+      const id = c.req.param("id") ?? "";
+      const a = (await assistant()) as AssistantService & { plans?: Planner };
+      if (!a.plans) throw new ApiError(501, "not-supported", "this assistant has no plan cards");
+      await a.get(id);
+      if (decision.revise && hub.running(id))
+        throw new ApiError(409, "turn-running", "this chat is still answering", { fix: "wait for the done event, then revise" });
+      if (Object.values(decision.decisions).includes("approve") && !d.runtime.ctx.has("crew"))
+        throw new ApiError(503, "plugin-missing", "the crew plugin is not enabled in this workspace, so no runs can start", {
+          fix: 'add a [[plugin]] row with id = "crew" and restart hl serve',
+        });
+      const person = await currentPerson(d.runtime);
+      const actor = { kind: "person" as const, id: person.id, onBehalfOf: person.id };
+      const card: PlanDecisionResult = await a.plans.decide(id, c.req.param("plan") ?? "", decision, actor);
+      if (decision.revise) {
+        const abort = new AbortController();
+        const text = `About the plan "${card.title}": ${decision.revise}`;
+        const events = a.send(id, text, { actor, channel: "console", signal: abort.signal });
+        hub.run(id, events, abort).catch((e) => d.log(`chat ${id}: ${(e as Error)?.stack ?? String(e)}`));
+      }
+      return okJson(c, card);
     } catch (e) {
       return failJson(c, e, d.log);
     }

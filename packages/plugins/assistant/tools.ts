@@ -10,10 +10,56 @@ export const NEVER_TOOLS: readonly string[] = ["secret set", "secret status"];
 export const FILE_READ = "file_read";
 export const FILE_READ_MAX = 12_000;
 export const TOOL_RESULT_MAX = 6_000;
+export const PROPOSE_PLAN = "propose_plan";
+export const CREW_STATUS = "crew_status";
+
+/** Routing tools (milestone 8): read the crew, and propose a plan card the person decides on. */
+export const CREW_TOOLS: ToolEntry[] = [
+  {
+    kind: "crew",
+    spec: {
+      name: CREW_STATUS,
+      description: "The crew: roles with their default engine and model, whether each engine works here, and live runs.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    kind: "plan",
+    spec: {
+      name: PROPOSE_PLAN,
+      description:
+        "Show the person a plan card of role hand-offs to approve, revise or skip. Nothing starts until they approve. The turn ends after this call.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: 'Short title, e.g. "Build T-014 slice 1"' },
+          steps: {
+            type: "array",
+            description: "One step per role hand-off, in order. Steps on the same ticket run one after the other.",
+            items: {
+              type: "object",
+              properties: {
+                ticket: { type: "string", description: "An existing ticket id" },
+                role: { type: "string", description: "A crew role id (see crew_status)" },
+                engine: { type: "string", description: "Only when the person named an engine; else the role's default is used" },
+                task: { type: "string", description: "What the role does, in one or two sentences" },
+                done_check: { type: "string", description: "An observable check that says the step is done" },
+              },
+              required: ["ticket", "role", "task", "done_check"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["title", "steps"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
 
 export interface ToolEntry {
   spec: ToolSpec;
-  kind: "read" | "write" | "file";
+  kind: "read" | "write" | "file" | "plan" | "crew";
   /** The verb id for verb tools. */
   verb?: string;
   args?: readonly string[];
@@ -54,7 +100,7 @@ const verbTool = (def: VerbDef, kind: "read" | "write"): ToolEntry => ({
   args: def.args ?? [],
 });
 
-export function buildTools(verbs: VerbsService, o: { writes: boolean; lowTrust: boolean }): ToolEntry[] {
+export function buildTools(verbs: VerbsService, o: { writes: boolean; lowTrust: boolean; crew?: boolean }): ToolEntry[] {
   const out: ToolEntry[] = [];
   for (const id of READ_VERBS) {
     const def = verbs.get(id);
@@ -70,6 +116,7 @@ export function buildTools(verbs: VerbsService, o: { writes: boolean; lowTrust: 
       parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false },
     },
   });
+  if (o.crew) out.push(...CREW_TOOLS);
   if (o.writes)
     for (const id of CONSOLE_VERBS) {
       const def = verbs.get(id);

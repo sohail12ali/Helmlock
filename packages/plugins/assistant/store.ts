@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import type { ChatMessageData, ChatSummaryData, ChatTurn, FileLayer } from "@helmlock/core";
 import { z } from "zod";
+import { planText } from "./plan.ts";
 
 export type StoredCall = { id: string; name: string; arguments: string };
 export type ChatLine =
@@ -153,7 +154,8 @@ export function toTurns(messages: StoredMessage[]): ChatTurn[][] {
       cur = [];
       groups.push(cur);
     }
-    const turn: ChatTurn = { role: "assistant", content: s.m.text };
+    // A plan card is shown to the model with its current step states (approved, started, skipped).
+    const turn: ChatTurn = { role: "assistant", content: s.m.plan ? planText(s.m.plan) : s.m.text };
     if (s.calls?.length) turn.tool_calls = s.calls;
     cur.push(turn);
     for (const c of s.calls ?? []) {
