@@ -1,7 +1,7 @@
 // Milestone 7 client: projects for the switcher and the other knowledge centers on this machine. Types only from core
 // (packages/core/src/contracts/api.ts, milestone 7). Projects are added through the `project add` and `project import`
 // console verbs (dry run first, then confirm).
-import type { CentersView, ProjectsView } from "@helmlock/core/contracts";
+import type { CentersView, FsListing, FsListMode, ProjectsView } from "@helmlock/core/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, get } from "./client";
 
@@ -25,6 +25,8 @@ async function orNull<T>(p: Promise<T>): Promise<T | null> {
 export const projectsApi = {
   projects: (s?: AbortSignal) => get<ProjectsView>("/projects", undefined, s),
   centers: (s?: AbortSignal) => get<CentersView>("/centers", undefined, s),
+  /** Folder picker listing (names only); no path lists the knowledge repo's parent folder. */
+  fsList: (path: string | undefined, mode: FsListMode, s?: AbortSignal) => get<FsListing>("/fs/list", { path, mode }, s),
 };
 
 /** null when the server has no /projects route (an older console). */

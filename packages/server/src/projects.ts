@@ -10,6 +10,7 @@ import { samePath } from "@helmlock/plugins/scaffold/scaffold.ts";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ReadModel } from "./data.ts";
 import { ApiError } from "./errors.ts";
+import { listFolder } from "./fs-list.ts";
 import { failJson, okJson } from "./models.ts";
 
 export interface ProjectDeps {
@@ -119,4 +120,12 @@ export function registerProjectRoutes(api: Hono, d: ProjectDeps): void {
       ...(d.probe ? { probe: d.probe } : {}),
     }),
   );
+  // Folder picker for Add project (read-only, names only; works before the plugins are mounted).
+  api.get("/fs/list", (c) => {
+    try {
+      return okJson(c, listFolder(d.runtime, { path: c.req.query("path"), mode: c.req.query("mode"), home: d.home }));
+    } catch (e) {
+      return failJson(c, e, d.log);
+    }
+  });
 }
