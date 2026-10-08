@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { ApprovalCardData, ApprovalQueueService, AssistantEvent, AssistantService, ChatSummaryData, RunManagerService, RunState } from "@helmlock/core";
+import type {
+  ApprovalCardData,
+  ApprovalQueueService,
+  AssistantEvent,
+  AssistantService,
+  ChatSummaryData,
+  ProvidersService,
+  RunManagerService,
+  RunState,
+} from "@helmlock/core";
 import { createRuntime } from "@helmlock/core";
 import { createTestWorkspace, DELIVERY_ROOT, type TestWorkspace } from "@helmlock/core/testing";
 import { catalog } from "../registry.ts";
@@ -45,8 +54,10 @@ function fakeAssistant(reply = ["Hel", "lo ", "Sam"], notice?: string) {
     async get(id) {
       return { summary: chats.find((c) => c.id === id) as ChatSummaryData, messages: [] };
     },
-    async setModel(id) {
-      return chats.find((c) => c.id === id) as ChatSummaryData;
+    async setModel(id, model) {
+      const c = chats.find((x) => x.id === id) as ChatSummaryData;
+      c.model = model;
+      return c;
     },
     async *send(chat, text, o): AsyncIterable<AssistantEvent> {
       sent.push({ chat, text, channel: o.channel, actor: o.actor.id });
@@ -183,6 +194,34 @@ test("/new and /use switch the DM's chat", async () => {
     h.api.push(dm(ME, "hi"));
     await h.api.waitFor(() => a.sent.length === 1);
     assert.equal(a.sent[0]?.chat, a.chats[0]?.id);
+  } finally {
+    await h.done();
+  }
+});
+
+test("/model lists the models (default and this chat marked) and switches this chat's model", async () => {
+  const a = fakeAssistant();
+  const caps = { tool_calls: true, vision: false, streaming: true };
+  const providers = {
+    models: () => [
+      { id: "lms/spark", provider: "lms", label: "spark", capabilities: caps },
+      { id: "or/a/one", provider: "or", label: "a/one", capabilities: caps },
+    ],
+    defaultModel: () => "or/a/one",
+  } as unknown as ProvidersService;
+  const h = await boot({ services: { assistant: a.svc, providers } });
+  try {
+    h.api.push(dm(ME, "/model lms/spark"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("New chat chat1")));
+    assert.equal(a.chats[0]?.model, "lms/spark");
+    h.api.push(dm(ME, "/model or/a/one"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t === "This chat now uses or/a/one."));
+    h.api.push(dm(ME, "/model nope/x"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Unknown model nope/x")));
+    h.api.push(dm(ME, "/model"));
+    await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Models")));
+    const list = sentTexts(h.api).find((t) => t.startsWith("Models")) as string;
+    assert.match(list, /- lms\/spark\n\* or\/a\/one \(default\)/);
   } finally {
     await h.done();
   }

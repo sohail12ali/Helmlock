@@ -185,8 +185,9 @@ export interface ProvidersService {
   probe(providerId: string): Promise<ProbeResult>;
   /** Probe a provider that is not saved yet (try before save). Reads the remote server only; writes no file.
    *  listOnly: reach + list models. model: the server model name to test (default: first loaded / first listed). */
+  /** draft.key: a pasted key used for this probe only (try before saving it); never stored, logged or returned. */
   probeDraft(
-    draft: { base_url: string; key_env?: string; preset?: string; compat?: Record<string, boolean> },
+    draft: { base_url: string; key_env?: string; key?: string; preset?: string; compat?: Record<string, boolean> },
     opts?: { model?: string; listOnly?: boolean },
   ): Promise<ProbeResult>;
 }

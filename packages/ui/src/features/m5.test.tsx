@@ -346,11 +346,12 @@ describe("setup wizard", () => {
     expect(fetchCall.body).toEqual({ base_url: LAN, preset: "lmstudio", list_only: true });
     expect(fetchCall.headers["X-Helmlock-Request"]).toBe("1");
 
-    // The picker lists the loaded model first, with its badges, and preselects it.
-    const picker = await within(step).findByRole("radiogroup", { name: "Models on the server" });
-    const radios = within(picker).getAllByRole("radio");
-    expect(radios.map((r) => (r as HTMLInputElement).value)).toEqual(["google/gemma-4-12b-qat", "spark-x2.5-4b"]);
-    expect(radios[0]).toBeChecked();
+    // The checklist lists the loaded model first, with its badges, and preticks it.
+    const picker = await within(step).findByRole("group", { name: "Models on the server" });
+    const boxes = within(picker).getAllByRole("checkbox");
+    expect(boxes.map((r) => (r as HTMLInputElement).value)).toEqual(["google/gemma-4-12b-qat", "spark-x2.5-4b"]);
+    expect(boxes[0]).toBeChecked();
+    expect(boxes[1]).not.toBeChecked();
     expect(picker).toHaveTextContent("loaded");
     expect(picker).toHaveTextContent("256k ctx");
     expect(picker).toHaveTextContent("1M ctx");
@@ -358,7 +359,9 @@ describe("setup wizard", () => {
     expect(save).toBeEnabled();
     expect(posts(spy, "/verbs/provider/add")).toHaveLength(0);
 
-    fireEvent.click(within(picker).getByRole("radio", { name: /spark-x2\.5-4b/ }));
+    // Test connection tries the first ticked model.
+    fireEvent.click(within(picker).getByRole("checkbox", { name: /gemma/ }));
+    fireEvent.click(within(picker).getByRole("checkbox", { name: /spark-x2\.5-4b/ }));
     fireEvent.click(within(step).getByRole("button", { name: "Test connection" }));
     await waitFor(() => expect(posts(spy, "/models/try")).toHaveLength(2));
     expect(posts(spy, "/models/try")[1]!.body).toEqual({ base_url: LAN, preset: "lmstudio", model: "spark-x2.5-4b" });
@@ -367,20 +370,25 @@ describe("setup wizard", () => {
     expect(result).toHaveTextContent("tool calls yes");
     expect(result).toHaveTextContent("tested spark-x2.5-4b");
 
-    fireEvent.click(save);
+    // Several models: Save writes every ticked one with what the probe found.
+    fireEvent.click(within(picker).getByRole("checkbox", { name: /gemma/ }));
+    const saveMany = within(step).getByRole("button", { name: "Save 2 models" });
+    fireEvent.click(saveMany);
     await waitFor(() => expect(posts(spy, "/verbs/provider/add")).toHaveLength(1));
+    expect(posts(spy, "/verbs/secret/set")).toHaveLength(0);
     expect(posts(spy, "/verbs/provider/add")[0]!.body).toEqual({
       input: {
         id: "lmstudio",
         preset: "lmstudio",
         base_url: `${LAN}/v1`,
-        model: "spark-x2.5-4b",
-        context_window: 1048576,
-        tool_calls: true,
-        vision: false,
+        models: ["spark-x2.5-4b", "google/gemma-4-12b-qat"],
+        model_info: [
+          { id: "spark-x2.5-4b", context_window: 1048576, tool_calls: true, vision: false },
+          { id: "google/gemma-4-12b-qat", context_window: 262144, tool_calls: true, vision: true },
+        ],
       },
     });
-    expect(await within(step).findByText(/Provider saved/)).toHaveTextContent("lmstudio/spark-x2.5-4b");
+    expect(await within(step).findByText(/Provider saved/)).toHaveTextContent("lmstudio/spark-x2.5-4b, lmstudio/google/gemma-4-12b-qat");
   });
 
   it("a failed fetch shows the code, the message and a hint, and Save stays off", async () => {
@@ -410,19 +418,60 @@ describe("setup wizard", () => {
     const form = await screen.findByTestId("provider-form");
     fireEvent.click(within(form).getByRole("button", { name: "Fetch models" }));
     await waitFor(() => expect(posts(spy, "/models/try")).toHaveLength(1));
-    expect(await within(form).findByRole("radiogroup", { name: "Models on the server" })).toBeInTheDocument();
+    expect(await within(form).findByRole("group", { name: "Models on the server" })).toBeInTheDocument();
   });
 
-  it("the model step refuses a key instead of a variable name", async () => {
+  it("a pasted key is used only for the try, then saved with secret set before provider add; it is never shown again", async () => {
+    const KEY = "sk-or-v1-abc123secret";
     const spy = tryServer();
     renderApp("/setup");
     const step = await screen.findByRole("region", { name: "Step: Model" });
     fireEvent.click(within(step).getByRole("button", { name: /OpenRouter/ }));
-    expect(within(step).getByLabelText(/Key variable/)).toHaveValue("OPENROUTER_API_KEY");
-    fireEvent.change(within(step).getByLabelText(/Key variable/), { target: { value: "sk-or-123" } });
+    const keyField = within(step).getByLabelText(/API key/) as HTMLInputElement;
+    expect(keyField).toHaveValue("OPENROUTER_API_KEY");
+    expect(keyField.type).toBe("text");
+    fireEvent.change(keyField, { target: { value: KEY } });
+    expect(keyField.type).toBe("password");
+    expect(step).toHaveTextContent("The key is saved only on this machine, in .env, which git ignores; workspace.toml gets only the name");
+
     fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
-    expect(await within(step).findByRole("alert")).toHaveTextContent(/NAME of an environment variable/);
-    expect(posts(spy, "/models/try")).toHaveLength(0);
+    await waitFor(() => expect(posts(spy, "/models/try")).toHaveLength(1));
+    expect(posts(spy, "/models/try")[0]!.body).toEqual({ base_url: "https://openrouter.ai/api/v1", preset: "openrouter", key: KEY, list_only: true });
+    await within(step).findByRole("group", { name: "Models on the server" });
+
+    fireEvent.click(within(step).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(posts(spy, "/verbs/provider/add")).toHaveLength(1));
+    const verbCalls = spy.mock.calls.map(([input]) => String(input)).filter((u) => u.includes("/verbs/"));
+    expect(verbCalls).toEqual(["/api/v1/verbs/secret/set", "/api/v1/verbs/provider/add"]);
+    expect(posts(spy, "/verbs/secret/set")[0]!.body).toEqual({ input: { name: "OPENROUTER_API_KEY", value: KEY } });
+    const add = posts(spy, "/verbs/provider/add")[0]!.body.input as Record<string, unknown>;
+    expect(add.key_env).toBe("OPENROUTER_API_KEY");
+    expect(JSON.stringify(add)).not.toContain(KEY);
+    expect(await within(step).findByText(/Provider saved/)).toHaveTextContent("key saved on this machine as OPENROUTER_API_KEY");
+    // The field holds the name now; the key is nowhere on the page.
+    expect(keyField).toHaveValue("OPENROUTER_API_KEY");
+    expect(document.body.innerHTML).not.toContain(KEY);
+  });
+
+  it("a key for a provider without a preset name is saved as <PROVIDER_ID>_API_KEY; a failed secret set stops the save", async () => {
+    const spy = tryServer();
+    const base = spy.getMockImplementation()!;
+    spy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === "/api/v1/verbs/secret/set"
+        ? json({ ok: false, code: 1, error: { rule: "secret", message: "cannot write .env", fix: "check the folder" } })
+        : base(input, init),
+    );
+    renderApp("/setup");
+    const step = await screen.findByRole("region", { name: "Step: Model" });
+    fireEvent.change(within(step).getByLabelText(/Provider id/), { target: { value: "my-lab" } });
+    fireEvent.change(within(step).getByLabelText(/API key/), { target: { value: "abc.def-123" } });
+    fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
+    await within(step).findByRole("group", { name: "Models on the server" });
+    fireEvent.click(within(step).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(posts(spy, "/verbs/secret/set")).toHaveLength(1));
+    expect(posts(spy, "/verbs/secret/set")[0]!.body).toEqual({ input: { name: "MY_LAB_API_KEY", value: "abc.def-123" } });
+    expect(await within(step).findByRole("alert")).toHaveTextContent("cannot write .env");
+    expect(posts(spy, "/verbs/provider/add")).toHaveLength(0);
   });
 
   it("the telegram step saves the allowed ids as an array through config set", async () => {

@@ -82,21 +82,38 @@ export function useInboxState() {
   });
 }
 
-/** The console verb that adds a provider row and a model row (added to CONSOLE_VERBS at integration). */
-export const PROVIDER_ADD = "provider add" as ConsoleVerb;
+/** The console verb that adds a provider row and its model rows. */
+export const PROVIDER_ADD: ConsoleVerb = "provider add";
+/** What a try-before-save probe found for one model (server name). */
+export interface ModelProbeInfo {
+  id: string;
+  context_window?: number;
+  tool_calls?: boolean;
+  vision?: boolean;
+}
 export interface ProviderAddInput {
   id: string;
   preset?: string;
   base_url?: string;
   key_env?: string;
-  model: string;
+  /** One model (older form); `models` takes several. */
+  model?: string;
+  models?: string[];
+  model_info?: ModelProbeInfo[];
   label?: string;
-  /** What a try-before-save probe found for the model. */
-  context_window?: number;
-  tool_calls?: boolean;
-  vision?: boolean;
 }
 export const addProvider = (input: ProviderAddInput) => callVerb(PROVIDER_ADD, { ...input });
+
+// Milestone 7: several models, the default, removal and machine secrets. All are console verbs (CONSOLE_VERBS).
+export const addModels = (input: { provider: string; models: string[]; model_info?: ModelProbeInfo[] }) => callVerb("model add", { ...input });
+export const removeModel = (input: { id: string; default?: string }) => callVerb("model remove", { ...input });
+export const setDefaultModel = (id: string) => callVerb("model default", { id });
+export const removeProvider = (input: { id: string; force?: boolean }) => callVerb("provider remove", { ...input });
+/** Saves a secret to the machine's gitignored .env (the value is never echoed back). */
+export const setSecret = (input: { name: string; value: string }) => callVerb("secret set", { ...input });
+
+/** Query roots a model or provider change refreshes. */
+export const MODEL_QUERIES = ["models", "setup", "settings"] as const;
 
 /** Inbox, knowledge and setup follow the files: refresh them on any change from the shared /events stream. */
 export function useM5Live(): void {

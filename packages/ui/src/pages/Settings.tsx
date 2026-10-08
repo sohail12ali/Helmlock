@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { ModelsTest } from "@/features/chat/ModelsTest";
 import { OverridesSection } from "@/features/people/OverridesSection";
 import { ProviderForm } from "@/features/setup/ProviderForm";
+import { ProvidersList } from "@/features/setup/ProvidersList";
 import { type ThemePref, useTheme } from "@/lib/theme";
 
 type SectionId = SettingsView["sections"][number]["id"];
@@ -41,11 +42,13 @@ const SOURCE_LABEL: Record<Source, string> = {
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** Settings > Models: add a provider (try before save) next to the per-provider connection test. */
+/** Settings > Models: the saved providers and their models (default, add, remove), the connection test, and add a
+ *  provider (try before save). */
 function ModelsSection() {
   const [adding, setAdding] = useState(false);
   return (
     <div className="flex flex-col gap-3">
+      <ProvidersList />
       <ModelsTest />
       {adding ? (
         <div className="@container flex flex-col gap-2 rounded-md border px-3 py-2.5">

@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "files": { "includes": ["packages/**/*.ts", "packages/**/*.tsx", "test/**/*.ts", "!packages/ui/dist/**"] },
+  "files": { "includes": ["packages/**/*.ts", "packages/**/*.tsx", "test/**/*.ts", "!packages/ui/dist"] },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 160 },
   "linter": { "enabled": true, "rules": { "recommended": true, "style": { "noNonNullAssertion": "off" }, "suspicious": { "noExplicitAny": "warn" } } },
   "javascript": { "formatter": { "quoteStyle": "double" } }
