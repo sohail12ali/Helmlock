@@ -185,6 +185,12 @@ export const CONSOLE_VERBS = [
   "run attach",
   "people add",
   "people claim",
+  // Milestone 7: machine secrets (value written to the gitignored .env, never echoed or logged) and several models.
+  "secret set",
+  "model add",
+  "model remove",
+  "model default",
+  "provider remove",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 
