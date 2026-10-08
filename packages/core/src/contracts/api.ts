@@ -472,6 +472,7 @@ export interface CentersView {
 
 // ---------- milestone 8: crew and engines (Blueprint 33, F152-F157) ----------
 import type { CrewRole, EngineCapabilities, EngineId, EngineTest, HandoffInput, OutcomeKind, PlanCard, RunOutcome, SayAction } from "./crew.ts";
+
 export type { CrewRole, EngineCapabilities, EngineId, EngineTest, HandoffInput, OutcomeKind, PlanCard, RunOutcome, SayAction };
 
 export interface EngineView {
@@ -504,9 +505,7 @@ export interface NextStep {
   reason: string;
 }
 /** GET /api/v1/tickets/:id/thread: comments and runs in one timeline, oldest first. */
-export type ThreadItem =
-  | { kind: "comment"; ts: string; author: string; text: string; run?: string }
-  | { kind: "run"; ts: string; run: RunState };
+export type ThreadItem = { kind: "comment"; ts: string; author: string; text: string; run?: string } | { kind: "run"; ts: string; run: RunState };
 export interface TicketThread {
   ticket: string;
   items: ThreadItem[];
