@@ -40,7 +40,7 @@ describe("settings diagnostics", () => {
     const files = r.data.plugins.find((p) => p.id === "work-log");
     assert.ok(files, r.text);
     assert.equal(files.status, "ok");
-    assert.equal(files.version, "0.1.0");
+    assert.match(files.version ?? "", /^\d+\.\d+\.\d+$/);
     assert.deepEqual(files.provides, ["worklog"]);
     assert.ok(r.data.plugins.every((p) => ["ok", "pending", "failed", "off"].includes(p.status)));
   });

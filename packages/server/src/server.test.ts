@@ -98,8 +98,11 @@ test("SSE: snapshot, then one batched change for a comment", async () => {
   // Let the watcher settle, then write through the service (comment + a second write in the same batch window).
   await new Promise((r) => setTimeout(r, 100));
   const actor = { kind: "person" as const, id: "sam", onBehalfOf: "sam" };
-  await ws.runtime.ctx.get("tickets").comment("T-001-sa", "Live update check", actor);
-  await ws.runtime.ctx.get("tickets").comment("T-001-sa", "Second line in the same batch", actor);
+  // Written together so both land in one batch window even on a busy machine.
+  await Promise.all([
+    ws.runtime.ctx.get("tickets").comment("T-001-sa", "Live update check", actor),
+    ws.runtime.ctx.get("tickets").comment("T-001-sa", "Second line in the same batch", actor),
+  ]);
 
   const change = await sse.next();
   assert.equal(change.event, "change");

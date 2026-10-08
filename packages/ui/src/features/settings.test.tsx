@@ -152,24 +152,27 @@ describe("Settings: layout", () => {
     });
     renderApp("/settings");
     await screen.findByRole("region", { name: "Appearance" });
-    await waitFor(() => expect(within(jumpBar()).getAllByRole("button").length).toBeGreaterThan(8));
-    const names = within(jumpBar())
-      .getAllByRole("button")
-      .map((b) => b.textContent);
-    expect(names).toEqual([
-      "Appearance",
-      "Models",
-      "Agents",
-      "Assistant",
-      "Permissions",
-      "Telegram",
-      "Work log",
-      "This machine",
-      "Workspace",
-      "Loaded on the server",
-      "Collapse all",
-      "Expand all",
-    ]);
+    // Panels that wait for data join the bar a moment later: wait for the whole list, not just part of it.
+    await waitFor(() =>
+      expect(
+        within(jumpBar())
+          .getAllByRole("button")
+          .map((b) => b.textContent),
+      ).toEqual([
+        "Appearance",
+        "Models",
+        "Agents",
+        "Assistant",
+        "Permissions",
+        "Telegram",
+        "Work log",
+        "This machine",
+        "Workspace",
+        "Loaded on the server",
+        "Collapse all",
+        "Expand all",
+      ]),
+    );
     // Appearance is open by default; the rest are folded.
     expect(panel("Appearance")).toHaveAttribute("data-open", "true");
     expect(panel("Telegram")).toHaveAttribute("data-open", "false");

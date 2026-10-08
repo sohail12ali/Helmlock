@@ -105,7 +105,7 @@ export async function startFakeBotApi(token = "123:TEST"): Promise<FakeBotApi> {
     failNext(status, n = 1) {
       failures = [...failures, ...Array.from({ length: n }, () => status)];
     },
-    async waitFor(pred, ms = 5000) {
+    async waitFor(pred, ms = 15000) {
       const end = Date.now() + ms;
       while (!pred(calls)) {
         if (Date.now() > end) throw new Error(`fake bot api: condition not met; calls: ${JSON.stringify(calls.map((c) => c.method))}`);

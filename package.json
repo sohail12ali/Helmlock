@@ -13,7 +13,8 @@
     "lint": "biome check .",
     "hl": "node packages/cli/bin/hl.ts",
     "test:ui": "pnpm --filter @helmlock/ui test",
-    "build:ui": "pnpm --filter @helmlock/ui build"
+    "build:ui": "pnpm --filter @helmlock/ui build",
+    "test:perf": "node --env-file=test/perf.env --test --test-name-pattern=F109 packages/server/src/app.test.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

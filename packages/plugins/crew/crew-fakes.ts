@@ -158,6 +158,7 @@ export function fakeCatalog(rm: FakeRunManager): PluginCatalog {
     runtimes: entry("runtimes", runtimes),
     "runtime-claude": entry("runtime-claude", noop),
     "runtime-cursor": entry("runtime-cursor", noop),
+    "runtime-loop": entry("runtime-loop", noop),
     providers: entry("providers", providers),
   };
 }

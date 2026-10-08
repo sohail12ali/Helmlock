@@ -64,11 +64,13 @@ async function chatWithCard(): Promise<string> {
 
 before(async () => {
   fake = await startFakeOpenAI(() => ({ sse: sseText(["Smaller ", "plan."]) }));
-  ws = await createTestWorkspace({ catalog });
+  // The real crew plugin is in the bundle; replace it so hand-offs go to the fake crew.
+  const crewEntry = catalog.crew as { dir: string };
+  const fakeCrew = { name: "crew", apply: (ctx: { provide: (k: "crew", v: CrewService) => void }) => ctx.provide("crew", crew) };
+  ws = await createTestWorkspace({ catalog: { ...catalog, crew: { dir: crewEntry.dir, load: async () => ({ default: fakeCrew }) } } as typeof catalog });
   appendFileSync(join(ws.root, "workspace.toml"), providersToml(fake.url));
   app = createApp(ws.runtime, { log: () => {}, heartbeatMs: 50 });
   await app.request("/api/v1/chats"); // mounts the plugins
-  if (!ws.runtime.ctx.has("crew")) ws.runtime.ctx.provide("crew", crew);
 });
 after(async () => {
   await ws.cleanup();

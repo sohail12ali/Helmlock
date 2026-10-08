@@ -362,7 +362,7 @@ test("approval card: buttons answer the queue via telegram and the card is edite
     await h.api.waitFor(() => h.api.callsTo("sendMessage").length === 2);
     await h.ws.runtime.ctx.emit("approval.decided", { id: "ap2", decision: "deny", by: "timeout", channel: "timeout" });
     await h.api.waitFor(() => sentTexts(h.api).some((t) => t.startsWith("Approval timed out")));
-    assert.ok(h.api.callsTo("editMessageText").some((c) => /Expired/.test(String(c.params.text))));
+    await h.api.waitFor(() => h.api.callsTo("editMessageText").some((c) => /Expired/.test(String(c.params.text))));
   } finally {
     await h.done();
   }

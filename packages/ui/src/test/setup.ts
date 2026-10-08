@@ -31,6 +31,10 @@ Element.prototype.scrollIntoView ??= () => {};
 
 beforeEach(() => {
   localStorage.clear();
+  // Fresh session per test, with the /welcome auto-open already spent: otherwise a page under test can be redirected
+  // to /welcome whenever the mocked setup status arrives first. Welcome tests clear this to test the auto-open.
+  sessionStorage.clear();
+  sessionStorage.setItem("hl.welcome.auto", "1");
   document.documentElement.classList.remove("dark");
   installFetch();
 });
