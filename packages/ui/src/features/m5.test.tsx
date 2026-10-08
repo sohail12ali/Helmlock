@@ -1,12 +1,11 @@
 // Milestone 5 stream B2: inbox state, knowledge and the setup wizard against the contract, with fetch mocked.
 import type { ApprovalCard, InboxItem, KnowledgeView, ModelProbe, SettingsView, SetupStatus } from "@helmlock/core/contracts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderApp } from "@/test/render";
 import { route } from "@/test/server";
 import { resurfaced, selectItems } from "./inbox/inbox-state";
 import { filterIndex } from "./knowledge/KnowledgePage";
-import { startIndex } from "./setup/SetupPage";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const ok = (data: unknown, status = 200) => json({ ok: true, data }, status);
@@ -266,12 +265,12 @@ describe("knowledge", () => {
 
 const setup: SetupStatus = {
   steps: [
-    { id: "author", label: "Author", done: true, detail: "You are sam." },
-    { id: "model", label: "Model", done: false, detail: "No provider configured." },
-    { id: "telegram", label: "Telegram", done: false, detail: "Optional." },
-    { id: "first-ticket", label: "First ticket", done: true, detail: "T-001-sa exists." },
-    { id: "agents", label: "Agents", done: false, detail: "Agents not synced.", action: "hl harness sync" },
-    { id: "trust", label: "Trust", done: false, detail: "Claude Code has not trusted this folder." },
+    { id: "you", label: "You", done: true, detail: "Sam Abbott (sam)" },
+    { id: "engine", label: "Engines", done: false, detail: "no agent CLI found and no model configured" },
+    { id: "code", label: "Your code", done: false, optional: true, detail: "no projects yet" },
+    { id: "crew", label: "Your crew", done: false, detail: "not ready" },
+    { id: "phone", label: "Phone", done: false, optional: true, detail: "optional" },
+    { id: "first-task", label: "First task", done: true, detail: "1 ticket" },
   ],
 };
 const probe: ModelProbe = { provider: "ollama", reachable: true, models: ["qwen3:14b"], chat: true, streaming: true, tool_calls: true };
@@ -289,26 +288,17 @@ function setupServer(extra?: Handler) {
   });
 }
 
-describe("setup wizard", () => {
-  it("starts at the first open step", () => {
-    expect(startIndex(setup.steps, undefined)).toBe(1);
-    expect(startIndex(setup.steps, "trust")).toBe(5);
+describe("setup wizard: the provider form and the phone screen", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
   });
-
-  it("shows progress and moves with Continue and Back", async () => {
-    setupServer();
-    renderApp("/setup");
-    expect(await screen.findByText("2 of 6 done")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Setup progress" })).toHaveAttribute("aria-valuenow", "2");
-    expect(screen.getByRole("region", { name: "Step: Model" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByRole("region", { name: "Step: Telegram" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("region", { name: "Step: Model" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Agents/ }));
-    expect(screen.getByRole("button", { name: "Copy: hl harness sync" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save and exit" })).toBeInTheDocument();
-  });
+  /** /welcome opens on Engines (the author is known); "Other provider" opens the provider form in a dialog. */
+  const otherProvider = async () => {
+    renderApp("/welcome");
+    fireEvent.click(await screen.findByRole("button", { name: "Other provider" }));
+    return screen.findByRole("dialog", { name: "Other provider" });
+  };
 
   const LAN = "http://192.168.1.14:1234";
   const listed: ModelProbe = {
@@ -333,8 +323,7 @@ describe("setup wizard", () => {
 
   it("the model step tries a provider before saving: fetch, pick, test, save", async () => {
     const spy = tryServer();
-    renderApp("/setup");
-    const step = await screen.findByRole("region", { name: "Step: Model" });
+    const step = await otherProvider();
     // LM Studio is the default preset; the base URL is editable (another machine on the LAN).
     expect(within(step).getByLabelText(/Base URL/)).toHaveValue("http://127.0.0.1:1234/v1");
     const save = within(step).getByRole("button", { name: "Save" });
@@ -395,8 +384,7 @@ describe("setup wizard", () => {
     tryServer(() =>
       ok({ ...listed, reachable: false, models: [], model_info: undefined, error: { code: "network", message: "cannot reach http://192.168.1.14:1234/v1" } }),
     );
-    renderApp("/setup");
-    const step = await screen.findByRole("region", { name: "Step: Model" });
+    const step = await otherProvider();
     fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
     const out = await within(step).findByTestId("fetch-result");
     expect(out).toHaveTextContent("network");
@@ -413,6 +401,7 @@ describe("setup wizard", () => {
         ? ok({ sections: [{ id: "models", label: "Models", plugins: [] }] } satisfies SettingsView)
         : base(input, init),
     );
+    sessionStorage.setItem("hl.welcome.auto", "1"); // the engine step is open: keep the console from opening /welcome
     renderApp("/settings");
     fireEvent.click(await screen.findByRole("button", { name: "Add provider" }));
     const form = await screen.findByTestId("provider-form");
@@ -424,8 +413,7 @@ describe("setup wizard", () => {
   it("a pasted key is used only for the try, then saved with secret set before provider add; it is never shown again", async () => {
     const KEY = "sk-or-v1-abc123secret";
     const spy = tryServer();
-    renderApp("/setup");
-    const step = await screen.findByRole("region", { name: "Step: Model" });
+    const step = await otherProvider();
     fireEvent.click(within(step).getByRole("button", { name: /OpenRouter/ }));
     const keyField = within(step).getByLabelText(/API key/) as HTMLInputElement;
     expect(keyField).toHaveValue("OPENROUTER_API_KEY");
@@ -461,8 +449,7 @@ describe("setup wizard", () => {
         ? json({ ok: false, code: 1, error: { rule: "secret", message: "cannot write .env", fix: "check the folder" } })
         : base(input, init),
     );
-    renderApp("/setup");
-    const step = await screen.findByRole("region", { name: "Step: Model" });
+    const step = await otherProvider();
     fireEvent.change(within(step).getByLabelText(/Provider id/), { target: { value: "my-lab" } });
     fireEvent.change(within(step).getByLabelText(/API key/), { target: { value: "abc.def-123" } });
     fireEvent.click(within(step).getByRole("button", { name: "Fetch models" }));
@@ -474,24 +461,24 @@ describe("setup wizard", () => {
     expect(posts(spy, "/verbs/provider/add")).toHaveLength(0);
   });
 
-  it("the telegram step saves the allowed ids as an array through config set", async () => {
+  it("the phone screen saves the allowed ids as an array through config set", async () => {
     const spy = setupServer();
-    renderApp("/setup");
-    await screen.findByRole("region", { name: "Step: Model" });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    const step = screen.getByRole("region", { name: "Step: Telegram" });
+    localStorage.setItem("hl.welcome.draft", JSON.stringify({ step: "phone" }));
+    renderApp("/welcome");
+    const step = await screen.findByRole("region", { name: "Step: Phone" });
     fireEvent.change(within(step).getByLabelText(/Allowed Telegram user ids/), { target: { value: "123, 456" } });
     fireEvent.click(within(step).getByRole("button", { name: "Save ids" }));
     await waitFor(() => expect(posts(spy, "/verbs/config/set")).toHaveLength(1));
     expect(posts(spy, "/verbs/config/set")[0]!.body).toEqual({ input: { plugin: "telegram", key: "allowed_user_ids", value: ["123", "456"], local: true } });
   });
 
-  it("Overview shows Finish setup with the open step count", async () => {
+  it("Overview shows Finish setup with the open required step count, linking to /welcome", async () => {
     setupServer();
+    sessionStorage.setItem("hl.welcome.auto", "1"); // already opened by itself this session
     renderApp("/");
     const card = await screen.findByRole("region", { name: "Finish setup" });
-    expect(card).toHaveTextContent("Finish setup (4 left)");
-    expect(within(card).getByRole("link", { name: "Continue setup" })).toHaveAttribute("href", "/setup");
+    expect(card).toHaveTextContent("Finish setup (2 left)");
+    expect(within(card).getByRole("link", { name: "Continue setup" })).toHaveAttribute("href", "/welcome");
   });
 });
 

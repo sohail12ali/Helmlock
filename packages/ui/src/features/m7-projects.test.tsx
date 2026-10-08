@@ -243,7 +243,8 @@ describe("add project", () => {
       { name: "shop-api", abs: "D:/code/shop-api", id: "shop-api", add: true },
       { name: "shop-web", abs: "D:/code/shop-web", id: "shop-web", add: true },
     ];
-    const setup: SetupStatus = { steps: [{ id: "code", label: "Connect your code", done: false, detail: "no projects yet" }] };
+    const setup: SetupStatus = { steps: [{ id: "code", label: "Your code", optional: true, done: false, detail: "no projects yet" }] };
+    localStorage.setItem("hl.welcome.draft", JSON.stringify({ step: "code" }));
     const spy = mockFetch((u, init) => {
       if (u.pathname === "/api/v1/setup") return ok(setup);
       if (init?.method !== "POST" || u.pathname !== "/api/v1/verbs/project/import") return undefined;
@@ -255,8 +256,8 @@ describe("add project", () => {
         text: folders.map((f) => `+ projects/${f}/project.toml`).join("\n"),
       });
     });
-    renderAt("/setup");
-    // The setup wizard's step embeds the same flow.
+    renderAt("/welcome");
+    // The wizard's Code screen embeds the same flow.
     fireEvent.click(await screen.findByRole("button", { name: "Import a .code-workspace" }));
     fireEvent.change(screen.getByLabelText(/\.code-workspace file/), { target: { value: "D:/code/Shop.code-workspace" } });
     fireEvent.click(screen.getByRole("button", { name: "Read folders" }));
@@ -285,20 +286,21 @@ describe("add project", () => {
 });
 
 describe("setup", () => {
-  it("Connect your code comes before the first ticket and embeds Add project", async () => {
+  it("the Code screen comes before the first task and embeds Add project", async () => {
     const setup: SetupStatus = {
       steps: [
-        { id: "author", label: "You are in the roster", done: true, detail: "Sam" },
-        { id: "code", label: "Connect your code", done: false, detail: "no projects yet", action: "Add project" },
-        { id: "first-ticket", label: "A first ticket", done: false, detail: "no tickets yet" },
+        { id: "you", label: "You", done: true, detail: "Sam" },
+        { id: "code", label: "Your code", optional: true, done: false, detail: "no projects yet", action: "Add project" },
+        { id: "first-task", label: "First task", done: false, detail: "no tickets yet" },
       ],
     };
+    localStorage.setItem("hl.welcome.draft", JSON.stringify({ step: "code" }));
     mockFetch((u) => (u.pathname === "/api/v1/setup" ? ok(setup) : undefined));
     renderAt("/setup");
-    const region = await screen.findByRole("region", { name: "Step: Connect your code" });
+    const region = await screen.findByRole("region", { name: "Step: Code" });
     expect(within(region).getByRole("button", { name: "One repo folder" })).toHaveAttribute("aria-pressed", "true");
     expect(within(region).getByLabelText(/Repo folder/)).toBeInTheDocument();
-    const steps = within(screen.getByRole("list", { name: "Setup steps" })).getAllByRole("button");
-    expect(steps.map((b) => b.textContent?.replace(/\s*\((done|open)\)/, ""))).toEqual(["You are in the roster", "Connect your code", "A first ticket"]);
+    const steps = within(screen.getByRole("navigation", { name: "Setup progress" })).getAllByRole("button");
+    expect(steps.map((b) => b.textContent?.replace(/\s*\((done|skipped)\)/, ""))).toEqual(["You", "Engines", "Code", "Crew", "Phone", "First task"]);
   });
 });

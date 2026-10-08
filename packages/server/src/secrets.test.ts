@@ -24,7 +24,7 @@ const allFiles = (dir: string): string[] =>
   existsSync(dir) ? readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? allFiles(join(dir, e.name)) : [join(dir, e.name)])) : [];
 async function telegramStep(env: Record<string, string> = {}) {
   await app.request("/api/v1/setup"); // mounts what the checklist reads
-  return (await setupStatus(ws.runtime, { env })).steps.find((s) => s.id === "telegram") as SetupStatus["steps"][number];
+  return (await setupStatus(ws.runtime, { env })).steps.find((s) => s.id === "phone") as SetupStatus["steps"][number];
 }
 
 before(async () => {

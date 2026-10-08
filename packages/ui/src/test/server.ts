@@ -20,6 +20,9 @@ export function route(url: string): Response {
   if (p === "/worklog") return ok(fx.worklog);
   if (p === "/skills") return ok(fx.skills);
   if (p === "/search") return ok(fx.search);
+  // Onboarding v2: /setup itself stays 404 here (no step list, so the console never opens /welcome by itself in tests).
+  if (p === "/setup/detect") return ok(fx.setupDetect);
+  if (p === "/setup/upkeep") return ok({ repaired: [], failures: [] });
   const art = /^\/tickets\/([^/]+)\/artifacts\/([^/]+)$/.exec(p);
   if (art) {
     const c = fx.artifactContent(decodeURIComponent(art[1]!), decodeURIComponent(art[2]!));

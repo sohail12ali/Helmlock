@@ -86,19 +86,20 @@ describe("knowledge", () => {
     assert.equal((await get("/api/v1/knowledge/doc?path=shared/missing.md")).status, 404);
   });
 
-  test("GET /setup: the first-run checklist", async () => {
+  test("GET /setup: the first-run steps (Blueprint 34)", async () => {
     const s = await data<SetupStatus>("/api/v1/setup");
     assert.deepEqual(
       s.steps.map((x) => x.id),
-      ["author", "model", "telegram", "code", "first-ticket", "agents", "trust"],
+      ["you", "engine", "code", "crew", "phone", "first-task"],
     );
     const by = new Map(s.steps.map((x) => [x.id, x]));
-    assert.equal(by.get("author")?.done, true);
-    assert.equal(by.get("first-ticket")?.done, true);
+    assert.equal(by.get("you")?.done, true);
+    assert.equal(by.get("first-task")?.done, true);
     assert.equal(by.get("code")?.done, true); // projects/wms/project.toml exists
-    assert.equal(by.get("model")?.done, false);
-    assert.equal(by.get("agents")?.done, false);
-    assert.equal(by.get("agents")?.action, "hl harness sync");
+    assert.deepEqual(
+      s.steps.filter((x) => x.optional).map((x) => x.id),
+      ["code", "phone"],
+    );
   });
 });
 
@@ -109,7 +110,8 @@ describe("inbox", () => {
     const items = await data<InboxItem[]>("/api/v1/inbox");
     assert.equal(find(items, "blocked:T-004-sa")?.kind, "blocked");
     assert.equal(find(items, "question:Q-001-sa")?.ticket, "T-001-sa");
-    assert.equal(find(items, "setup:model")?.kind, "setup");
+    // Only the blocking setup steps (you, engine) reach the inbox; which are open depends on this machine's CLIs.
+    assert.ok(items.filter((i) => i.kind === "setup").every((i) => ["setup:you", "setup:engine"].includes(i.key)));
     assert.equal(find(items, "retention:T-005-sa")?.kind, "retention");
     assert.ok(items.every((i) => !i.read && !i.archived));
   });

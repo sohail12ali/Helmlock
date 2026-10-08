@@ -16,6 +16,7 @@ import { overridesRoute } from "./overrides.ts";
 import { peopleView } from "./people.ts";
 import { registerProjectRoutes } from "./projects.ts";
 import { newHookToken, registerRunRoutes } from "./runs.ts";
+import { registerSetupRoutes, type SetupDeps } from "./setup.ts";
 import { DEFAULT_UI_DIR, serveUi } from "./static.ts";
 import { registerThreadRoutes } from "./thread.ts";
 import {
@@ -44,6 +45,8 @@ export interface AppOptions {
   hookToken?: string;
   /** Per-user home holding .helmlock/recent.toml for GET /centers (milestone 7); default HL_USER_HOME or the OS home. */
   home?: string;
+  /** Onboarding detection and the hello probe (tests fake git config, env and local servers). */
+  setup?: Pick<SetupDeps, "detect" | "helloTimeoutSec">;
 }
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -142,6 +145,7 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
       c.req.method === "POST" &&
       (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/cancel$|approvals\/[^/]+$|inbox\/[^/]+$|hooks\/pretooluse$)/.test(c.req.path) ||
         /^\/api\/v1\/tickets\/[^/]+\/(?:handoff|say)$/.test(c.req.path) ||
+        /^\/api\/v1\/setup\/(?:test-engine|you|upkeep)$/.test(c.req.path) ||
         /^\/api\/v1\/(chats|models)(\/|$)/.test(c.req.path));
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && !isVerbCall)
       return c.json(
@@ -226,6 +230,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   // Milestone 8: the crew and the ticket thread (Next step, hand-off, composer).
   registerCrewRoutes(api, m4);
   registerThreadRoutes(api, m4);
+  // Onboarding v2 (Blueprint 34): detection, engine tests, "this is me" and silent upkeep for /welcome.
+  registerSetupRoutes(api, { ...m4, serial, ...(opts.setup ?? {}) });
 
   api.post("/verbs/*", async (c) => {
     try {

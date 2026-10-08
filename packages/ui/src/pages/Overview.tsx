@@ -41,10 +41,10 @@ export function StageBars({ stages }: { stages: (StageDef & { count: number })[]
   );
 }
 
-/** "Finish setup (n left)" until the first-run checklist (GET /setup) is done. Hidden when the server has none. */
+/** "Finish setup (n left)" until the required first-run steps (GET /setup) are done. Hidden when the server has none. */
 function FinishSetup() {
   const q = useSetup();
-  const open = (q.data?.steps ?? []).filter((s) => !s.done);
+  const open = (q.data?.steps ?? []).filter((s) => !s.done && !s.optional);
   if (!open.length) return null;
   return (
     <Card role="region" className="mb-3 flex flex-wrap items-center gap-2 border-primary/40 px-4 py-3" aria-label="Finish setup">
@@ -53,7 +53,7 @@ function FinishSetup() {
         <p className="truncate text-xs text-muted-foreground">Next: {open.map((s) => s.label).join(", ")}</p>
       </div>
       <Button size="sm" asChild>
-        <Link to="/setup">Continue setup</Link>
+        <Link to="/welcome">Continue setup</Link>
       </Button>
     </Card>
   );

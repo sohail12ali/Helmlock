@@ -9,9 +9,11 @@ import { modelVerbs } from "./models.ts";
 import { providerAddVerb } from "./provider-add.ts";
 import { secretSetVerb, secretStatusVerb } from "./secret.ts";
 import { coerceValue, type SettingDecl, SettingError, type SettingValue, setInDoc, settingsOf } from "./settings.ts";
+import { setupVerb } from "./setup-status.ts";
 
 export * from "./secret.ts";
 export * from "./settings.ts";
+export * from "./setup-status.ts";
 
 export const WORKSPACE_CONFIG_KIND = "workspace-config";
 export const WORKSPACE_FILE = "workspace.toml";
@@ -142,6 +144,7 @@ const plugin: PluginModule = {
     for (const def of modelVerbs(WORKSPACE_CONFIG_KIND)) await ctx.effect(() => ctx.get("verbs").register(def));
     await ctx.effect(() => ctx.get("verbs").register(secretSetVerb));
     await ctx.effect(() => ctx.get("verbs").register(secretStatusVerb));
+    await ctx.effect(() => ctx.get("verbs").register(setupVerb));
   },
 };
 

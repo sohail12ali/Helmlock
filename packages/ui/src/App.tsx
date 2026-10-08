@@ -16,7 +16,7 @@ const TodosPage = lazy(() => import("@/pages/Todos").then((m) => ({ default: m.T
 const WorkPage = lazy(() => import("@/pages/Work").then((m) => ({ default: m.WorkPage })));
 const KnowledgePage = lazy(() => import("@/features/knowledge/KnowledgePage").then((m) => ({ default: m.KnowledgePage })));
 const InboxPage = lazy(() => import("@/features/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
-const SetupPage = lazy(() => import("@/features/setup/SetupPage").then((m) => ({ default: m.SetupPage })));
+const WelcomePage = lazy(() => import("@/features/welcome/WelcomePage").then((m) => ({ default: m.WelcomePage })));
 const PeoplePage = lazy(() => import("@/features/people/PeoplePage").then((m) => ({ default: m.PeoplePage })));
 const SettingsPage = lazy(() => import("@/pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const ActionsPage = lazy(() => import("@/pages/Actions").then((m) => ({ default: m.ActionsPage })));
@@ -55,6 +55,8 @@ function OldRunRedirect() {
 export function AppRoutes() {
   return (
     <Routes>
+      {/* First run (Blueprint 34): a focused full-width wizard outside the shell. */}
+      <Route path="welcome" element={s(<WelcomePage />)} />
       <Route element={<AppShell />}>
         <Route index element={<OverviewPage />} />
         <Route path="inbox" element={s(<InboxPage />)} />
@@ -71,7 +73,7 @@ export function AppRoutes() {
         <Route path="knowledge" element={s(<KnowledgePage />)} />
         <Route path="people" element={s(<PeoplePage />)} />
         <Route path="settings" element={s(<SettingsPage />)} />
-        <Route path="setup" element={s(<SetupPage />)} />
+        <Route path="setup" element={<Navigate to="/welcome" replace />} />
         <Route path="actions" element={s(<ActionsPage />)} />
         <Route path="search" element={s(<SearchPage />)} />
         <Route path="*" element={s(<NotFoundPage />)} />

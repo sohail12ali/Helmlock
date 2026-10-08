@@ -51,7 +51,7 @@ describe("projects", () => {
   test("setup: Connect your code is open until a project exists", async () => {
     const s = await data<SetupStatus>("/api/v1/setup");
     const ids = s.steps.map((x) => x.id);
-    assert.ok(ids.indexOf("code") < ids.indexOf("first-ticket"));
+    assert.ok(ids.indexOf("code") < ids.indexOf("first-task"));
     assert.equal(s.steps.find((x) => x.id === "code")?.done, false);
   });
 
