@@ -189,24 +189,28 @@ describe("VerbForm", () => {
 });
 
 describe("settings", () => {
-  it("renders F9a sections with source chips, scope notes and what is coming", async () => {
+  it("places plugin settings in subject panels with scope and source chips", async () => {
     mockServer();
-    renderApp("/settings");
-    expect(await screen.findByRole("heading", { name: "Workspace and repos" })).toBeInTheDocument();
-    expect(screen.getByText(/provider layer arrives with the assistant/)).toBeInTheDocument();
-    expect(screen.getByText(/telegram plugin is not enabled/)).toBeInTheDocument();
-    expect(screen.getByText("workspace.local.toml")).toBeInTheDocument();
-    expect(screen.getByText(/Only the variable name is saved here/)).toBeInTheDocument();
-    expect(screen.getAllByText(/shared with the team/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/this machine only/).length).toBeGreaterThan(0);
+    renderApp("/settings#settings-agents");
+    const agents = await screen.findByRole("region", { name: "Agents" });
+    const key = await within(agents).findByLabelText("API key variable");
+    const row = key.closest("[data-setting]") as HTMLElement;
+    expect(within(row).getByText("this machine")).toBeInTheDocument();
+    expect(within(row).getByText(/Only the variable name is stored/)).toBeInTheDocument();
+    const mode = within(agents).getByLabelText("Mode").closest("[data-setting]") as HTMLElement;
+    expect(within(mode).getByText("shared")).toBeInTheDocument();
+    // Panels without settings say why instead of disappearing.
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Settings sections" })).getByRole("button", { name: "Telegram" }));
+    expect(await screen.findByText(/telegram plugin is not enabled/)).toBeInTheDocument();
   });
 
-  it("saves a shared number with config set (no local flag) and a local switch with local: true", async () => {
+  it("saves a shared number on blur (no local flag) and a local switch at once with local: true", async () => {
     const calls = mockServer(() => ({ ok: true, data: {}, text: "set work-log.day_hours" }));
-    renderApp("/settings");
+    renderApp("/settings#settings-worklog");
     const dayHours = await screen.findByLabelText("Day length (hours)");
     fireEvent.change(dayHours, { target: { value: "7.5" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save Day length (hours)" }));
+    expect(calls).toHaveLength(0);
+    fireEvent.blur(dayHours);
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]!.path).toBe("/verbs/config/set");
     expect(calls[0]!.headers["X-Helmlock-Request"]).toBe("1");
@@ -219,14 +223,15 @@ describe("settings", () => {
 
   it("a secret-env field saves only a variable name", async () => {
     const calls = mockServer();
-    renderApp("/settings");
+    renderApp("/settings#settings-agents");
     const env = await screen.findByLabelText("API key variable");
     fireEvent.change(env, { target: { value: "sk-live 123" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save API key variable" }));
+    fireEvent.keyDown(env, { key: "Enter" });
     expect(await screen.findByText(/an environment variable name/)).toBeInTheDocument();
     expect(calls).toHaveLength(0);
     fireEvent.change(env, { target: { value: "MY_KEY" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save API key variable" }));
+    fireEvent.keyDown(env, { key: "Enter" });
+    fireEvent.blur(env);
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]!.body.input).toEqual({ plugin: "runtime-claude", key: "api_key_env", value: "MY_KEY", local: true });
   });

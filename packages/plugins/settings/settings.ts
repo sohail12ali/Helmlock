@@ -2,7 +2,7 @@
 // screen and `hl config set` are generated from them. Values live in [[plugin]] rows: shared ones in workspace.toml,
 // per-machine ones in workspace.local.toml (F103). Secrets are stored as env-var NAMES only, never the secret.
 // Form shape follows Paperclip's getConfigSchema / ConfigFieldSchema (type, label, hint, default, options).
-import type { PluginManifest, PluginSettings, SettingField, SettingsView } from "@helmlock/core";
+import type { PluginManifest, PluginSettings, SettingApplies, SettingField, SettingsView } from "@helmlock/core";
 import { composeRows } from "@helmlock/core";
 
 export type SectionId = SettingsView["sections"][number]["id"];
@@ -18,6 +18,8 @@ export const SECTIONS: readonly { id: SectionId; label: string }[] = [
 ];
 
 const TYPES = ["string", "number", "boolean", "select", "secret-env", "list"] as const;
+/** When a change takes effect in a running console (the console shows it as a chip). Absent = "live". */
+export const APPLIES = ["live", "next-run", "restart"] as const;
 /** An environment variable name: what a secret-env setting stores (F9b). */
 export const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 
@@ -63,12 +65,18 @@ export function settingsOf(m: PluginManifest, problems: string[] = []): SettingD
       problems.push(`${where}: scope must be workspace or local`);
       continue;
     }
+    const applies = t.applies ?? "live";
+    if (!(APPLIES as readonly unknown[]).includes(applies)) {
+      problems.push(`${where}: applies must be one of ${APPLIES.join(", ")}`);
+      continue;
+    }
     const d: SettingDecl = {
       key,
       type: type as SettingField["type"],
       label: typeof t.label === "string" ? t.label : key,
       scope,
       section: section as SectionId,
+      applies: applies as SettingApplies,
     };
     if (typeof t.hint === "string") d.hint = t.hint;
     if (typeof t.default === "string" || typeof t.default === "number" || typeof t.default === "boolean") d.default = t.default;
@@ -209,4 +217,21 @@ export function setInDoc(doc: Record<string, unknown>, id: string, key: string, 
     plugin[at] = { ...r, config: { ...(isObj(r.config) ? r.config : {}), [key]: value } };
   } else plugin.push({ id, config: { [key]: value } });
   return { ...doc, plugin };
+}
+
+/**
+ * Remove plugin `id`'s `key` from a parsed workspace.toml or workspace.local.toml (every [[plugin]] row with that id),
+ * so the value falls back to the layer below or the plugin default. An emptied config table is dropped; rows stay.
+ */
+export function unsetInDoc(doc: Record<string, unknown>, id: string, key: string): { doc: Record<string, unknown>; removed: boolean } {
+  if (!Array.isArray(doc.plugin)) return { doc, removed: false };
+  let removed = false;
+  const plugin = (doc.plugin as unknown[]).map((r) => {
+    if (!isObj(r) || r.id !== id || !isObj(r.config) || !(key in r.config)) return r;
+    removed = true;
+    const { [key]: _gone, ...rest } = r.config;
+    const { config: _c, ...row } = r;
+    return Object.keys(rest).length ? { ...row, config: rest } : row;
+  });
+  return { doc: { ...doc, plugin }, removed };
 }

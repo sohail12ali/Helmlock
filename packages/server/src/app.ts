@@ -8,6 +8,7 @@ import { registerApprovalRoutes } from "./approvals.ts";
 import { mountChatRoutes } from "./chats.ts";
 import { registerCrewRoutes } from "./crew.ts";
 import { createReadModel, helmlockVersion, localDate, type ReadModel } from "./data.ts";
+import { registerDiagnosticsRoutes } from "./diagnostics.ts";
 import { ApiError, toErrorBody } from "./errors.ts";
 import { type ChangeHub, createChangeHub, sseStream } from "./events.ts";
 import { registerKnowledgeRoutes } from "./knowledge.ts";
@@ -140,7 +141,7 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
     c.header("Cache-Control", "no-store");
     const isVerbCall =
       c.req.method === "POST" &&
-      (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/(?:cancel|say|merge)$|sessions\/reset$|approvals\/[^/]+$|inbox\/[^/]+$|hooks\/(?:pretooluse|run-report)$)/.test(
+      (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/(?:cancel|say|merge)$|sessions\/reset$|approvals\/[^/]+$|inbox\/[^/]+$|hooks\/(?:pretooluse|run-report)$|engines\/test$)/.test(
         c.req.path,
       ) ||
         /^\/api\/v1\/tickets\/[^/]+\/(?:handoff|say)$/.test(c.req.path) ||
@@ -228,6 +229,8 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
   // Milestone 8: the crew and the ticket thread (Next step, hand-off, composer).
   registerCrewRoutes(api, m4);
   registerThreadRoutes(api, m4);
+  // Settings page: plugins loaded here, the .env names, and a fresh engine test.
+  registerDiagnosticsRoutes(api, m4);
 
   api.post("/verbs/*", async (c) => {
     try {

@@ -17,6 +17,7 @@ label = "Default model"
 hint = "Model id (provider/model) used for new chats and every role without its own model."
 scope = "workspace"
 section = "models"
+applies = "live"
 
 [settings.assistant_model]
 type = "string"
@@ -24,6 +25,7 @@ label = "Assistant model"
 hint = "Model for the console and Telegram assistant. Empty = the default model."
 scope = "workspace"
 section = "models"
+applies = "live"
 
 [settings.summariser_model]
 type = "string"
@@ -31,6 +33,7 @@ label = "Summariser model"
 hint = "Model that shortens old chat turns and digests. Empty = the default model."
 scope = "workspace"
 section = "models"
+applies = "live"
 
 [settings.titles_model]
 type = "string"
@@ -38,6 +41,7 @@ label = "Titles model"
 hint = "Model that names chats. Empty = the default model."
 scope = "workspace"
 section = "models"
+applies = "live"
 
 [settings.refiner_model]
 type = "string"
@@ -45,3 +49,4 @@ label = "Refiner model"
 hint = "Model that cleans up dictated text. Empty = the default model."
 scope = "workspace"
 section = "models"
+applies = "live"

@@ -14,6 +14,7 @@ hint = "After each run, refuse changes to protected state paths that bypassed th
 default = true
 scope = "workspace"
 section = "permissions"
+applies = "restart"
 
 [settings.command]
 type = "string"
@@ -21,3 +22,4 @@ label = "Cursor binary path"
 hint = "Override the Cursor CLI binary on this machine (empty = found on PATH)."
 scope = "local"
 section = "agents"
+applies = "restart"

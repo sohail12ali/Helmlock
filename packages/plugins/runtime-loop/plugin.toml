@@ -13,6 +13,7 @@ label = "Loop step limit"
 hint = "Model requests per turn before the Helmlock loop stops a run (default 60)."
 scope = "workspace"
 section = "agents"
+applies = "restart"
 
 [settings.timeout_sec]
 type = "number"
@@ -20,3 +21,4 @@ label = "Loop run time limit (seconds)"
 hint = "Wall time of one Helmlock loop run (default 3600)."
 scope = "workspace"
 section = "agents"
+applies = "restart"

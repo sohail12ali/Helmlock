@@ -16,3 +16,4 @@ min = 10
 integer = true
 scope = "workspace"
 section = "permissions"
+applies = "restart"
