@@ -3,7 +3,7 @@
 // hl/<ticket> from the product repo's HEAD: the product repo gets no stray folder and no .gitignore change, and the
 // cache is local like runs/. Git runs from PATH without a shell. Never a force, never a push.
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 
 export const PATCH_LIMIT = 512 * 1024;
@@ -29,7 +29,19 @@ async function must(args: string[], cwd: string): Promise<string> {
   return r.stdout;
 }
 
-const same = (a: string, b: string) => resolve(a).replaceAll("\\", "/").toLowerCase() === resolve(b).replaceAll("\\", "/").toLowerCase();
+/** A path in one canonical form: the real long path (Windows short names like RUNNER~1 resolved), forward slashes,
+ *  and case-folded only where the file system ignores case. */
+const canon = (p: string) => {
+  let r = resolve(p);
+  try {
+    r = realpathSync.native(r);
+  } catch {
+    // not there (yet): compare the lexical path
+  }
+  r = r.replaceAll("\\", "/");
+  return process.platform === "win32" || process.platform === "darwin" ? r.toLowerCase() : r;
+};
+const same = (a: string, b: string) => canon(a) === canon(b);
 
 /** The top folder of the git repo holding `cwd`, or undefined outside a repo (or without git). */
 export async function repoRoot(cwd: string): Promise<string | undefined> {

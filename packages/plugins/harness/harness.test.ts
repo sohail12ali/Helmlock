@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { test } from "node:test";
 import { createTestWorkspace, FIXTURES } from "@helmlock/core/testing";
 import { catalog } from "@helmlock/plugins";
@@ -117,20 +117,23 @@ test("--check reports stale after the source changes or a generated file is edit
   }
 });
 
-test("a delivery repo outside the synced root gets absolute hook paths; no mcp means no mcp files; AGENTS.md created", () => {
+test("a delivery repo outside the synced root: absolute hook paths across drives, else project-relative; no mcp means no mcp files; AGENTS.md created", () => {
   const root = copyFixture("s5-harness");
   try {
     rmSync(join(root, "AGENTS.md"));
     writeFileSync(join(root, "harness/harness.toml"), readFileSync(join(root, "harness/harness.toml"), "utf8").replace(/\[\[mcp\]\][\s\S]*$/, ""));
     const src = loadSource(root);
-    // An absolute path on this platform, outside the synced root.
+    // Outside the synced root. On Windows another drive has no relative path, so the hook path is absolute; on one
+    // filesystem (Linux, macOS) it stays relative to the project.
     const delivery = process.platform === "win32" ? "D:/delivery" : "/opt/delivery";
     const files = generate(src, { deliveryRoot: delivery });
     assert.ok(!files.some((f) => f.path.endsWith("mcp.json")));
     const settings = JSON.parse(files.find((f) => f.path === ".claude/settings.json")?.content ?? "{}");
+    const rel = relative(root, delivery);
+    const script = isAbsolute(rel) ? delivery : `$CLAUDE_PROJECT_DIR/${rel.split(sep).join("/")}`;
     assert.equal(
       settings.hooks.Stop[0].hooks[0].command,
-      `node "${delivery}/packages/plugins/harness/hooks/stop.ts" --host claude --policy harness/harness.toml -- log show`,
+      `node "${script}/packages/plugins/harness/hooks/stop.ts" --host claude --policy harness/harness.toml -- log show`,
     );
     assert.match(files.find((f) => f.path === "AGENTS.md")?.content ?? "", /^<!-- hl:generated:start -->\n/);
     assert.deepEqual(hlArgs('hl log-work - "two words"'), ["log-work", "-", "two words"]);
