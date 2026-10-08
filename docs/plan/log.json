@@ -1,5 +1,10 @@
 [
  {
+  "date": "2026-10-08",
+  "you": "yes, build the multi-person scopes with multiple agents; keep going and tell me when it is done",
+  "change": "Built people and storage scopes with three parallel agents (people and data, agent/skill layers, UI). Verified live. Blueprint 31 updated."
+ },
+ {
   "date": "2026-10-07",
   "you": "This can be used by multiple person and we should give options to store things shared or local; see lc config and control center for users info and personal vs shared agents, tasks, todos",
   "change": "Researched the three reference repos; proposed storage scopes and per-kind options in Blueprint 31; open question with recommendation. Also fixed: run transcripts persist, full-width pages, provider add model ids, assistant grounding; LM Studio connected."

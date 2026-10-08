@@ -1,5 +1,10 @@
 [
  {
+  "title": "People and storage scopes (Blueprint 31).",
+  "text": "Shared in git, personal under people/<slug>/ in git, private in .hl-local/ never committed. Todos default personal; chats and runs local with share and attach. Agent and skill overrides resolve local > personal > workspace > system into gitignored .claude/ copies.",
+  "source": "You, 2026-10-07/08: yes, build the multi-person scopes"
+ },
+ {
   "title": "Front-end spike result: stay on React.",
   "text": "The console was built in React 19 with shadcn/ui with a clean first typecheck and no library retries; Svelte is not needed (F151).",
   "source": "Build result, 2026-10-07"

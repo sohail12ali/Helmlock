@@ -1,4 +1,4 @@
-# Blueprint 31: People and storage scopes (proposal, 2026-10-07)
+# Blueprint 31: People and storage scopes (approved and built, 2026-10-08)
 
 The user's ask: several people share one knowledge repo; give options to keep things shared (committed) or local (on this machine, never committed). Grounded in how lc-wms, control-center and Paperclip do it (research, 2026-10-07).
 
@@ -34,3 +34,12 @@ Overrides resolve: local, then personal, then shared. `hl skill find` and the co
 ## Why this shape
 
 Merge-friendly (one file per person or record, as F62), nothing personal leaks by accident (local is the default for chats, runs and private items), and the team still sees what people choose to share.
+
+## As built (milestone 6, `m6/people-scopes`)
+
+- People: `hl people add`, `people claim <id> <git name or email>`, `people unknown`; `people.toml` keeps `git = [...]`; who you are still comes only from `author.local`. Console People page.
+- Todos: `--scope team|personal|private` (default personal) stored in `todos/`, `people/<slug>/todos/`, `.hl-local/todos/`; `todo move`; list = team + mine, `--all` adds other people's personal lists. Ids unique across all three.
+- `chat share` copies a chat to `people/<slug>/chats/` with file reads stripped; `run attach` writes `artifacts/<T>/runs/<id>.md` and a comment.
+- Runs, approvals and chats record `responsible`; credentials always come from this machine.
+- Agent and skill layers: system (delivery) < workspace (`harness/agents`, `harness/skills`) < personal (`people/<slug>/`) < local (`.hl-local/`); `hl harness sync` writes the winners into gitignored `.claude/agents` and `.claude/skills`; hand-made files there are never touched; `hl overrides` and Settings show which layer won.
+- Verified: 325 unit tests, 99 UI tests, 8-step end-to-end; live on the demo (personal analyst and local builder overrides; one todo in each scope) and on the real repo (People page sees the author and the unclaimed git name).
