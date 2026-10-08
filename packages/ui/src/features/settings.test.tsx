@@ -110,7 +110,7 @@ const crew = {
   max_live: 2,
   needs_you: [],
 } as unknown as CrewView;
-const setup: SetupStatus = { steps: [{ id: "telegram", label: "Telegram", done: false, detail: "allow at least one Telegram user id" }] };
+const setup: SetupStatus = { steps: [{ id: "phone", label: "Telegram", done: false, detail: "allow at least one Telegram user id" }] };
 
 type Post = { path: string; body: { input?: Record<string, unknown> } };
 

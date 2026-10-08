@@ -72,7 +72,10 @@ export function TimesheetPanel({
         <div key={s.author} className="overflow-x-auto">
           <table className="w-full text-xs" aria-label={`Timesheet of ${s.name}`}>
             <caption className="pb-1 text-left text-[11px] font-semibold text-ink2">
-              {s.name} <span className="font-normal text-muted-foreground">{date} · {fmtH(s.total)}</span>
+              {s.name}{" "}
+              <span className="font-normal text-muted-foreground">
+                {date} · {fmtH(s.total)}
+              </span>
             </caption>
             <thead>
               <tr className="border-b text-left text-[11px] tracking-wide text-muted-foreground uppercase">

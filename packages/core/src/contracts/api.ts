@@ -755,6 +755,7 @@ export interface WorkSearchResult {
   query: string;
   total: number;
   hits: (WorkEntryView & { date: string; author: string })[];
+}
 // ---------------------------------------------------------------------------------------------------------------
 // Onboarding v2 (Blueprint 34): the /welcome wizard. Detection never sends values: key names and sources only, a
 // redacted first line of a hello probe at most. Git identity is a suggestion and is used only after a confirm.

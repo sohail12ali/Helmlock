@@ -345,7 +345,7 @@ export function PermissionsPanel({ data }: { data: SettingsData }) {
 
 export function TelegramPanel({ data }: { data: SettingsData }) {
   const setup = useSetup();
-  const step = setup.data?.steps.find((s) => s.id === "telegram");
+  const step = setup.data?.steps.find((s) => s.id === "phone");
   const plugins = pluginsIn(data.view, "telegram");
   const items = fieldsOf(data.view, "telegram");
   const enabled = plugins.some((p) => p.plugin === "telegram");
