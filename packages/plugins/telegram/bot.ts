@@ -25,10 +25,10 @@ export interface BotOptions {
   /** Minimum gap between edits of the working message (default 1000 ms). */
   editIntervalMs?: number;
   /** Service overrides (tests); otherwise read from the runtime, mounting plugins when needed. */
-  services?: Partial<Pick<Services, "assistant" | "approvalQueue" | "runManager" | "context">>;
+  services?: Partial<Pick<Services, "assistant" | "approvalQueue" | "runManager" | "context" | "providers">>;
 }
 
-type Lazy = "assistant" | "approvalQueue" | "runManager" | "context";
+type Lazy = "assistant" | "approvalQueue" | "runManager" | "context" | "providers";
 
 /** The origin a run started from this Telegram chat carries (RunState.origin), so /stop can find it. */
 export const telegramOrigin = (dm: number) => `telegram:${dm}`;
@@ -40,6 +40,7 @@ const HELP = [
   "/use <chat id prefix> - switch chat (no argument lists recent chats)",
   "/run [ticket id] <task> - start a read-only (plan mode) agent run",
   "/stop - cancel the current answer or a run started from this chat",
+  "/model [model id] - switch this chat's model (no argument lists the models)",
   "/todo <text> - add a todo",
   "/ticket <title> - create a ticket",
   "/help - this list",
@@ -264,6 +265,8 @@ export class TelegramBot {
         return this.use(dm, rest);
       case "/stop":
         return this.stopCmd(dm);
+      case "/model":
+        return this.modelCmd(dm, rest);
       case "/run":
         return this.runCmd(dm, rest);
       case "/todo":
@@ -318,6 +321,29 @@ export class TelegramBot {
     const c = await assistant.create({ channel: "telegram", ...(title ? { title } : {}), ...(this.o.config.model ? { model: this.o.config.model } : {}) });
     this.store.set(dm, { chat: c.id });
     return `New chat ${c.id.slice(0, 8)}${c.title ? `: ${c.title}` : ""}.`;
+  }
+
+  /** /model lists the configured models (default and this chat's marked); /model <id> switches this chat's model. */
+  private async modelCmd(dm: number, id: string): Promise<string> {
+    const [assistant, providers] = [await this.svc("assistant"), await this.svc("providers")];
+    if (!assistant || !providers) return "The assistant is not enabled in this workspace.";
+    const models = providers.models();
+    const chat = this.store.get(dm).chat;
+    if (!id) {
+      const def = providers.defaultModel();
+      const current = chat ? (await assistant.get(chat).catch(() => undefined))?.summary.model : undefined;
+      if (!models.length) return "No models are configured. Add one in the console under Settings > Models.";
+      const row = (m: { id: string }) => `${m.id === current ? "* " : "- "}${m.id}${m.id === def ? " (default)" : ""}`;
+      return ["Models (* this chat):", ...models.map(row), "Switch with /model <model id>."].join("\n");
+    }
+    if (!models.some((m) => m.id === id)) return `Unknown model ${id}. Send /model for the list.`;
+    if (!chat) {
+      const c = await assistant.create({ channel: "telegram", model: id });
+      this.store.set(dm, { chat: c.id });
+      return `New chat ${c.id.slice(0, 8)} on ${id}.`;
+    }
+    const s = await assistant.setModel(chat, id);
+    return `This chat now uses ${s.model}.`;
   }
 
   private async use(dm: number, prefix: string): Promise<string> {

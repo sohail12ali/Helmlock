@@ -408,6 +408,13 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
     },
 
     async probeDraft(draft, opts = {}) {
+      // A pasted key (try before saving it): a one-off instance whose environment holds only that key, so the key
+      // lookup stays as it is and nothing is stored. The key never reaches the result.
+      if (draft.key) {
+        const { key, ...rest } = draft;
+        const once = createProviders({ ...o, env: { [DRAFT_KEY_ENV]: key } });
+        return once.probeDraft({ ...rest, key_env: DRAFT_KEY_ENV }, opts);
+      }
       const cfg = readProvidersConfig({
         providers: [
           {
@@ -537,6 +544,8 @@ export function createProviders(o: ProvidersOptions): ProvidersImpl {
 }
 
 const DRAFT_ID = "draft";
+/** The variable name a pasted draft key is held under, inside a one-off instance only. */
+const DRAFT_KEY_ENV = "HL_DRAFT_KEY";
 const emptyProbe = (provider: string): ProbeResult => ({ provider, reachable: false, models: [], chat: false, streaming: false, tool_calls: false });
 const causeOf = (e: unknown) => ((e as Error).cause ? String((e as Error & { cause: unknown }).cause) : (e as Error).message);
 

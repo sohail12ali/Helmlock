@@ -1,5 +1,6 @@
 // Milestone 4: GET /api/v1/models (ModelsView), POST /api/v1/models/test { provider } (ModelProbe, F73) and
-// POST /api/v1/models/try { base_url, ... } (probe a provider before it is saved; writes nothing).
+// POST /api/v1/models/try { base_url, ... } (probe a provider before it is saved; writes nothing). A pasted `key` in
+// that body is used for that one request only (milestone 7).
 // The probe saves what it learned to .hl-cache/models/<provider>.json (local); configured capabilities always win.
 import type { ApiResponse, ModelProbe, ModelsView, ModelTry, Person, ProvidersService, Runtime } from "@helmlock/core";
 import type { Hono, Context as HonoContext } from "hono";
@@ -98,11 +99,18 @@ export function mountModelRoutes(api: Hono, d: M4RouteDeps): void {
         { base_url, ...rest },
         { ...(model ? { model } : {}), ...(list_only ? { listOnly: true } : {}) },
       );
-      return okJson(c, r);
+      // A pasted key is used for this request only: never stored, logged or sent back (even inside a server's error text).
+      return okJson(c, t.key ? scrub(r, t.key) : r);
     } catch (e) {
       return failJson(c, e, d.log);
     }
   });
+}
+
+/** Replace every occurrence of a secret in a JSON-shaped value. */
+export function scrub<T>(v: T, secret: string): T {
+  if (!secret) return v;
+  return JSON.parse(JSON.stringify(v).split(JSON.stringify(secret).slice(1, -1)).join("[key hidden]")) as T;
 }
 
 function parseTry(body: Record<string, unknown>): ModelTry {
@@ -116,6 +124,11 @@ function parseTry(body: Record<string, unknown>): ModelTry {
   if (!base_url) throw new ApiError(400, "bad-request", "body needs { base_url: <server URL> }");
   if (body.list_only !== undefined && typeof body.list_only !== "boolean") throw new ApiError(400, "bad-request", "list_only must be true or false");
   const out: ModelTry = { base_url };
+  if (body.key !== undefined && body.key !== null && body.key !== "") {
+    if (typeof body.key !== "string") throw new ApiError(400, "bad-request", "key must be a string");
+    const key = body.key.trim();
+    if (key) out.key = key;
+  }
   for (const k of ["key_env", "preset", "model"] as const) {
     const v = s(k);
     if (v) out[k] = v;

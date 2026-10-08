@@ -5,6 +5,7 @@ import type { FileLayer, PluginManifest, PluginModule, TomlEmitter, VerbDef } fr
 import { composeRows, ok, readManifests } from "@helmlock/core";
 import { z } from "zod";
 import { catalog } from "../registry.ts";
+import { modelVerbs } from "./models.ts";
 import { providerAddVerb } from "./provider-add.ts";
 import { coerceValue, type SettingDecl, SettingError, type SettingValue, setInDoc, settingsOf } from "./settings.ts";
 
@@ -136,6 +137,7 @@ const plugin: PluginModule = {
     await ctx.effect(() => files.registerEmitter(workspaceConfigEmitter));
     await ctx.effect(() => ctx.get("verbs").register(configSet));
     await ctx.effect(() => ctx.get("verbs").register(providerAddVerb(WORKSPACE_CONFIG_KIND)));
+    for (const def of modelVerbs(WORKSPACE_CONFIG_KIND)) await ctx.effect(() => ctx.get("verbs").register(def));
   },
 };
 
