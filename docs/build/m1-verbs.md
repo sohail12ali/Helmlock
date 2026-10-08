@@ -51,6 +51,8 @@ Ids: tickets `T-014-sa` (counter plus author initials), records `D-003-sa` (deci
 | `hl secret set <NAME>` | value from a hidden prompt, or stdin when piped (`hl secret set NAME < file`); never on the command line (`--value` is refused). Writes `NAME=value` to the knowledge repo's gitignored `.env` (adds `.env` to `.gitignore` if missing); output and activity carry the name only. Not offered to the assistant or Telegram. | M7 |
 | `hl secret status [NAME...]` | where each name is found: `environment`, `.env` or `missing` (default: the Telegram token variable and every provider `key_env`); never values; `--json` | M7 |
 >>>>>>> worktree-agent-abbf2cbf1e71f7811
+| `hl crew show` | the crew roles (from the agent pack plus the `crew` row of workspace.toml) with engine, model, worktree and permission mode, and the stage -> role map; `--json` | M8 |
+| `hl crew set <role>` | `--engine <id>` (must be registered), `--model <id>` (checked against the configured models when the engine is `loop`; `""` clears), `--worktree true\|false`, `--mode plan\|ask\|auto-review`, `--dry-run`; writes the `crew` row of workspace.toml | M8 |
 
 Stages (workflow-lite): `backlog`, `spec`, `plan`, `build`, `verify`, `done`. Blocked is a flag that needs `--by` and `--next`.
 

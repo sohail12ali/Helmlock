@@ -3,9 +3,10 @@
 // from ~/.helmlock/recent.toml, each probed with a quick health GET). One console serves one center (F138).
 import { statSync } from "node:fs";
 import type { CenterEntry, CentersView, ProjectsView, Runtime } from "@helmlock/core";
+import { CrewError, productFolders, projectRepoDir, liveFolders as sharedLiveFolders } from "@helmlock/plugins/crew/project-dir.ts";
 import { readProjects } from "@helmlock/plugins/notes/notes.ts";
 import { centerName, readRecent, userHome } from "@helmlock/plugins/scaffold/recent.ts";
-import { readWorkspaceFolders, samePath } from "@helmlock/plugins/scaffold/scaffold.ts";
+import { samePath } from "@helmlock/plugins/scaffold/scaffold.ts";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ReadModel } from "./data.ts";
 import { ApiError } from "./errors.ts";
@@ -32,27 +33,13 @@ const isDir = (p: string) => {
 
 /** Folders of the workspace file as they are now (`hl project add` may have changed it since the server started). */
 export function liveFolders(runtime: Runtime): { name: string; abs: string }[] {
-  const info = runtime.info;
-  if (info.codeWorkspaceFile) {
-    try {
-      return readWorkspaceFolders(info.codeWorkspaceFile);
-    } catch {
-      /* fall back to the folders read at start */
-    }
-  }
-  return info.folders.map((f) => ({ name: f.name, abs: f.path }));
-}
-
-/** Product folders only: never the knowledge center itself or the system repo. */
-function productFolders(runtime: Runtime): { name: string; abs: string }[] {
-  const info = runtime.info;
-  return liveFolders(runtime).filter((f) => !samePath(f.abs, info.root) && !samePath(f.abs, info.deliveryRoot));
+  return sharedLiveFolders(runtime.info);
 }
 
 export async function projectsView(runtime: Runtime): Promise<ProjectsView> {
   const ctx = runtime.ctx;
   const tickets = await ctx.get("tickets").list();
-  const folders = productFolders(runtime);
+  const folders = productFolders(runtime.info);
   const projects = (await readProjects(ctx)).map((p) => ({
     id: p.id,
     name: p.name,
@@ -69,18 +56,15 @@ export async function projectsView(runtime: Runtime): Promise<ProjectsView> {
 /**
  * The folder a run for this project starts in: its first repo folder that the workspace file names and that exists.
  * Only folders of this workspace file are used, so a project.toml cannot point a run anywhere else.
+ * Milestone 8: the logic lives in the crew plugin (project-dir.ts) so hand-offs resolve the same folder.
  */
 export async function projectCwd(runtime: Runtime, id: string): Promise<string> {
-  const p = (await readProjects(runtime.ctx)).find((x) => x.id === id);
-  if (!p) throw new ApiError(404, "unknown-project", `no project ${JSON.stringify(id)} in projects/`, { fix: "pick one from GET /api/v1/projects" });
-  const folders = productFolders(runtime);
-  for (const repo of p.repos) {
-    const f = folders.find((x) => x.name === repo);
-    if (f && isDir(f.abs)) return f.abs;
+  try {
+    return await projectRepoDir(runtime.ctx, id);
+  } catch (e) {
+    if (e instanceof CrewError) throw new ApiError(e.rule === "unknown-project" ? 404 : 422, e.rule, e.message, e.fix ? { fix: e.fix } : {});
+    throw e;
   }
-  throw new ApiError(422, "no-repo-folder", `project ${id} has no repo folder on this machine (repos: ${p.repos.join(", ") || "none"})`, {
-    fix: `add its folder with \`hl project add <folder> --path <path> --id ${id}\``,
-  });
 }
 
 /** Does a console answer at this port for this root? */

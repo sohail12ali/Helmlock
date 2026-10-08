@@ -31,6 +31,7 @@ export const BUNDLES: Record<string, PluginRow[]> = {
     "assistant",
     "notes",
     "lifecycle",
+    "crew",
   ].map((id) => ({ id, use: id })),
 };
 
