@@ -28,4 +28,5 @@ export const catalog: PluginCatalog = {
   assistant: { dir: join(here, "assistant"), load: () => import("./assistant/index.ts") },
   notes: { dir: join(here, "notes"), load: () => import("./notes/index.ts") },
   lifecycle: { dir: join(here, "lifecycle"), load: () => import("./lifecycle/index.ts") },
+  crew: { dir: join(here, "crew"), load: () => import("./crew/index.ts") },
 };
