@@ -5,11 +5,14 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { BinaryInfo, RunMode, RunOptions, RuntimeAdapter } from "@helmlock/core";
-import { startProcessRun } from "../runtimes/process-run.ts";
+import type { BinaryInfo, EngineCapabilities, RunMode, RunOptions, RuntimeAdapter } from "@helmlock/core";
+import { type ManagedRunOptions, startProcessRun } from "../runtimes/process-run.ts";
 import { DEFAULT_PROTECTED } from "../runtimes/protect.ts";
 import { cleanEnv, resolveCommand, spawnTarget } from "../runtimes/spawn.ts";
 import { createCursorNormalizer } from "./parse.ts";
+
+/** Print mode reads the whole prompt from stdin and has no hook, so no steering and no approval cards. */
+export const CURSOR_CAPABILITIES: EngineCapabilities = { resume: true, steer: false, approve: false, models: true };
 
 /** Cursor spells each rung with its own flag; `--mode default` is rejected by the CLI. */
 export const CURSOR_MODE_FLAGS: Record<RunMode, string[]> = {
@@ -54,30 +57,48 @@ export interface CursorAdapterOptions {
 
 export function createCursorAdapter(opts: CursorAdapterOptions = {}): RuntimeAdapter {
   const baseEnv = opts.env ?? process.env;
+  const detect = async (): Promise<BinaryInfo | null> => {
+    const command = await findCursor(baseEnv, opts.command);
+    if (!command) return null;
+    const t = spawnTarget(command, ["--version"], baseEnv);
+    const version = await new Promise<string | undefined>((res) =>
+      execFile(t.command, t.args, { windowsHide: true, windowsVerbatimArguments: t.verbatim, timeout: 15000 }, (err, out) => res(err ? undefined : out.trim())),
+    );
+    return version ? { command, version } : { command };
+  };
   return {
     id: "cursor",
-    async detect(): Promise<BinaryInfo | null> {
-      const command = await findCursor(baseEnv, opts.command);
-      if (!command) return null;
-      const t = spawnTarget(command, ["--version"], baseEnv);
-      const version = await new Promise<string | undefined>((res) =>
-        execFile(t.command, t.args, { windowsHide: true, windowsVerbatimArguments: t.verbatim, timeout: 15000 }, (err, out) =>
-          res(err ? undefined : out.trim()),
-        ),
-      );
-      return version ? { command, version } : { command };
+    label: "Cursor CLI",
+    capabilities: CURSOR_CAPABILITIES,
+    detect,
+    async test() {
+      const bin = await detect();
+      if (!bin) return { ok: false, checks: [{ level: "error", message: "Cursor CLI not found (install cursor-agent or set HL_CURSOR_BIN)" }] };
+      // There is no cheap, non-interactive sign-in probe that is stable across Cursor CLI builds.
+      return {
+        ok: true,
+        checks: [
+          { level: "info", message: `found ${bin.command}${bin.version ? ` (${bin.version})` : ""}` },
+          { level: "info", message: "sign-in is checked on first run" },
+        ],
+      };
     },
-    async start(o) {
+    async start(o: ManagedRunOptions) {
       const command = await findCursor(baseEnv, opts.command);
       if (!command) throw Object.assign(new Error("Cursor CLI not found"), { rule: "runtime-missing", fix: "install cursor-agent or set HL_CURSOR_BIN" });
       const protect = opts.protect === false ? undefined : (opts.protect ?? { root: o.cwd, globs: DEFAULT_PROTECTED });
       return startProcessRun({
+        ...(o.runId ? { id: o.runId } : {}),
         protect,
+        // A session that cannot be resumed is retried once fresh (Paperclip).
+        retryOn: ["unknown_session"],
         attempt(n) {
-          if (n > 0) return undefined;
+          if (n > 1 || (n === 1 && !o.resumeSessionId)) return undefined;
+          const run: RunOptions = { ...o };
+          if (n === 1) delete run.resumeSessionId;
           return {
             command,
-            args: cursorArgs(o),
+            args: cursorArgs(run),
             cwd: o.cwd,
             env: cleanEnv(baseEnv, o.env),
             prompt: o.prompt,

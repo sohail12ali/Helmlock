@@ -3,6 +3,7 @@
 // src/shared/stream.ts (normalizeCursorStreamLine), plus the tool_call "<name>ToolCall" handling from
 // lc-wms .kanban/agents/normalize.py. See THIRD_PARTY_NOTICES.md.
 import type { RunEvent } from "@helmlock/core";
+import { PATCH_CAP, todoItems } from "../runtimes/event-vocab.ts";
 import type { TurnEnd } from "../runtimes/failures.ts";
 import type { StreamNormalizer } from "../runtimes/process-run.ts";
 
@@ -75,17 +76,42 @@ export function createCursorNormalizer(): StreamNormalizer {
         const body = obj(call[key]);
         const name = key.replace(/ToolCall$/, "") || "tool";
         const id = str(e.call_id) ?? str(call.toolCallId);
-        if (sub === "started") return [{ type: "tool", phase: "start", name, ...(id ? { id } : {}), input: body.args }];
+        if (sub === "started") {
+          const out: RunEvent[] = [{ type: "tool", phase: "start", name, ...(id ? { id } : {}), input: body.args }];
+          // Todo and plan tools (names vary across Cursor builds: updateTodos, todoWrite, createPlan, ...).
+          if (/todo/i.test(name)) {
+            const items = todoItems(body.args);
+            if (items) out.push({ type: "todo", items });
+          } else if (/plan/i.test(name)) {
+            const plan = str(obj(body.args).plan);
+            if (plan) out.push({ type: "plan", text: plan });
+          }
+          return out;
+        }
         if (sub === "completed") {
           const result = obj(body.result);
           const isError = "error" in result || "failure" in result || "rejected" in result;
-          return [{ type: "tool", phase: "end", name, ...(id ? { id } : {}), isError }];
+          const out: RunEvent[] = [{ type: "tool", phase: "end", name, ...(id ? { id } : {}), isError }];
+          // Edits report their own line counts and a diff string on success.
+          const ok = obj(result.success);
+          const file = str(ok.path) ?? str(obj(body.args).path);
+          if (!isError && file && (typeof ok.linesAdded === "number" || typeof ok.linesRemoved === "number")) {
+            const patch = str(ok.diffString);
+            out.push({
+              type: "diff",
+              file,
+              added: num(ok.linesAdded),
+              removed: num(ok.linesRemoved),
+              ...(patch && patch.length <= PATCH_CAP ? { patch } : {}),
+            });
+          }
+          return out;
         }
         return [];
       }
       case "error":
         lastError = errorText(e.message ?? e.error ?? e.detail);
-        return [{ type: "stderr", text: lastError }];
+        return [{ type: "error", message: lastError }];
       case "result": {
         const isError = e.is_error === true || sub === "error";
         end = {
@@ -102,7 +128,9 @@ export function createCursorNormalizer(): StreamNormalizer {
           cacheReadTokens: num(u.cacheReadTokens, u.cachedInputTokens, u.cache_read_input_tokens),
           cacheWriteTokens: num(u.cacheWriteTokens, u.cache_creation_input_tokens),
         };
-        return [usage, { type: "result", ok: !isError, text: end.result ?? end.error ?? "", ...(session ? { sessionId: session } : {}) }];
+        const result: RunEvent = { type: "result", ok: !isError, text: end.result ?? end.error ?? "", ...(session ? { sessionId: session } : {}) };
+        // An error event already said why; a bare error result says it here.
+        return isError && !lastError ? [usage, { type: "error", message: end.error ?? `the run ended with ${end.subtype}` }, result] : [usage, result];
       }
       default:
         return [{ type: "raw", line: t }];
