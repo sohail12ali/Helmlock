@@ -2,6 +2,7 @@
 // TypeScript port of lc-wms .kanban/core/harness_lint.py, plus the checks of .kanban/tests/test_skill_contract.py
 // (every skill folder has a SKILL.md, a hidden skill is named in the rulebook, vendored skills match the lock).
 // Reference checking follows explicit tokens only (backticked paths and /commands), never bare prose.
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
@@ -95,6 +96,13 @@ function vendoredLock(skillsDir: string): Record<string, { files?: Record<string
 }
 
 const digest = (p: string) => `sha256-${createHash("sha256").update(readFileSync(p).toString("latin1").replace(/\r\n/g, "\n"), "latin1").digest("hex")}`;
+
+/** A path git ignores here is a generated or per-machine output (docs/plan.html, notes/, site/): it may be missing on a
+ *  fresh clone, so a rulebook may still name it. Without git (or outside a repo) nothing counts as ignored. */
+function gitIgnored(root: string, p: string): boolean {
+  const r = spawnSync("git", ["check-ignore", "-q", "--", p], { cwd: root, stdio: "ignore", windowsHide: true });
+  return r.status === 0;
+}
 
 export function skillFormat(name: string, body: string, o: Required<LintOptions>): string[] {
   const out: string[] = [];
@@ -264,7 +272,7 @@ export function lintHarness(root: string, opts: LintOptions = {}, layers: { deli
       const tok = (m[1] as string).trim();
       if (o.pathPrefixes.some((p) => tok.startsWith(p)) && !/[{}*<>|$ …]/.test(tok) && !tok.endsWith("/")) {
         const p = (tok.split("::")[0] as string).split("#")[0] as string;
-        if (!existsSync(join(root, p))) badPaths.add(p);
+        if (!existsSync(join(root, p)) && !gitIgnored(root, p)) badPaths.add(p);
       }
       for (const c of tok.matchAll(CMD_RE)) if (!commandOk(c[1] as string)) badCmds.add(`/${c[1]}`);
     }

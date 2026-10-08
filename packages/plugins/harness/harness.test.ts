@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
@@ -316,6 +317,22 @@ test("lint fixture: every rule fires once where expected", () => {
   assert.match(msgs, /path does not exist: \.claude\/skills\/nope\/SKILL\.md/);
   assert.match(msgs, /command resolves to no skill or alias: \/ghost/);
   assert.doesNotMatch(msgs, /missing-from-evals|\/fold\b|\/loop|<name>/);
+});
+
+test("lint: a missing path is an error unless git ignores it (generated outputs may be absent on a fresh clone)", () => {
+  const root = mkdtempSync(join(tmpdir(), "hl-lint-ignored-"));
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    writeFileSync(join(root, ".gitignore"), "docs/generated.html\n");
+    writeFileSync(join(root, "CLAUDE.md"), "# Rules\n\nRead `docs/missing.md`; the page `docs/generated.html` is built locally.\n");
+    const msgs = lintHarness(root, { pathPrefixes: ["docs/"] })
+      .map((x) => x.message)
+      .join("\n");
+    assert.match(msgs, /path does not exist: docs\/missing\.md/);
+    assert.doesNotMatch(msgs, /generated\.html/);
+  } finally {
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  }
 });
 
 test("frontmatter: folded block, quoted strings, nested aliases list, flow list", () => {
