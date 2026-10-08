@@ -1,0 +1,44 @@
+# Ticket thread: work happens here
+@from paperclip (issue thread), lc-wms (advance per lane, STATUS), control-center (steer, queue, needs you), deepseek-harness (event log, approvals)
+> 1 Next step comes from the stage and the role map. One click hands the ticket to the right role on its engine; the chip changes the engine for this hand-off only.
+> 2 A run is a card in the thread with grouped steps, not a raw transcript. Steer appears only when the engine can take input mid-run.
+> 3 The approval shows the command or diff and also lands in Needs you and Telegram.
+> 4 Every run ends with an outcome card written to the ticket; its next step is a button.
+> 5 The composer talks to whoever is on the ticket. @role hands work to another role.
+app
+  top
+    brand "Helmlock"
+    crumb "wms-api" "T-014-sa"
+    sp
+    chip "Project: wms-api"
+  body
+    side
+      nav "Overview" "Inbox 2" "Tickets*" "Crew" "Todos" "Knowledge" "Settings"
+    main
+      row
+        h "T-014-sa  Pick list sync"
+        chip "[~build]"
+        sp
+        btn "Next step: Builder builds slice 2" n=1
+        chip "Claude Code"
+      card "Thread"
+        chat
+          msg me "Spec frozen. Please keep the API backwards compatible."
+          msg ai "Analyst, OpenRouter qwen3: [+done] Spec written, 4 rules, 6 criteria. Next: plan."
+          msg ai "Planner, Claude Code: [+done] 3 slices, estimate M. Next: build slice 1."
+      card "Run r-0151 Builder, Claude Code, 4 min, 31k tokens" n=2
+        list "+Read 6 files" "+Edited sync.ts +12 -3" "+Ran tests: 42 passed" "-Editing api.ts"
+        btns "Steer" "Queue a note" "Stop"
+        chat
+          ask "Run pnpm db:migrate (touches the dev database)" "Allow" "Deny"
+      card "Outcome" n=4
+        text "[+done] Slice 1 built, 42 tests pass, 2 files changed."
+        btns "Review diff" "Next: Verifier checks slice 1"
+      input "Message the builder, or @analyst ..." n=5
+    right
+      card "This run"
+        h "Todos"
+        list "+Read the spec" "+Write the sync" "-Update API docs"
+        h "Files changed"
+        list "sync.ts +12 -3" "api.ts +4 -0"
+        stat "Cost" "$0.18" hint="31k tokens"

@@ -1,6 +1,11 @@
 [
   {
     "date": "2026-10-08",
+    "you": "no agents and skills on Settings; the agents and chat experience is bad: use both CLI agents (as Paperclip) and any model with our own harness (as deepseek-harness); study all four repos and come up with something new",
+    "change": "Removed the overrides card from Settings. Researched all four repos (research 12) and proposed Crew and engines (Blueprint 33, mockups 15 and 16, cards F152 to F157)."
+  },
+  {
+    "date": "2026-10-08",
     "you": "onboarding does not mark Telegram done; set up the repo/workspace and projects first and show which is active (like Paperclip); connect several models at once and switch",
     "change": "Built with three parallel agents: machine secrets in the gitignored .env (paste token/key, no restart), several models per provider with default and switching, and a project switcher with a Connect your code setup step. Blueprint 32."
   },
