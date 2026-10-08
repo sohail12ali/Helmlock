@@ -196,6 +196,8 @@ export const CONSOLE_VERBS = [
   // Milestone 7: project switcher. Both write the .code-workspace file: the console shows the dry run, then confirms with yes.
   "project add",
   "project import",
+  // Milestone 8: crew roles (engine and model per role).
+  "crew set",
 ] as const;
 export type ConsoleVerb = (typeof CONSOLE_VERBS)[number];
 
@@ -290,7 +292,7 @@ import type {
 /** POST /api/v1/runs. Modes allowed from the console: plan, ask, auto-review ("force" stays in the terminal). */
 export interface RunStart {
   task: string;
-  runtime?: "claude-code" | "cursor";
+  runtime?: string;
   agent?: string;
   ticket?: string;
   mode?: Exclude<RunMode, "force">;
@@ -467,3 +469,81 @@ export interface CentersView {
   current: { name: string; console_name: string; root: string };
   others: CenterEntry[];
 }
+
+// ---------- milestone 8: crew and engines (Blueprint 33, F152-F157) ----------
+import type { CrewRole, EngineCapabilities, EngineId, EngineTest, HandoffInput, OutcomeKind, PlanCard, RunOutcome, SayAction } from "./crew.ts";
+export type { CrewRole, EngineCapabilities, EngineId, EngineTest, HandoffInput, OutcomeKind, PlanCard, RunOutcome, SayAction };
+
+export interface EngineView {
+  id: EngineId;
+  label: string;
+  capabilities: EngineCapabilities;
+  test: EngineTest;
+}
+/** GET /api/v1/crew: the roles with what each is doing now. */
+export interface CrewView {
+  roles: (CrewRole & {
+    engine_ok: boolean;
+    engine_problem?: string;
+    /** Running or queued runs of this role. */
+    current: RunState[];
+    last?: RunState;
+  })[];
+  engines: EngineView[];
+  live: number;
+  max_live: number;
+  /** Approvals pending, runs ended needs-input or review, open questions: across all runs. */
+  needs_you: NeedsYouItem[];
+}
+/** GET /api/v1/tickets/:id/next -> NextStep | null */
+export interface NextStep {
+  role: string;
+  label: string;
+  engine: EngineId;
+  model?: string;
+  reason: string;
+}
+/** GET /api/v1/tickets/:id/thread: comments and runs in one timeline, oldest first. */
+export type ThreadItem =
+  | { kind: "comment"; ts: string; author: string; text: string; run?: string }
+  | { kind: "run"; ts: string; run: RunState };
+export interface TicketThread {
+  ticket: string;
+  items: ThreadItem[];
+  next: NextStep | null;
+  /** The run currently live or queued on this ticket, if any. */
+  live?: RunState;
+}
+/** POST /api/v1/tickets/:id/handoff (HandoffInput without ticket) -> RunDetail (201). */
+export type HandoffBody = Omit<HandoffInput, "ticket">;
+/** POST /api/v1/tickets/:id/say {text} -> SayResult. */
+export interface SayResult {
+  action: SayAction;
+  run?: RunState;
+}
+/** POST /api/v1/runs/:id/say {text} -> {delivered}. */
+export interface RunSayResult {
+  delivered: "live" | "queued";
+}
+/** GET /api/v1/runs/:id/diff */
+export interface RunDiff {
+  files: { file: string; added: number; removed: number }[];
+  patch: string;
+}
+/** POST /api/v1/runs/:id/merge -> RunMergeResult; POST /api/v1/runs/:id/reset-session -> 204. */
+export interface RunMergeResult {
+  merged: boolean;
+  message: string;
+}
+/** POST /api/v1/chats/:id/plans/:plan {decisions: {[step index]: "approve" | "skip"}, revise?: string} -> PlanCard.
+ *  Approved steps become hand-offs; "revise" sends the text back to the assistant as the next user turn. */
+export interface PlanDecision {
+  decisions: Record<string, "approve" | "skip">;
+  revise?: string;
+}
+export type PlanDecisionResult = PlanCard;
+/** GET /api/v1/runs?ticket=&role=&limit= -> RunState[] (milestone 8 filters). */
+export type RunStateList = RunState[];
+/** Re-exported so the outcome type is reachable from the API module. */
+export type RunOutcomeView = RunOutcome;
+export type OutcomeKindView = OutcomeKind;

@@ -1,4 +1,5 @@
 // FROZEN CONTRACT (milestone 1). Every service key and its interface, declared up front.
+import type { CrewRole, EngineCapabilities, EngineId, EngineTest, HandoffInput, PlanCard, RunOutcome, SayAction } from "./crew.ts";
 import type { FileLayer } from "./files.ts";
 import type { Disposer } from "./kernel.ts";
 import type {
@@ -94,13 +95,20 @@ export interface ApprovalQueueService {
 }
 
 export interface RunStartOptions extends Omit<RunOptions, "cwd" | "mode"> {
-  runtime?: "claude-code" | "cursor";
+  /** An engine id (milestone 8: any registered engine, e.g. "loop"). */
+  runtime?: string;
   mode?: RunMode;
   cwd?: string;
   /** Who started it (F98: the person's own logins are used). */
   actor: Actor;
   /** Where the start came from, e.g. "console" or "telegram:<chat id>" (so /stop can find its runs). */
   origin?: string;
+  /** Milestone 8: the crew role doing the work (its agent file); the session is kept per (role, ticket) (F155). */
+  role?: string;
+  /** Start a fresh session instead of resuming the (role, ticket) session. */
+  fresh?: boolean;
+  /** Work in a git worktree of the project on branch hl/<ticket> (F156). */
+  worktree?: boolean;
 }
 export interface RunState {
   id: string;
@@ -109,12 +117,23 @@ export interface RunState {
   ticket?: string;
   mode: RunMode;
   origin?: string;
-  status: "running" | "done" | "failed" | "cancelled";
+  /** "queued" waits for a free slot (concurrency cap, milestone 8). */
+  status: "queued" | "running" | "done" | "failed" | "cancelled";
   started: string;
   ended?: string;
   first_result_line?: string;
   failure_class?: string;
   usage?: { input_tokens: number; output_tokens: number; cost_usd: number | null };
+  // milestone 8
+  role?: string;
+  model?: string;
+  capabilities?: EngineCapabilities;
+  /** Set by `hl run report`; "none" when the run ended without a report (F154). */
+  outcome?: RunOutcome | "none";
+  /** The worktree folder and branch when the run works in one (F156). */
+  worktree?: { path: string; branch: string; repo: string; merged?: boolean };
+  /** Messages waiting for the next turn (engines that cannot steer). */
+  queued_messages?: number;
 }
 /** Runs started from the server (console, Telegram); the CLI `hl run` keeps its own path. */
 export interface RunManagerService {
@@ -124,6 +143,19 @@ export interface RunManagerService {
   /** Buffered events from seq (0 = all) and live ones after; the iterator ends when the run ends. */
   events(id: string, fromSeq?: number): AsyncIterable<{ seq: number; ts: string; event: RunEvent }>;
   cancel(id: string, by: string): Promise<void>;
+  // milestone 8
+  /** All runs known on this machine (live and from runs/), newest first. */
+  list(filter?: { ticket?: string; role?: string; limit?: number }): Promise<RunState[]>;
+  /** Deliver a message: live when the engine can steer, else queued for the next turn (resumes the same session). */
+  say(id: string, text: string, by: string): Promise<"live" | "queued">;
+  /** Record the agent's outcome (called by the `run report` verb); writes a ticket comment and an activity line. */
+  report(id: string, outcome: RunOutcome, by: string): Promise<RunState>;
+  /** Forget the (role, ticket) session so the next hand-off starts fresh. */
+  resetSession(role: string, ticket: string): Promise<void>;
+  /** Files changed by a worktree run against its base. */
+  diff(id: string): Promise<{ files: { file: string; added: number; removed: number }[]; patch: string }>;
+  /** Merge a worktree run's branch into the project's current branch (fast-forward or merge commit; refuses on conflict). */
+  merge(id: string, by: string): Promise<{ merged: boolean; message: string }>;
 }
 
 /** OpenAI-compatible provider layer (F11a-c, F72-F78). Config re-read on every request. */
@@ -207,6 +239,8 @@ export interface ChatMessageData {
   role: "user" | "assistant" | "tool";
   text: string;
   tool?: { name: string; input: unknown; status: "proposed" | "approved" | "denied" | "done" | "failed"; result?: string; approval_id?: string };
+  /** Milestone 8: an assistant plan card (role hand-offs to approve, revise or skip). */
+  plan?: PlanCard;
   ts: string;
   usage?: { input_tokens: number; output_tokens: number };
 }
@@ -226,6 +260,19 @@ export interface AssistantService {
   setModel(id: string, model: string): Promise<ChatSummaryData>;
   /** Runs one user turn; events stream until "done". Low-trust channels get the low-trust preset (F66). */
   send(id: string, text: string, opts: { actor: Actor; channel: "console" | "telegram"; signal?: AbortSignal }): AsyncIterable<AssistantEvent>;
+}
+
+// ---------- crew (milestone 8, Blueprint 33) ----------
+export interface CrewService {
+  roles(): Promise<CrewRole[]>;
+  /** The next step for a ticket from its stage, the last outcome's next_role, and the role map; undefined when done. */
+  next(ticket: string): Promise<{ role: string; label: string; engine: EngineId; model?: string; reason: string } | undefined>;
+  /** A role takes a ticket: builds the brief (full for a fresh session, the delta for a resumed one) and starts a run. */
+  handoff(input: HandoffInput, actor: Actor, origin?: string): Promise<RunState>;
+  /** The ticket composer: steer or queue into a live run, hand off on @role, else hand back to the last role. */
+  say(ticket: string, text: string, actor: Actor): Promise<{ action: SayAction; run?: RunState }>;
+  /** Engines with capabilities and a cached test. */
+  engines(): Promise<{ id: EngineId; label: string; capabilities: EngineCapabilities; test: EngineTest }[]>;
 }
 
 // ---------- people ----------
@@ -419,6 +466,9 @@ export interface RunOptions {
   mode: RunMode;
   ticket?: string;
   resumeSessionId?: string;
+  /** Milestone 8: the run id (HL_RUN_ID for `hl run report`) and the role. */
+  runId?: string;
+  role?: string;
   timeoutSec?: number;
   /** Seconds of silence before the run is flagged / killed (F65). */
   silenceSec?: number;
@@ -426,6 +476,15 @@ export interface RunOptions {
 }
 export type RunEvent =
   | { type: "init"; sessionId?: string; model?: string }
+  // milestone 8: one vocabulary for every engine (Blueprint 33)
+  | { type: "diff"; file: string; added: number; removed: number; patch?: string }
+  | { type: "todo"; items: { text: string; status: "pending" | "in_progress" | "done" }[] }
+  | { type: "plan"; text: string }
+  | { type: "approval"; id: string; status: "pending" | "allowed" | "denied"; summary: string }
+  | { type: "outcome"; outcome: RunOutcome }
+  | { type: "message"; text: string; by: string; delivered: "live" | "queued" }
+  | { type: "compaction"; beforeTokens: number; afterTokens: number }
+  | { type: "error"; message: string; retryable?: boolean }
   | { type: "text"; text: string }
   | { type: "thinking"; text: string }
   | { type: "tool"; phase: "start" | "end"; name: string; id?: string; input?: unknown; isError?: boolean }
@@ -438,6 +497,8 @@ export interface RunHandle {
   readonly events: AsyncIterable<RunEvent>;
   /** Tree kill (taskkill /T then /T /F on Windows). */
   cancel(): Promise<void>;
+  /** Milestone 8: a message mid-run, only when the engine's capabilities.steer is true. */
+  steer?(text: string): Promise<void>;
   done: Promise<{ ok: boolean; exitCode: number | null; timedOut: boolean }>;
 }
 export interface BinaryInfo {
@@ -445,8 +506,14 @@ export interface BinaryInfo {
   version?: string;
 }
 export interface RuntimeAdapter {
-  id: "claude-code" | "cursor";
+  /** "claude-code", "cursor", "loop" (milestone 8), ... */
+  id: string;
+  /** Milestone 8: shown on Crew. */
+  label?: string;
+  capabilities?: EngineCapabilities;
   detect(): Promise<BinaryInfo | null>;
+  /** Milestone 8: installed and signed in, or a model reachable. Defaults to detect() when absent. */
+  test?(opts?: { model?: string }): Promise<EngineTest>;
   start(opts: RunOptions): Promise<RunHandle>;
 }
 export interface RuntimesService {
@@ -495,4 +562,6 @@ export interface Services {
   runManager: RunManagerService;
   providers: ProvidersService;
   assistant: AssistantService;
+  // milestone 8
+  crew: CrewService;
 }
