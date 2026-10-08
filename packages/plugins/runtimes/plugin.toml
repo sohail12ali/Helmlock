@@ -5,7 +5,7 @@ requires_core = ">=1 <2"
 provides = ["runtimes", "runManager"]
 # "tickets" only orders the mount for `run attach`; `hl run` works without it.
 requires = ["tickets"]
-verbs = ["run", "run attach"]
+verbs = ["run", "run attach", "run report"]
 entry = "index.ts"
 
 [settings.default_runtime]
@@ -22,6 +22,16 @@ type = "number"
 label = "Silence timeout (seconds)"
 hint = "A run with no output for this long is stopped."
 default = 1800
+min = 1
+integer = true
+scope = "workspace"
+section = "agents"
+
+[settings.max_live]
+type = "number"
+label = "Live runs at once"
+hint = "Agent runs started from the console that may work at the same time; more wait in a queue and start in order."
+default = 2
 min = 1
 integer = true
 scope = "workspace"

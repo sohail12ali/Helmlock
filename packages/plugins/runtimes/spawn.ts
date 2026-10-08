@@ -140,6 +140,8 @@ export interface ProcessOptions {
   env: Record<string, string>;
   /** Written to stdin, then stdin is closed. The prompt always travels this way, never on the command line. */
   stdin: string;
+  /** Keep stdin open after writing `stdin` (a live session takes more lines with write(); endStdin() closes it). */
+  keepStdinOpen?: boolean;
   timeoutSec?: number;
   /** Kill after this many seconds without any output (measured from the last output). */
   silenceSec?: number;
@@ -165,6 +167,10 @@ export interface ProcessResult {
 export interface ProcessHandle {
   pid: number | undefined;
   cancel(): Promise<void>;
+  /** Write to an open stdin (keepStdinOpen); false when it is closed or the process is gone. */
+  write(text: string): boolean;
+  /** Close stdin: how a live session asks the CLI to exit. */
+  endStdin(): void;
   done: Promise<ProcessResult>;
 }
 
@@ -272,8 +278,12 @@ export function startProcess(o: ProcessOptions): ProcessHandle {
     timers.push(tick);
   }
 
-  child.stdin?.on("error", () => {});
-  child.stdin?.end(o.stdin, "utf8");
+  let stdinOpen = Boolean(o.keepStdinOpen);
+  child.stdin?.on("error", () => {
+    stdinOpen = false;
+  });
+  if (o.keepStdinOpen) child.stdin?.write(o.stdin, "utf8");
+  else child.stdin?.end(o.stdin, "utf8");
 
   const done = new Promise<ProcessResult>((res, rej) => {
     child.once("error", (e) => {
@@ -281,6 +291,7 @@ export function startProcess(o: ProcessOptions): ProcessHandle {
       rej(new Error(`failed to start ${o.command}: ${e.message}`));
     });
     child.once("close", (code, signal) => {
+      stdinOpen = false;
       for (const t of timers) clearTimeout(t);
       if (lingerTimer) clearTimeout(lingerTimer);
       out.flush();
@@ -293,6 +304,16 @@ export function startProcess(o: ProcessOptions): ProcessHandle {
     async cancel() {
       state.cancelled = true;
       await kill();
+    },
+    write(text) {
+      if (!stdinOpen || !child.stdin || child.stdin.destroyed || child.exitCode !== null) return false;
+      child.stdin.write(text, "utf8");
+      return true;
+    },
+    endStdin() {
+      if (!stdinOpen) return;
+      stdinOpen = false;
+      child.stdin?.end();
     },
     done,
   };

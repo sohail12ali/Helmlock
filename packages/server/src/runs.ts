@@ -1,8 +1,10 @@
 // Milestone 4: agent runs from the console (api.ts "Milestone 4"). POST /runs, GET /runs/:id, GET /runs/:id/events
 // (SSE: replay from ?from or Last-Event-ID, then live, then "end"), POST /runs/:id/cancel, and GET /runs merging the
 // active runs into the run records. Writes carry the same protection as verb calls (checkWriteRequest).
-import { randomBytes } from "node:crypto";
-import type { ApiResponse, Person, RunDetail, RunEventLine, RunState, RunSummary, Runtime } from "@helmlock/core";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import type { ApiResponse, Person, RunDetail, RunDiff, RunEventLine, RunMergeResult, RunSayResult, RunState, RunSummary, Runtime } from "@helmlock/core";
+import { readRecord, recordToState } from "@helmlock/plugins/runtimes/run-record.ts";
+import { HOOK_TOKEN_HEADER } from "@helmlock/plugins/runtimes/run-report.ts";
 import type { Hono, Context as HonoContext } from "hono";
 import { z } from "zod";
 import type { ReadModel } from "./data.ts";
@@ -37,6 +39,11 @@ const STATUS: Record<string, number> = {
   "unknown-approval": 404,
   "already-decided": 409,
   "local-only": 403,
+  // milestone 8
+  "no-worktree": 409,
+  "run-cancelled": 409,
+  "worktree-blocked": 409,
+  "git-failed": 502,
 };
 
 export function failM4(c: HonoContext, e: unknown, log: (l: string) => void): Response {
@@ -70,7 +77,11 @@ export async function jsonBody(c: HonoContext): Promise<unknown> {
 const RunStartBody = z
   .object({
     task: z.string().trim().min(1, "say what to do"),
-    runtime: z.enum(["claude-code", "cursor"]).optional(),
+    // Milestone 8: any registered engine id (claude-code, cursor, loop, ...); an unknown one is a 422 from the manager.
+    runtime: z
+      .string()
+      .regex(/^[a-z][a-z0-9-]*$/, "an engine id")
+      .optional(),
     agent: z.string().min(1).optional(),
     ticket: z.string().min(1).optional(),
     mode: z.string().optional(),
@@ -96,38 +107,38 @@ export function summaryOf(s: RunState): RunSummary {
 
 /** A finished run's record as a RunState (GET /runs/:id after the server restarted). */
 async function stateFromRecord(runtime: Runtime, id: string): Promise<RunState | undefined> {
-  if (!/^[\w.-]+$/.test(id)) return undefined;
-  const files = runtime.ctx.get("files");
-  const rel = `runs/${id}.json`;
-  if (!(await files.exists(rel))) return undefined;
-  let raw: Record<string, unknown>;
-  try {
-    raw = JSON.parse(await files.readText(rel)) as Record<string, unknown>;
-  } catch {
-    return undefined;
-  }
-  const str = (k: string) => (typeof raw[k] === "string" && raw[k] !== "" ? (raw[k] as string) : undefined);
-  const fc = str("failure_class");
-  const s: RunState = {
-    id: str("id") ?? id,
-    runtime: str("runtime") ?? "unknown",
-    mode: (str("mode") ?? "plan") as RunState["mode"],
-    status: raw.ok === true ? "done" : fc === "cancelled" ? "cancelled" : "failed",
-    started: str("started") ?? "",
-  };
-  for (const k of ["agent", "ticket", "ended", "first_result_line", "origin"] as const) {
-    const v = str(k);
-    if (v) s[k] = v;
-  }
-  if (fc) s.failure_class = fc;
-  const u = raw.usage as Record<string, unknown> | undefined;
-  if (u && typeof u === "object")
-    s.usage = {
-      input_tokens: Number(u.input_tokens ?? 0),
-      output_tokens: Number(u.output_tokens ?? 0),
-      cost_usd: typeof u.cost_usd === "number" ? u.cost_usd : null,
-    };
-  return s;
+  const raw = await readRecord(runtime.ctx.get("files"), id);
+  return raw ? recordToState(raw, id) : undefined;
+}
+
+/** GET /runs rows: the RunState plus RunSummary's `ok`, so the milestone 4 views keep working. */
+export function listRow(s: RunState): RunState & { ok?: boolean } {
+  return s.status === "running" || s.status === "queued" ? s : { ...s, ok: s.status === "done" };
+}
+
+const ROLE = /^[a-z][a-z0-9-]*$/;
+const SayBody = z.object({ text: z.string().trim().min(1, "say something").max(8000) }).strict();
+const ResetBody = z.object({ role: z.string().regex(ROLE, "a role id"), ticket: z.string().min(1) }).strict();
+const ReportBody = z
+  .object({
+    run_id: z.string().min(1),
+    by: z.string().optional(),
+    outcome: z.enum(["done", "review", "blocked", "needs-input"]),
+    summary: z.string().trim().min(1).max(2000),
+    next: z.string().trim().min(1).max(500).optional(),
+    next_role: z.string().regex(ROLE).optional(),
+  })
+  .strict();
+
+function tokenMatches(given: string | undefined, secret: string): boolean {
+  if (!given) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(secret);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function badBody(issues: readonly { path: readonly PropertyKey[]; message: string }[]): ApiError {
+  return new ApiError(400, "bad-request", issues.map((i) => `${i.path.map(String).join(".") || "body"}: ${i.message}`).join("; "));
 }
 
 function sseHeaders(): Record<string, string> {
@@ -198,17 +209,94 @@ export function registerRunRoutes(api: Hono, d: M4Deps): void {
     }
   };
 
+  // Milestone 8: RunState[] (live, queued and recorded runs) with ?ticket=&role=&limit=; each row also carries `ok`.
   api.get(
     "/runs",
     handle(async (c) => {
-      const m = await d.ready();
-      const out = new Map<string, RunSummary>();
-      for (const s of manager().active()) out.set(s.id, summaryOf(s));
-      for (const r of await m.runs()) if (!out.has(r.id)) out.set(r.id, r);
-      const list = [...out.values()].sort((a, b) => b.started.localeCompare(a.started));
-      return c.json({ ok: true, data: list } satisfies ApiResponse<RunSummary[]>);
+      const limitQ = c.req.query("limit");
+      if (limitQ !== undefined && limitQ !== "" && !/^\d+$/.test(limitQ))
+        throw new ApiError(400, "bad-request", `limit must be a number, got ${JSON.stringify(limitQ)}`);
+      const ticket = c.req.query("ticket") || undefined;
+      const role = c.req.query("role") || undefined;
+      const list = await manager().list({
+        ...(ticket ? { ticket } : {}),
+        ...(role ? { role } : {}),
+        ...(limitQ ? { limit: Number(limitQ) } : {}),
+      });
+      return c.json({ ok: true, data: list.map(listRow) } satisfies ApiResponse<RunState[]>);
     }),
   );
+
+  api.post(
+    "/runs/:id/say",
+    handle(async (c) => {
+      checkWriteRequest({ method: c.req.method, header: (n) => c.req.header(n) }, d.hostOf(c));
+      const parsed = SayBody.safeParse(await jsonBody(c));
+      if (!parsed.success) throw badBody(parsed.error.issues);
+      const person = await currentPerson(runtime);
+      const delivered = await manager().say(c.req.param("id") ?? "", parsed.data.text, person.id);
+      return c.json({ ok: true, data: { delivered } } satisfies ApiResponse<RunSayResult>);
+    }),
+  );
+
+  api.get(
+    "/runs/:id/diff",
+    handle(async (c) => {
+      const data = await manager().diff(c.req.param("id") ?? "");
+      return c.json({ ok: true, data } satisfies ApiResponse<RunDiff>);
+    }),
+  );
+
+  api.post(
+    "/runs/:id/merge",
+    handle(async (c) => {
+      checkWriteRequest({ method: c.req.method, header: (n) => c.req.header(n) }, d.hostOf(c));
+      const person = await currentPerson(runtime);
+      const data = await manager().merge(c.req.param("id") ?? "", person.id);
+      return c.json({ ok: true, data } satisfies ApiResponse<RunMergeResult>, data.merged ? 200 : 409);
+    }),
+  );
+
+  api.post(
+    "/sessions/reset",
+    handle(async (c) => {
+      checkWriteRequest({ method: c.req.method, header: (n) => c.req.header(n) }, d.hostOf(c));
+      const parsed = ResetBody.safeParse(await jsonBody(c));
+      if (!parsed.success) throw badBody(parsed.error.issues);
+      await currentPerson(runtime);
+      await manager().resetSession(parsed.data.role, parsed.data.ticket);
+      return c.body(null, 204);
+    }),
+  );
+
+  // Internal: `hl run report` from inside a server-started run (HL_SERVER_URL, HL_HOOK_TOKEN). The token comes first.
+  api.post("/hooks/run-report", async (c) => {
+    if (!tokenMatches(c.req.header(HOOK_TOKEN_HEADER), d.hookToken))
+      return c.json({ ok: false, error: { rule: "hook-token", message: "missing or wrong hook token" } } satisfies ApiResponse<never>, 403);
+    try {
+      await d.ready();
+      const ct = (c.req.header("content-type") ?? "").split(";")[0]?.trim().toLowerCase();
+      if (ct !== "application/json") throw new ApiError(415, "bad-content-type", "hook calls are JSON");
+      const parsed = ReportBody.safeParse(await jsonBody(c));
+      if (!parsed.success) throw badBody(parsed.error.issues);
+      const { run_id, by, ...rest } = parsed.data;
+      const m = manager();
+      const live = m.get(run_id);
+      if (!live) throw new ApiError(404, "unknown-run", `run ${run_id} is not in this console`);
+      const outcome = {
+        outcome: rest.outcome,
+        summary: rest.summary,
+        ...(rest.next ? { next: rest.next } : {}),
+        ...(rest.next_role ? { next_role: rest.next_role } : {}),
+      };
+      // The verb writes its own activity line; the manager adds the outcome event and the ticket comment.
+      const report = m.report as (id: string, o: typeof outcome, by: string, opts?: { activity?: boolean }) => Promise<RunState>;
+      const data = await report.call(m, run_id, outcome, by ?? live.role ?? live.runtime, { activity: false });
+      return c.json({ ok: true, data } satisfies ApiResponse<RunDetail>);
+    } catch (e) {
+      return failM4(c, e, log);
+    }
+  });
 
   api.post(
     "/runs",

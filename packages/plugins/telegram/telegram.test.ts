@@ -29,6 +29,15 @@ const tap = (from: number, data: string, messageId: number, text = ""): Omit<TgU
   callback_query: { id: `cb-${messageId}`, from: { id: from }, data, message: { message_id: messageId, chat: { id: from, type: "private" }, text } },
 });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** The milestone 8 run manager methods the bot does not use. */
+const m8Stubs = (run: RunState): Pick<RunManagerService, "list" | "say" | "report" | "resetSession" | "diff" | "merge"> => ({
+  list: async () => [run],
+  say: async () => "queued",
+  report: async () => run,
+  resetSession: async () => {},
+  diff: async () => ({ files: [], patch: "" }),
+  merge: async () => ({ merged: false, message: "not in this test" }),
+});
 
 function fakeAssistant(reply = ["Hel", "lo ", "Sam"], notice?: string) {
   const sent: { chat: string; text: string; channel: string; actor: string }[] = [];
@@ -281,6 +290,7 @@ test("/run starts a plan-mode run with this chat as origin; /stop cancels runs o
       const s = states.find((x) => x.id === id);
       if (s) s.status = "cancelled";
     },
+    ...m8Stubs(states[0] as RunState),
   };
   const h = await boot({ services: { runManager: runs } });
   try {
@@ -393,6 +403,7 @@ test("/status and notifications", async () => {
     active: () => [run],
     events: async function* () {},
     cancel: async () => {},
+    ...m8Stubs(run),
   };
   const q = fakeQueue([card("ap1")]);
   const h = await boot({ services: { approvalQueue: q.svc, runManager: runs } });

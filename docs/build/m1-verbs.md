@@ -40,6 +40,7 @@ Ids: tickets `T-014-sa` (counter plus author initials), records `D-003-sa` (deci
 | `hl harness sync` | `--check` | S5 |
 | `hl harness lint` | `--json` | S5 |
 | `hl run "<task>"` | `--runtime claude\|cursor`, `--agent <role>`, `--ticket <T>`, `--mode plan\|ask\|auto-review\|force` | S5 |
+| `hl run report` | `--outcome done\|review\|blocked\|needs-input`, `--summary "<one sentence>"`, `--next "<step>"`, `--next-role <role>`, `--run <id>` (default HL_RUN_ID); called by the agent at the end of a run: a server-started run posts it to the server, otherwise it is filed in `runs/reports/<id>.json` and recorded when the run ends (F154) | M8 |
 | `hl provider add <id>` | `--preset`, `--base-url`, `--key-env <NAME>`, `--model` or `--models` (repeatable, at least one), `--label`; first model becomes the default when there is none | M7 |
 | `hl provider remove <id>` | removes the provider and its models; refuses when it holds the default model unless `--force` (the default then moves to the first remaining model, or is cleared) | M7 |
 | `hl model add <provider> <model...>` | adds models to a saved provider; models already there are skipped and named | M7 |

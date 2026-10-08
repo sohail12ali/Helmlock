@@ -140,7 +140,9 @@ export function createApp(runtime: Runtime, opts: AppOptions = {}): Hono {
     c.header("Cache-Control", "no-store");
     const isVerbCall =
       c.req.method === "POST" &&
-      (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/cancel$|approvals\/[^/]+$|inbox\/[^/]+$|hooks\/pretooluse$)/.test(c.req.path) ||
+      (/^\/api\/v1\/(?:verbs\/|runs$|runs\/[^/]+\/(?:cancel|say|merge)$|sessions\/reset$|approvals\/[^/]+$|inbox\/[^/]+$|hooks\/(?:pretooluse|run-report)$)/.test(
+        c.req.path,
+      ) ||
         /^\/api\/v1\/tickets\/[^/]+\/(?:handoff|say)$/.test(c.req.path) ||
         /^\/api\/v1\/(chats|models)(\/|$)/.test(c.req.path));
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && !isVerbCall)

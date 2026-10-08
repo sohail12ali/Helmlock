@@ -3,8 +3,10 @@ import { delimiter, resolve } from "node:path";
 import type { RunEvent, RunOptions, VerbDef, VerbResult } from "@helmlock/core";
 import { z } from "zod";
 import { agentNotice } from "../harness/layers.ts";
+import { newRunId } from "./process-run.ts";
 import { RUNTIME_ALIASES } from "./registry.ts";
 import { buildRecord, RunTally, stampResponsible, writeRunRecord } from "./run-record.ts";
+import { takeReportFile, writeOutcome } from "./run-report.ts";
 
 /** Windows names it "Path"; reuse the existing key so the child does not get two. */
 const PATH_KEY = Object.keys(process.env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
@@ -113,13 +115,16 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
         };
       const cwd = resolve(input.cwd ?? ws.root);
       const addDirs = input.add_dir.length ? input.add_dir.map((d) => resolve(d)) : defaultAddDirs(ws.folders, cwd);
+      // The run id is known up front so the agent can call `hl run report` (HL_RUN_ID).
+      const runId = newRunId();
       let opts: RunOptions = {
         prompt: input.task,
         cwd,
         addDirs,
         mode: input.mode,
         silenceSec: input.silence_sec ?? o.defaultSilenceSec ?? 1800,
-        env: baseRunEnv(ws.root),
+        env: { ...baseRunEnv(ws.root), HL_RUN_ID: runId },
+        runId,
         ...(input.agent ? { agent: input.agent } : {}),
         ...(input.model ? { model: input.model } : {}),
         ...(input.ticket ? { ticket: input.ticket } : {}),
@@ -155,7 +160,16 @@ export function createRunVerb(o: RunVerbOptions = {}): VerbDef<typeof RunInput> 
       }
       const done = await handle.done;
       const record = stampResponsible(buildRecord(handle.id, adapter.id, opts, started, done, tally), v.actor.onBehalfOf);
+      // The agent's `hl run report` from inside this run waits in runs/reports/<id>.json (F154).
+      const filed = await takeReportFile(v.ctx, handle.id).catch(() => undefined);
+      record.outcome = filed?.outcome ?? "none";
       const file = await writeRunRecord(v.ctx.get("files"), record);
+      if (filed) {
+        const problems = await writeOutcome(v.ctx, { ...record, ticket: record.ticket ?? undefined, agent: record.agent ?? undefined }, filed.outcome, {
+          activity: false,
+        });
+        for (const p of problems) err(`hl: ${p}\n`);
+      }
       await v.ctx.emit("run.finished", { runId: handle.id, runtime: adapter.id, ok: done.ok, ...(opts.ticket ? { ticket: opts.ticket } : {}) });
       if (!done.ok)
         return {

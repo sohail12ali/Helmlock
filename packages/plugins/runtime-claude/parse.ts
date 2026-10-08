@@ -2,8 +2,17 @@
 // packages/adapters/claude-local/src/server/parse.ts (parseClaudeStreamJson, claudeModelUsageTotals) and the
 // event shapes in control-center console/server/agent_normalize.py. See THIRD_PARTY_NOTICES.md.
 import type { RunEvent } from "@helmlock/core";
+import { claudeEditDiff, todoItems } from "../runtimes/event-vocab.ts";
 import type { TurnEnd } from "../runtimes/failures.ts";
-import type { StreamNormalizer } from "../runtimes/process-run.ts";
+import type { LiveProtocol, StreamNormalizer } from "../runtimes/process-run.ts";
+
+/** Live sessions (--input-format stream-json --replay-user-messages): messages in, acknowledgements out. */
+export const CLAUDE_LIVE: LiveProtocol = {
+  encode: (text) => `${JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text }] } })}\n`,
+  isAck: (line) => line.startsWith("{") && /"isReplay"\s*:\s*true/.test(line) && /"type"\s*:\s*"user"/.test(line),
+};
+
+const EDIT_TOOLS = new Set(["Edit", "MultiEdit", "Write"]);
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : {});
@@ -19,6 +28,8 @@ export function createClaudeNormalizer(): StreamNormalizer {
   const streamed = new Set<string>(); // message ids whose text arrived as deltas
   let currentMessage = "";
   const tools = new Map<string, string>();
+  /** Edit tool inputs by tool id: the diff event is emitted when the edit succeeded, not when it was asked for. */
+  const edits = new Map<string, unknown>();
 
   const line = (raw: string): RunEvent[] => {
     const t = raw.trim();
@@ -63,6 +74,15 @@ export function createClaudeNormalizer(): StreamNormalizer {
           const name = str(blk.name) ?? "tool";
           if (id) tools.set(id, name);
           out.push({ type: "tool", phase: "start", name, ...(id ? { id } : {}), input: blk.input });
+          if (id && EDIT_TOOLS.has(name)) edits.set(id, blk.input);
+          if (name === "TodoWrite") {
+            const items = todoItems(blk.input);
+            if (items) out.push({ type: "todo", items });
+          }
+          if (name === "ExitPlanMode") {
+            const plan = str(obj(blk.input).plan);
+            if (plan) out.push({ type: "plan", text: plan });
+          }
         }
       }
       return out;
@@ -74,7 +94,13 @@ export function createClaudeNormalizer(): StreamNormalizer {
         const blk = obj(b);
         if (str(blk.type) !== "tool_result") continue;
         const id = str(blk.tool_use_id);
-        out.push({ type: "tool", phase: "end", name: (id && tools.get(id)) || "tool", ...(id ? { id } : {}), isError: blk.is_error === true });
+        const name = (id && tools.get(id)) || "tool";
+        out.push({ type: "tool", phase: "end", name, ...(id ? { id } : {}), isError: blk.is_error === true });
+        if (id && edits.has(id)) {
+          const diff = blk.is_error === true ? undefined : claudeEditDiff(name, edits.get(id));
+          edits.delete(id);
+          if (diff) out.push(diff);
+        }
       }
       return out;
     }
@@ -99,7 +125,11 @@ export function createClaudeNormalizer(): StreamNormalizer {
         ...(typeof cost === "number" ? { costUsd: cost } : {}),
       };
       const ok = !end.is_error && (sub === "success" || sub === "");
-      return [usage, { type: "result", ok, text: end.result ?? "", ...(session ? { sessionId: session } : {}) }];
+      const result: RunEvent = { type: "result", ok, text: end.result ?? "", ...(session ? { sessionId: session } : {}) };
+      if (ok) return [usage, result];
+      const detail = end.error ?? (end.errors ?? []).map((x) => (typeof x === "string" ? x : (str(obj(x).message) ?? JSON.stringify(x)))).join("; ") ?? "";
+      const message = detail || end.result || `the run ended with ${sub || "an error"}`;
+      return [usage, { type: "error", message: message.slice(0, 1000) }, result];
     }
     if (type === "system") return [];
     return [{ type: "raw", line: t }];
